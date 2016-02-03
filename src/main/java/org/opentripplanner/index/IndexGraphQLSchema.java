@@ -84,6 +84,19 @@ public class IndexGraphQLSchema {
         .value("COORDINATE_WITH_DRIVER", StopPattern.PICKDROP_COORDINATE_WITH_DRIVER, "Must coordinate with driver to arrange pickup / drop off.")
         .build();
 
+    public static GraphQLEnumType realtimeStateEnum = GraphQLEnumType.newEnum()
+        .name("RealtimeState")
+        .value("SCHEDULED", 0, "The trip information comes from the GTFS feed, i.e. no real-time update has been applied.")
+
+        .value("UDPATED", 1, "The trip information has been updated, but the trip pattern stayed the same as the trip pattern of the scheduled trip.")
+
+        .value("CANCELED", 2, "The trip has been canceled by a real-time update.")
+
+        .value("ADDED", 3, "The trip has been added using a real-time update, i.e. the trip was not present in the GTFS feed.")
+
+        .value("MODIFIED", 4, "The trip information has been updated and resulted in a different trip pattern compared to the trip pattern of the scheduled trip.")
+        .build();
+
     private final GtfsRealtimeFuzzyTripMatcher fuzzyTripMatcher;
 
     public GraphQLOutputType agencyType = new GraphQLTypeReference("Agency");
@@ -612,6 +625,11 @@ public class IndexGraphQLSchema {
                 .dataFetcher(environment -> index.patternForTrip
                     .get(index.tripForId.get(((TripTimeShort) environment.getSource()).tripId))
                     .getAlightType(((TripTimeShort) environment.getSource()).stopIndex))
+                .build())
+            .field(GraphQLFieldDefinition.newFieldDefinition()
+                .name("realtimeState")
+                .type(realtimeStateEnum)
+                .dataFetcher(environment -> ((TripTimeShort) environment.getSource()).realtimeState)
                 .build())
             .field(GraphQLFieldDefinition.newFieldDefinition()
                 .name("serviceDay")
