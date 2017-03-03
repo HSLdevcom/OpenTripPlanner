@@ -37,8 +37,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -254,43 +256,84 @@ public class GraphPathFinder {
             List<GenericLocation> places = Lists.newArrayList(request.from);
             places.addAll(request.intermediatePlaces);
             places.add(request.to);
-            long time = request.dateTime;
+            List<GraphPath> ret = new ArrayList<>();
+            Set<AgencyAndId> bannedTrips = new HashSet<>();
 
-            List<GraphPath> paths = new ArrayList<>();
-            DebugOutput debugOutput = null;
-            int placeIndex = (request.arriveBy ? places.size() - 1 : 1);
+            int firstPlaceIndex = (request.arriveBy ? places.size() - 1 : 1);
+            RoutingRequest firstRequest = request.clone();
+            firstRequest.from = places.get(firstPlaceIndex - 1);
+            firstRequest.to = places.get(firstPlaceIndex);
+            firstRequest.rctx = null;
+            firstRequest.setRoutingContext(router.graph);
+            DebugOutput debugOutput = firstRequest.rctx.debugOutput;
+            List<GraphPath> firstPaths = getPaths(firstRequest);
 
-            while (0 < placeIndex && placeIndex < places.size()) {
-                RoutingRequest intermediateRequest = request.clone();
-                intermediateRequest.setNumItineraries(1);
-                intermediateRequest.dateTime = time;
-                intermediateRequest.from = places.get(placeIndex - 1);
-                intermediateRequest.to = places.get(placeIndex);
-                intermediateRequest.rctx = null;
-                intermediateRequest.setRoutingContext(router.graph);
+            if (firstPaths.size() == 0) {
+                return firstPaths;
+            }
 
-                if (debugOutput != null) {// Restore the previous debug info accumulator
+            Vertex[] fromVertices = new Vertex[places.size()];
+            Vertex[] toVertices = new Vertex[places.size()];
+
+
+            for (int i=0; i < firstPaths.size(); i++) {
+                GraphPath firstPath = firstPaths.get(i);
+                long time = (request.arriveBy ? firstPath.getStartTime() : firstPath.getEndTime());
+
+                List<GraphPath> paths = new ArrayList<>();
+                paths.add(firstPath);
+                int placeIndex = (request.arriveBy ? places.size() - 2 : 2);
+
+                while (0 < placeIndex && placeIndex < places.size()) {
+                    RoutingRequest intermediateRequest = request.clone();
+                    intermediateRequest.setNumItineraries(1);
+                    intermediateRequest.dateTime = time;
+                    intermediateRequest.from = places.get(placeIndex - 1);
+                    intermediateRequest.to = places.get(placeIndex);
+                    bannedTrips.forEach(intermediateRequest::banTrip);
+                    intermediateRequest.rctx = null;
+
+                    if ( fromVertices[placeIndex - 1] != null && toVertices[placeIndex] != null ) {
+                        intermediateRequest.setRoutingContext(
+                            router.graph,
+                            fromVertices[placeIndex - 1],
+                            toVertices[placeIndex]
+                        );
+                    } else {
+                        intermediateRequest.setRoutingContext(router.graph);
+                    }
                     intermediateRequest.rctx.debugOutput = debugOutput;
-                } else {// Store the debug info accumulator
-                    debugOutput = intermediateRequest.rctx.debugOutput;
+
+                    if (fromVertices[placeIndex - 1] == null) {
+                        fromVertices[placeIndex -1] = intermediateRequest.rctx.fromVertex;
+                    }
+
+                    if (toVertices[placeIndex] == null) {
+                        toVertices[placeIndex] = intermediateRequest.rctx.toVertex;
+                    }
+
+                    List<GraphPath> partialPaths = getPaths(intermediateRequest);
+                    if (partialPaths.size() == 0) {
+                        continue;
+                    }
+
+                    GraphPath path = partialPaths.get(0);
+                    paths.add(path);
+                    bannedTrips.addAll(path.getTrips());
+                    time = (request.arriveBy ? path.getStartTime() : path.getEndTime());
+                    placeIndex += (request.arriveBy ? -1 : +1);
                 }
 
-                List<GraphPath> partialPaths = getPaths(intermediateRequest);
-                if (partialPaths.size() == 0) {
-                    return partialPaths;
+                request.setRoutingContext(router.graph);
+                request.rctx.debugOutput = debugOutput;
+                if (request.arriveBy) {
+                    Collections.reverse(paths);
                 }
 
-                GraphPath path = partialPaths.get(0);
-                paths.add(path);
-                time = (request.arriveBy ? path.getStartTime() : path.getEndTime());
-                placeIndex += (request.arriveBy ? -1 : +1);
+                ret.add(joinPaths(paths));
             }
-            request.setRoutingContext(router.graph);
-            request.rctx.debugOutput = debugOutput;
-            if (request.arriveBy) {
-                Collections.reverse(paths);
-            }
-            return Collections.singletonList(joinPaths(paths));
+            Collections.sort(ret, new PathComparator(request.arriveBy));
+            return ret;
         } else {
             return getPaths(request);
         }
@@ -308,7 +351,7 @@ public class GraphPathFinder {
             lastState = newPath.states.getLast();
             // add a leg-switching state
             LegSwitchingEdge legSwitchingEdge = new LegSwitchingEdge(lastVertex, lastVertex);
-            lastState = legSwitchingEdge.traverse(lastState);
+            lastState = legSwitchingEdge.traverse(lastState, path.getStartTime());
             newPath.edges.add(legSwitchingEdge);
             newPath.states.add(lastState);
             // add the next subpath
@@ -319,7 +362,8 @@ public class GraphPathFinder {
             }
             lastVertex = path.getEndVertex();
         }
-        return newPath;
+        // Do a second round of reverse optimization over the whole Path
+        return new GraphPath(newPath.states.getLast(), true);
     }
 
 /*

@@ -46,6 +46,16 @@ public class LegSwitchingEdge extends Edge {
 	}
 
 	@Override
+	public State traverse(State s0, long departureTime) {
+		StateEditor editor = s0.edit(this);
+		editor.setBackMode(TraverseMode.LEG_SWITCH);
+		//Forget the last pattern to allow taking the same route from an intermediate place
+		editor.setLastPattern(null);
+		editor.setTimeSeconds(departureTime);
+		return editor.makeState();
+	}
+
+	@Override
 	public double getDistance() {
 		return 0;
 	}
