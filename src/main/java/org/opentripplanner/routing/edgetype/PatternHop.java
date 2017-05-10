@@ -80,7 +80,7 @@ public class PatternHop extends TablePatternEdge implements OnboardEdge, HopEdge
         
     	int runningTime = getPattern().scheduledTimetable.getBestRunningTime(stopIndex);
     	StateEditor s1 = state0.edit(this);
-    	s1.incrementTimeInSeconds(runningTime);
+    	s1.incrementTimeInSeconds((int)(options.getModeWeight(getMode()) * runningTime));
     	s1.setBackMode(getMode());
     	s1.incrementWeight(runningTime);
     	return s1.makeState();
@@ -106,11 +106,10 @@ public class PatternHop extends TablePatternEdge implements OnboardEdge, HopEdge
                 return null;
             }
         }
-        
         TripTimes tripTimes = s0.getTripTimes();
         int runningTime = tripTimes.getRunningTime(stopIndex);
         StateEditor s1 = s0.edit(this);
-        s1.incrementTimeInSeconds(runningTime);
+        s1.incrementTimeInSeconds((int)(options.getModeWeight(getMode()) * runningTime));
         if (s0.getOptions().arriveBy)
             s1.setZone(getBeginStop().getZoneId());
         else

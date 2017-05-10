@@ -64,6 +64,10 @@ public abstract class GtfsTest extends TestCase {
     private String agencyId;
 
     public Itinerary itinerary = null;
+    
+    protected RoutingRequest getRoutingRequest() {
+        return new RoutingRequest();
+    }
 
     protected void setUp() {
         File gtfs = new File("src/test/resources/" + getFeedName());
@@ -73,7 +77,6 @@ public abstract class GtfsTest extends TestCase {
         gtfsBundle.setFeedId(feedId);
         List<GtfsBundle> gtfsBundleList = Collections.singletonList(gtfsBundle);
         GtfsModule gtfsGraphBuilderImpl = new GtfsModule(gtfsBundleList);
-
 
         alertsUpdateHandler = new AlertsUpdateHandler();
         graph = new Graph();
@@ -117,8 +120,7 @@ public abstract class GtfsTest extends TestCase {
                boolean wheelchairAccessible, boolean preferLeastTransfers, TraverseMode preferredMode,
                String excludedRoute, String excludedStop, int legCount) {
         final TraverseMode mode = preferredMode != null ? preferredMode : TraverseMode.TRANSIT;
-        RoutingRequest routingRequest = new RoutingRequest();
-        routingRequest.setNumItineraries(1);
+        RoutingRequest routingRequest = getRoutingRequest();
         
         routingRequest.setArriveBy(dateTime < 0);
         routingRequest.dateTime = Math.abs(dateTime);
