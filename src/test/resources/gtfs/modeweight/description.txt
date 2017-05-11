@@ -1,2 +1,0 @@
-This feed contains two routes. One with tram and one with bus. Both routes start, 
-go through and end at the same transit stop. Route1(bus) is one minute slower.
