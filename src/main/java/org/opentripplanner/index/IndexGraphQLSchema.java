@@ -2,6 +2,9 @@ package org.opentripplanner.index;
 
 import static java.util.Collections.emptyList;
 
+import java.util.List;
+import java.util.AbstractMap;
+
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -184,6 +187,8 @@ public class IndexGraphQLSchema {
         .build();
 
     private final GtfsRealtimeFuzzyTripMatcher fuzzyTripMatcher;
+    
+    public GraphQLOutputType routeHeadsignMapType = new GraphQLTypeReference("RouteHeadsignMapType");
 
     public GraphQLOutputType agencyType = new GraphQLTypeReference("Agency");
     
@@ -961,6 +966,23 @@ public class IndexGraphQLSchema {
                 .dataFetcher(environment -> ((StopCluster) environment.getSource()).children)
                 .build())
             .build();
+        
+        routeHeadsignMapType = GraphQLObjectType.newObject()
+                        .name("RouteHeadsignMapType")
+                        .description("Route mapped with its most popular headsign")
+                        .field(GraphQLFieldDefinition.newFieldDefinition()
+                                .name("route")
+                                .description("Route")
+                                .type(routeType)
+                                .dataFetcher(environment -> ((Map.Entry<Route,String>) environment.getSource()).getKey())
+                                .build())
+                        .field(GraphQLFieldDefinition.newFieldDefinition()
+                                .name("headsign")
+                                .description("The most popular headsign for a route")
+                                .type(Scalars.GraphQLString)
+                                .dataFetcher(environment -> ((Map.Entry<Route,String>) environment.getSource()).getValue())
+                                .build())
+                        .build();
 
         stopType = GraphQLObjectType.newObject()
             .name("Stop")
@@ -1098,6 +1120,69 @@ public class IndexGraphQLSchema {
                 .dataFetcher(environment -> index.patternsForStop.get(environment.getSource()))
                 .build())
             .field(GraphQLFieldDefinition.newFieldDefinition()
+                           .name("topDestinationsForToday")
+                            .type(new GraphQLList(routeHeadsignMapType))
+                            .argument(GraphQLArgument.newArgument()
+                                .name("serviceDay")
+                                .type(Scalars.GraphQLString)
+                                .defaultValue(null)
+                                .build())
+                            .dataFetcher(environment -> {
+                                  try {
+                                      BitSet services = index.servicesRunning(
+                                              ServiceDate.parseString(environment.getArgument("serviceDay"))
+                                      );
+            
+                                      List<Map.Entry<Route, String>> routeHeadsignList = new ArrayList<Map.Entry<Route, String>>();
+                                      Map<Route, Long> routeTripCount = new HashMap<Route, Long>();
+                                      index.routesForStop(((Stop)environment
+                                                .getSource()))
+                                                .stream()
+                                                .forEach((route) -> {
+                                                Map<TripPattern, Long> tripCountMap = new HashMap<TripPattern, Long>();
+            
+                                                if(!routeTripCount.containsValue(route))
+                                                    routeTripCount.put(route, new Long(0));
+                                                index.patternsForStop.get((Stop)environment.getSource())
+                                                     .stream()
+                                                     .filter(pattern -> index.patternsForRoute.get(route).contains(pattern))
+                                                     .forEach((pattern) -> {
+                                                         long count = pattern.scheduledTimetable.tripTimes
+                                                                 .stream()
+                                                                 .filter(times -> services.get(times.serviceCode))
+                                                                 .map(times -> times.trip).count();
+            
+                                                          tripCountMap.put(pattern, count);
+                                                          routeTripCount.put(route, routeTripCount.get(route)+ count);
+                                                     });
+            
+                                                     String headsignForRoute = tripCountMap
+                                                                                     .entrySet()
+                                                                                     .stream()
+                                                                                     .max(Map.Entry.comparingByValue())
+                                                                                     .get()
+                                                                                     .getKey()
+                                                                                     .getDirection();
+            
+                                                     routeHeadsignList.add(new AbstractMap.SimpleEntry<Route, String>(route, headsignForRoute));
+                                                });
+            
+                                      if(routeHeadsignList != null) {
+            
+                                          routeHeadsignList.sort((Map.Entry<Route, String> e1, Map.Entry<Route, String> e2) ->
+                                                  (int) (routeTripCount.get(e2.getKey()) - routeTripCount.get(e1.getKey())));
+                                          return routeHeadsignList;
+                                      }
+            
+            
+                                      return null;
+            
+                                  } catch (ParseException e) {
+                                         return null; // Invalid date format
+                                  }
+                               })
+                            .build())
+                        .field(GraphQLFieldDefinition.newFieldDefinition()
                 .name("transfers")               //TODO: add max distance as parameter?
                 .type(new GraphQLList(stopAtDistanceType))
                 .dataFetcher(environment -> index.stopVertexForStop
