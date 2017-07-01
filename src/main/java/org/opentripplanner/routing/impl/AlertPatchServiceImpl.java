@@ -84,8 +84,9 @@ public class AlertPatchServiceImpl implements AlertPatchService {
         if (stop != null) {
             patchesByStop.put(stop, alertPatch);
         }
-        AgencyAndId route = alertPatch.getRoute();
-        if (route != null) {
+
+        List<AgencyAndId> routes = alertPatch.getRoute();
+        for( AgencyAndId route: routes) {
             patchesByRoute.put(route, alertPatch);
         }
     }
@@ -128,8 +129,8 @@ public class AlertPatchServiceImpl implements AlertPatchService {
         if (stop != null) {
             patchesByStop.remove(stop, alertPatch);
         }
-        AgencyAndId route = alertPatch.getRoute();
-        if (route != null) {
+        List<AgencyAndId> routes = alertPatch.getRoute();
+        for( AgencyAndId route: routes) {
             patchesByRoute.remove(route, alertPatch);
         }
 

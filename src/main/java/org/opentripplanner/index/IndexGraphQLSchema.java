@@ -698,8 +698,15 @@ public class IndexGraphQLSchema {
                 .build())
             .field(GraphQLFieldDefinition.newFieldDefinition()
                 .name("route")
-                .type(routeType)
-                .dataFetcher(environment -> index.routeForId.get(((AlertPatch) environment.getSource()).getRoute()))
+                .type(new GraphQLList(routeType))
+                .dataFetcher(environment -> {
+                    List<AgencyAndId> rts = ((AlertPatch) environment.getSource()).getRoute();
+                    List<Route> routes = null;
+                    routes = rts.stream()
+                            .map(route -> index.routeForId.get(route))
+                            .collect(Collectors.toList());
+                    return routes;
+                })
                 .build())
             .field(GraphQLFieldDefinition.newFieldDefinition()
                 .name("trip")
