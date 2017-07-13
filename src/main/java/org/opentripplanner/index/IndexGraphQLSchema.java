@@ -2540,7 +2540,8 @@ public class IndexGraphQLSchema {
                             alerts = alerts
                                      .stream()
                                      .filter(alertPatch ->
-                                      modes.contains(GtfsLibrary.getTraverseMode(index.routeForId.get(alertPatch.getRoute().get(0)))))
+                                      modes.contains(GtfsLibrary.getTraverseMode(
+                                              index.routeForId.get(alertPatch.getRoute() instanceof  AgencyAndId ? alertPatch.getRoute() : alertPatch.getRoute().get(0)))))
                                      .collect(Collectors.toList());
                         }
                     }
