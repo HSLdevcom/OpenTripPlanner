@@ -2,22 +2,10 @@ package org.opentripplanner.index;
 
 import static java.util.Collections.emptyList;
 
-import java.util.List;
-import java.util.AbstractMap;
+import java.util.*;
 
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -2527,16 +2515,38 @@ public class IndexGraphQLSchema {
                     .name("feeds")
                     .type(new GraphQLList(new GraphQLNonNull(Scalars.GraphQLString)))
                     .build())
-                .dataFetcher(environment -> environment.getArgument("feeds") != null
-                    ? index.getAlerts()
-                        .stream()
-                        .filter(alertPatch ->
-                            ((List) environment.getArgument("feeds"))
-                                .contains(alertPatch.getFeedId())
-                        )
-                        .collect(Collectors.toList())
-                    : index.getAlerts()
-                )
+                .argument(GraphQLArgument.newArgument()
+                    .name("modes")
+                    .type(Scalars.GraphQLString)
+                    .build())
+                .dataFetcher(environment ->  {
+                    List <AlertPatch> alerts = index.getAlerts();
+                    if(alerts != null) {
+                        if(environment.getArgument("feeds") != null)
+                            alerts = alerts
+                                     .stream()
+                                     .filter(alertPatch ->
+                                        ((List) environment.getArgument("feeds"))
+                                            .contains(alertPatch.getFeedId())
+                                     )
+                                .collect(Collectors.toList());
+                        if(environment.getArgument("modes") != null) {
+                            Set<TraverseMode> modes = new QualifiedModeSet(
+                                    environment.getArgument("modes")).qModes
+                                    .stream()
+                                    .map(qualifiedMode -> qualifiedMode.mode)
+                                    .filter(TraverseMode::isTransit)
+                                    .collect(Collectors.toSet());
+                            alerts = alerts
+                                     .stream()
+                                     .filter(alertPatch ->
+                                      modes.contains(GtfsLibrary.getTraverseMode(index.routeForId.get(alertPatch.getRoute().get(0)))))
+                                     .collect(Collectors.toList());
+                        }
+                    }
+
+                    return alerts;
+                })
                 .build())
             .field(GraphQLFieldDefinition.newFieldDefinition()
                 .name("serviceTimeRange")
