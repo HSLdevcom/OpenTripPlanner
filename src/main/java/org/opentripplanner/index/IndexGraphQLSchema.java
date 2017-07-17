@@ -2722,6 +2722,21 @@ public class IndexGraphQLSchema {
                 .dataFetcher(environment -> index.tripForId.get(((Leg)environment.getSource()).tripId))
                 .build())
             .field(GraphQLFieldDefinition.newFieldDefinition()
+                .name("serviceDay")
+                .description("For transit legs, the serviceDay. For non-transit legs, null.")
+                .type(Scalars.GraphQLLong)
+                .dataFetcher(environment -> {
+                    final String argServiceDate = (Leg)environment.getSource()).serviceDate;
+                    if (argServiceDate == null) {
+                        return null;
+                    }
+                    final ServiceDate serviceDate = ServiceDate.parseString(argServiceDate);
+                    final String agencyId = (Leg)environment.getSource()).agencyId;
+                    final ServiceDay serviceDay = new ServiceDay(index.graph, serviceDate, index.graph.getCalendarService(), agencyId);
+                    return serviceDay.time(0);
+                })
+                .build())
+            .field(GraphQLFieldDefinition.newFieldDefinition()
                 .name("intermediateStops")
                 .description("For transit legs, intermediate stops between the Place where the leg originates and the Place where the leg ends. For non-transit legs, null.")
                 .type(new GraphQLList(stopType))
