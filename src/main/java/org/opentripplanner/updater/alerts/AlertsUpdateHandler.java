@@ -98,6 +98,9 @@ public class AlertsUpdateHandler {
             // Per the GTFS-rt spec, if an alert has no TimeRanges, than it should always be shown.
             periods.add(new TimePeriod(0, Long.MAX_VALUE));
         }
+
+        AlertPatch patch = new AlertPatch();
+
         for (EntitySelector informed : alert.getInformedEntityList()) {
             if (fuzzyTripMatcher != null && informed.hasTrip()) {
                 TripDescriptor trip = fuzzyTripMatcher.match(feedId, informed.getTrip());
@@ -108,6 +111,9 @@ public class AlertsUpdateHandler {
             String routeId = null;
             if (informed.hasRouteId()) {
                 routeId = informed.getRouteId();
+            } else if (informed.hasTrip() && informed.getTrip().hasRouteId()) {
+                String tempRouteId = informed.getTrip().getRouteId();
+                routeId = tempRouteId.substring(tempRouteId.indexOf("_")+1);
             }
 
             int direction;
@@ -130,10 +136,12 @@ public class AlertsUpdateHandler {
             String agencyId = informed.getAgencyId();
             if (informed.hasAgencyId()) {
                 agencyId = informed.getAgencyId().intern();
+            } else if (informed.hasTrip() && informed.getTrip().hasRouteId()) {
+                agencyId = informed.getTrip().getRouteId().substring(0, informed.getTrip().getRouteId().indexOf("_"));
             }
 
-            AlertPatch patch = new AlertPatch();
             patch.setFeedId(feedId);
+
             if (routeId != null) {
                 patch.setRoute(new AgencyAndId(feedId, routeId));
                 // Makes no sense to set direction if we don't have a route
@@ -150,6 +158,7 @@ public class AlertsUpdateHandler {
             if (agencyId != null && routeId == null && tripId == null && stopId == null) {
                 patch.setAgencyId(agencyId);
             }
+
             patch.setTimePeriods(periods);
             patch.setAlert(alertText);
 

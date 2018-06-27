@@ -66,7 +66,7 @@ public class AlertPatch implements Serializable {
 
     private String agency;
 
-    private AgencyAndId route;
+    private List<AgencyAndId> route = new LinkedList();
 
     private AgencyAndId trip;
 
@@ -120,7 +120,7 @@ public class AlertPatch implements Serializable {
             Map<String, Agency> agencies = graph.index.agenciesForFeedId.get(feedId);
             agency = this.agency != null ? agencies.get(this.agency) : null;
         }
-        Route route = this.route != null ? graph.index.routeForId.get(this.route) : null;
+        Route route = (this.route != null && this.route.size() != 0) ? graph.index.routeForId.get(this.route.get(this.route.size()-1)) : null;
         Stop stop = this.stop != null ? graph.index.stopForId.get(this.stop) : null;
         Trip trip = this.trip != null ? graph.index.tripForId.get(this.trip) : null;
 
@@ -204,7 +204,7 @@ public class AlertPatch implements Serializable {
             Map<String, Agency> agencies = graph.index.agenciesForFeedId.get(feedId);
             agency = this.agency != null ? agencies.get(this.agency) : null;
         }
-        Route route = this.route != null ? graph.index.routeForId.get(this.route) : null;
+        Route route = (this.route != null && this.route.size() != 0) ? graph.index.routeForId.get(this.route.get(this.route.size()-1)) : null;
         Stop stop = this.stop != null ? graph.index.stopForId.get(this.stop) : null;
         Trip trip = this.trip != null ? graph.index.tripForId.get(this.trip) : null;
 
@@ -279,7 +279,10 @@ public class AlertPatch implements Serializable {
     }
 
     @XmlJavaTypeAdapter(AgencyAndIdAdapter.class)
-    public AgencyAndId getRoute() {
+    public List<AgencyAndId> getRoute() {
+//        if(route.size() > 0)
+//            return route.get(route.size()-1);
+//        return null;
         return route;
     }
 
@@ -298,7 +301,7 @@ public class AlertPatch implements Serializable {
     }
 
     public void setRoute(AgencyAndId route) {
-        this.route = route;
+        this.route.add(route);
     }
 
     public void setTrip(AgencyAndId trip) {

@@ -1,19 +1,10 @@
 package org.opentripplanner.index;
 import static java.util.Collections.emptyList;
 
+import java.util.*;
+
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -185,6 +176,8 @@ public class IndexGraphQLSchema {
         .build();
 
     private final GtfsRealtimeFuzzyTripMatcher fuzzyTripMatcher;
+    
+    public GraphQLOutputType routeHeadsignMapType = new GraphQLTypeReference("RouteHeadsignMapType");
 
     public GraphQLOutputType agencyType = new GraphQLTypeReference("Agency");
 
@@ -714,8 +707,15 @@ public class IndexGraphQLSchema {
                 .build())
             .field(GraphQLFieldDefinition.newFieldDefinition()
                 .name("route")
-                .type(routeType)
-                .dataFetcher(environment -> index.routeForId.get(((AlertPatch) environment.getSource()).getRoute()))
+                .type(new GraphQLList(routeType))
+                .dataFetcher(environment -> {
+                    List<AgencyAndId> rts = ((AlertPatch) environment.getSource()).getRoute();
+                    List<Route> routes = null;
+                    routes = rts.stream()
+                            .map(route -> index.routeForId.get(route))
+                            .collect(Collectors.toList());
+                    return routes;
+                })
                 .build())
             .field(GraphQLFieldDefinition.newFieldDefinition()
                 .name("trip")
@@ -988,6 +988,23 @@ public class IndexGraphQLSchema {
                 .dataFetcher(environment -> ((StopCluster) environment.getSource()).children)
                 .build())
             .build();
+        
+        routeHeadsignMapType = GraphQLObjectType.newObject()
+                        .name("RouteHeadsignMapType")
+                        .description("Route mapped with its most popular headsign")
+                        .field(GraphQLFieldDefinition.newFieldDefinition()
+                                .name("route")
+                                .description("Route")
+                                .type(routeType)
+                                .dataFetcher(environment -> ((Map.Entry<Route,String>) environment.getSource()).getKey())
+                                .build())
+                        .field(GraphQLFieldDefinition.newFieldDefinition()
+                                .name("headsign")
+                                .description("The most popular headsign for a route")
+                                .type(Scalars.GraphQLString)
+                                .dataFetcher(environment -> ((Map.Entry<Route,String>) environment.getSource()).getValue())
+                                .build())
+                        .build();
 
         stopType = GraphQLObjectType.newObject()
             .name("Stop")
@@ -1131,6 +1148,69 @@ public class IndexGraphQLSchema {
                 .dataFetcher(environment -> index.patternsForStop.get(environment.getSource()))
                 .build())
             .field(GraphQLFieldDefinition.newFieldDefinition()
+                           .name("topDestinationsForToday")
+                            .type(new GraphQLList(routeHeadsignMapType))
+                            .argument(GraphQLArgument.newArgument()
+                                .name("serviceDay")
+                                .type(Scalars.GraphQLString)
+                                .defaultValue(null)
+                                .build())
+                            .dataFetcher(environment -> {
+                                  try {
+                                      BitSet services = index.servicesRunning(
+                                              ServiceDate.parseString(environment.getArgument("serviceDay"))
+                                      );
+            
+                                      List<Map.Entry<Route, String>> routeHeadsignList = new ArrayList<Map.Entry<Route, String>>();
+                                      Map<Route, Long> routeTripCount = new HashMap<Route, Long>();
+                                      index.routesForStop(((Stop)environment
+                                                .getSource()))
+                                                .stream()
+                                                .forEach((route) -> {
+                                                Map<TripPattern, Long> tripCountMap = new HashMap<TripPattern, Long>();
+            
+                                                if(!routeTripCount.containsValue(route))
+                                                    routeTripCount.put(route, new Long(0));
+                                                index.patternsForStop.get((Stop)environment.getSource())
+                                                     .stream()
+                                                     .filter(pattern -> index.patternsForRoute.get(route).contains(pattern))
+                                                     .forEach((pattern) -> {
+                                                         long count = pattern.scheduledTimetable.tripTimes
+                                                                 .stream()
+                                                                 .filter(times -> services.get(times.serviceCode))
+                                                                 .map(times -> times.trip).count();
+            
+                                                          tripCountMap.put(pattern, count);
+                                                          routeTripCount.put(route, routeTripCount.get(route)+ count);
+                                                     });
+            
+                                                     String headsignForRoute = tripCountMap
+                                                                                     .entrySet()
+                                                                                     .stream()
+                                                                                     .max(Map.Entry.comparingByValue())
+                                                                                     .get()
+                                                                                     .getKey()
+                                                                                     .getDirection();
+            
+                                                     routeHeadsignList.add(new AbstractMap.SimpleEntry<Route, String>(route, headsignForRoute));
+                                                });
+            
+                                      if(routeHeadsignList != null) {
+            
+                                          routeHeadsignList.sort((Map.Entry<Route, String> e1, Map.Entry<Route, String> e2) ->
+                                                  (int) (routeTripCount.get(e2.getKey()) - routeTripCount.get(e1.getKey())));
+                                          return routeHeadsignList;
+                                      }
+            
+            
+                                      return null;
+            
+                                  } catch (ParseException e) {
+                                         return null; // Invalid date format
+                                  }
+                               })
+                            .build())
+                        .field(GraphQLFieldDefinition.newFieldDefinition()
                 .name("transfers")               //TODO: add max distance as parameter?
                 .type(new GraphQLList(stopAtDistanceType))
                 .dataFetcher(environment -> index.stopVertexForStop
@@ -2521,16 +2601,39 @@ public class IndexGraphQLSchema {
                     .name("feeds")
                     .type(new GraphQLList(new GraphQLNonNull(Scalars.GraphQLString)))
                     .build())
-                .dataFetcher(environment -> environment.getArgument("feeds") != null
-                    ? index.getAlerts()
-                        .stream()
-                        .filter(alertPatch ->
-                            ((List) environment.getArgument("feeds"))
-                                .contains(alertPatch.getFeedId())
-                        )
-                        .collect(Collectors.toList())
-                    : index.getAlerts()
-                )
+                .argument(GraphQLArgument.newArgument()
+                    .name("modes")
+                    .type(Scalars.GraphQLString)
+                    .build())
+                .dataFetcher(environment ->  {
+                    List <AlertPatch> alerts = index.getAlerts();
+                    if(alerts != null) {
+                        if(environment.getArgument("feeds") != null)
+                            alerts = alerts
+                                     .stream()
+                                     .filter(alertPatch ->
+                                        ((List) environment.getArgument("feeds"))
+                                            .contains(alertPatch.getFeedId())
+                                     )
+                                .collect(Collectors.toList());
+                        if(environment.getArgument("modes") != null) {
+                            Set<TraverseMode> modes = new QualifiedModeSet(
+                                    environment.getArgument("modes")).qModes
+                                    .stream()
+                                    .map(qualifiedMode -> qualifiedMode.mode)
+                                    .filter(TraverseMode::isTransit)
+                                    .collect(Collectors.toSet());
+                            alerts = alerts
+                                     .stream()
+                                     .filter(alertPatch ->
+                                      modes.contains(GtfsLibrary.getTraverseMode(
+                                              index.routeForId.get(alertPatch.getRoute() instanceof  AgencyAndId ? alertPatch.getRoute() : alertPatch.getRoute().get(0)))))
+                                     .collect(Collectors.toList());
+                        }
+                    }
+
+                    return alerts;
+                })
                 .build())
             .field(GraphQLFieldDefinition.newFieldDefinition()
                 .name("serviceTimeRange")

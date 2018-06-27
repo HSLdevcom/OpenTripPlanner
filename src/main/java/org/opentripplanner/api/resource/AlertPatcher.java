@@ -16,6 +16,7 @@ package org.opentripplanner.api.resource;
 import static org.opentripplanner.api.resource.ServerInfo.Q;
 
 import java.util.Collection;
+import java.util.List;
 
 import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.Consumes;
@@ -34,6 +35,8 @@ import org.opentripplanner.api.model.alertpatch.AlertPatchResponse;
 import org.opentripplanner.api.model.alertpatch.AlertPatchSet;
 import org.opentripplanner.routing.alertpatch.AlertPatch;
 import org.opentripplanner.routing.services.AlertPatchService;
+
+
 
 @Path("/patch")
 @XmlRootElement
@@ -95,11 +98,12 @@ public class AlertPatcher {
                 return response;
             }
 
-            final AgencyAndId route = alertPatch.getRoute();
-            if (route != null && route.getId().equals("")) {
-                response.status = "Every route patch must have a route id";
-                return response;
-            }
+            final List<AgencyAndId> routes = alertPatch.getRoute();
+              for(AgencyAndId route : routes)
+                  if (route != null && route.getId().equals("")) {
+                      response.status = "Every route patch must have a route id";
+                      return response;
+                  }
         }
         for (AlertPatch alertPatch : alertPatches.alertPatches) {
             alertPatchService.apply(alertPatch);
