@@ -79,9 +79,9 @@
 
     <properties>
         <geotools.version>10.5</geotools.version>
-        <jackson.version>2.5.3</jackson.version>
+        <jackson.version>2.9.7</jackson.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <aws.version>1.11.456</aws.version>
+        <aws.version>1.11.459</aws.version>
     </properties>
 
     <distributionManagement>
@@ -468,7 +468,7 @@
         <dependency>
             <groupId>de.ruedigermoeller</groupId>
             <artifactId>fst</artifactId>
-            <version>2.34</version>
+            <version>2.44.6</version>
         </dependency>
         <!-- XXX: temporary fox for the build that is currently broken because some transitive deps are not handled correctly -->
         <dependency>
