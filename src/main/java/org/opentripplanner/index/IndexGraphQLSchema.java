@@ -1,5 +1,8 @@
 package org.opentripplanner.index;
 
+import java.util.List;
+import com.beust.jcommander.internal.Lists;
+
 import com.google.transit.realtime.GtfsRealtime;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
@@ -37,6 +40,7 @@ import org.opentripplanner.routing.graph.GraphIndex;
 import org.opentripplanner.routing.graph.GraphIndex.PlaceAndDistance;
 import org.opentripplanner.routing.trippattern.RealTimeState;
 import org.opentripplanner.routing.trippattern.TripTimes;
+import org.opentripplanner.routing.trippattern.FrequencyEntry;
 import org.opentripplanner.routing.vertextype.TransitVertex;
 import org.opentripplanner.updater.GtfsRealtimeFuzzyTripMatcher;
 import org.opentripplanner.updater.stoptime.TimetableSnapshotSource;
@@ -1819,9 +1823,30 @@ public class IndexGraphQLSchema {
                         .name("stoptimes")
                         .description("List of times when this trip arrives to or departs from a stop")
                         .type(new GraphQLList(stoptimeType))
-                        .dataFetcher(environment -> TripTimeShort.fromTripTimes(
-                                index.patternForTrip.get((Trip) environment.getSource()).scheduledTimetable,
-                                environment.getSource()))
+                        .dataFetcher(environment ->{
+                                Timetable timetable = index.patternForTrip.get((Trip) environment.getSource()).scheduledTimetable;
+
+                                // If the Trip is frequency-based, there are no scheduled tripTimes (they must com from <FrequencyEntry>.tripTimes)
+                                if (timetable.tripTimes.isEmpty()) {
+
+                                        // This should probably be encapsulated into a function named TripTimeShort.fromFrequencyTripTimes,
+                                        // since it does the same as existing function TripTimeShort.fromTripTimes, but for Frequency.
+                                        // Or, it could also be moved into TripTimeShort.fromTripTimes.
+
+                                        List<TripTimeShort> out = Lists.newArrayList();
+
+                                        for (FrequencyEntry freq : timetable.frequencyEntries) {
+                                              TripTimes times = freq.tripTimes;
+                                               // one per stop, not one per hop, thus the <= operator
+                                               for (int i = 0; i < times.getNumStops(); ++i) {
+                                                         out.add(new TripTimeShort(times, i, timetable.pattern.getStop(i), null));
+                                               }
+                                        }
+					return out;
+                               } else {
+                                	return TripTimeShort.fromTripTimes(timetable, environment.getSource());
+                               }
+                        })
                         .build())
                 .field(GraphQLFieldDefinition.newFieldDefinition()
                         .name("departureStoptime")
