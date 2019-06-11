@@ -79,7 +79,7 @@
 
     <properties>
         <geotools.version>10.5</geotools.version>
-        <jackson.version>2.5.3</jackson.version>
+        <jackson.version>2.9.8</jackson.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <aws.version>1.11.456</aws.version>
     </properties>
@@ -505,7 +505,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>18.0</version>
+            <version>24.1.1-jre</version>
         </dependency>
         <!-- Trove provides optimized map/set collections for native types (int, long...) -->
         <dependency>
