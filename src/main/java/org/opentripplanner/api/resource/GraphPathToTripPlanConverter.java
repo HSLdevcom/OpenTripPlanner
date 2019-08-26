@@ -46,6 +46,7 @@ public abstract class GraphPathToTripPlanConverter {
     private static final double MAX_ZAG_DISTANCE = 30; // TODO add documentation, what is a "zag"?
     private static final double WALK_LEG_DISTANCE_EPSILON = 2.0;
     private static final double WALK_LEG_DURATION_EPSILON = 5e3;
+    private static final double MIN_ELEVATION_DISTANCE_DIFFERENCE = 5.0;
 
     /**
      * Generates a TripPlan from a set of paths
@@ -164,7 +165,7 @@ public abstract class GraphPathToTripPlanConverter {
 
         calculateTimes(itinerary, states);
 
-        calculateElevations(itinerary, edges);
+        calculateElevations(itinerary);
 
         itinerary.walkDistance = lastState.getWalkDistance();
 
@@ -512,27 +513,32 @@ public abstract class GraphPathToTripPlanConverter {
     /**
      * Calculate the elevationGained and elevationLost fields of an {@link Itinerary}.
      *
-     * @param itinerary The itinerary to calculate the elevation changes for
-     * @param edges The edges that go with the itinerary
+     * @param itinerary The itinerary to calculate the elevation changes for and from
      */
-    private static void calculateElevations(Itinerary itinerary, Edge[] edges) {
-        for (Edge edge : edges) {
-            if (!(edge instanceof StreetEdge)) continue;
-
-            StreetEdge edgeWithElevation = (StreetEdge) edge;
-            PackedCoordinateSequence coordinates = edgeWithElevation.getElevationProfile();
-
-            if (coordinates == null) continue;
-            // TODO Check the test below, AFAIU current elevation profile has 3 dimensions.
-            if (coordinates.getDimension() != 2) continue;
-
-            for (int i = 0; i < coordinates.size() - 1; i++) {
-                double change = coordinates.getOrdinate(i + 1, 1) - coordinates.getOrdinate(i, 1);
-
-                if (change > 0) {
-                    itinerary.elevationGained += change;
-                } else if (change < 0) {
-                    itinerary.elevationLost -= change;
+    private static void calculateElevations(Itinerary itinerary) {
+        for (Leg leg : itinerary.legs) {
+            Double lastElevation = null;
+            for (WalkStep step : leg.walkSteps) {
+                List<P2<Double>> elevationValues = step.elevation;
+                // Calculate elevation change between steps
+                if (lastElevation != null && elevationValues.size() > 0) {
+                    double change = elevationValues.get(0).second - lastElevation;
+                    if (change > 0) {
+                        itinerary.elevationGained += change;
+                    } else if (change < 0) {
+                        itinerary.elevationLost -= change;
+                    }
+                    lastElevation = elevationValues.get(elevationValues.size() - 1).second;
+                }
+                // Calculate elevation changes between elevation values of a step
+                for (int i = 0; i < elevationValues.size() - 1; i++) {
+                    double change = elevationValues.get(i + 1).second -
+                            elevationValues.get(i).second;
+                    if (change > 0) {
+                        itinerary.elevationGained += change;
+                    } else if (change < 0) {
+                        itinerary.elevationLost -= change;
+                    }
                 }
             }
         }
@@ -1007,7 +1013,6 @@ public abstract class GraphPathToTripPlanConverter {
                             // succession; this is probably a U-turn.
                             
                             steps.remove(last - 1);
-                            
                             lastStep.distance += twoBack.distance;
                             
                             // A U-turn to the left, typical in the US. 
@@ -1033,12 +1038,10 @@ public abstract class GraphPathToTripPlanConverter {
                             step.distance += twoBack.distance;
                             distance += step.distance;
                             if (twoBack.elevation != null) {
-                                if (step.elevation == null) {
+                                if (step.elevation == null || step.elevation.size() == 0) {
                                     step.elevation = twoBack.elevation;
                                 } else {
-                                    for (P2<Double> d : twoBack.elevation) {
-                                        step.elevation.add(new P2<Double>(d.first + step.distance, d.second));
-                                    }
+                                    step.elevation = appendElevationProfile(step.elevation, twoBack.elevation, step.distance);
                                 }
                             }
                         }
@@ -1046,16 +1049,15 @@ public abstract class GraphPathToTripPlanConverter {
                 }
             } else {
                 if (!createdNewStep && step.elevation != null) {
-                    List<P2<Double>> s = encodeElevationProfile(edge, distance,
+                    List<P2<Double>> elevationValues = encodeElevationProfile(edge, distance,
                             backState.getOptions().geoidElevation ? -graph.ellipsoidToGeoidDifference : 0);
                     if (step.elevation != null && step.elevation.size() > 0) {
-                        step.elevation.addAll(s);
+                        step.elevation = appendElevationProfile(step.elevation, elevationValues, 0);
                     } else {
-                        step.elevation = s;
+                        step.elevation = elevationValues;
                     }
+                    distance += edge.getDistance();
                 }
-                distance += edge.getDistance();
-
             }
 
             // increment the total length for this step
@@ -1113,6 +1115,21 @@ public abstract class GraphPathToTripPlanConverter {
         return step;
     }
 
+    private static List<P2<Double>> appendElevationProfile(List<P2<Double>> profile, List<P2<Double>> profileToAdd, double distanceOffset) {
+        if (profileToAdd.size() > 0) {
+            Double lastElevationDistance = profile.get(profile.size() - 1).first;
+            Double firstElevationDistance = profileToAdd.get(0).first + distanceOffset;
+            if (firstElevationDistance - lastElevationDistance > MIN_ELEVATION_DISTANCE_DIFFERENCE) {
+                profile.add(new P2<Double>(firstElevationDistance, profileToAdd.get(0).second));
+            }
+            for (int j = 1; j < profileToAdd.size(); j++) {
+                P2<Double> elevationPair = profileToAdd.get(j);
+                profile.add(new P2<Double>(elevationPair.first + distanceOffset, elevationPair.second));
+            }
+        }
+        return profile;
+    }
+
     private static List<P2<Double>> encodeElevationProfile(Edge edge, double distanceOffset, double heightOffset) {
         if (!(edge instanceof StreetEdge)) {
             return new ArrayList<P2<Double>>();
@@ -1123,8 +1140,14 @@ public abstract class GraphPathToTripPlanConverter {
         }
         ArrayList<P2<Double>> out = new ArrayList<P2<Double>>();
         Coordinate[] coordArr = elevEdge.getElevationProfile().toCoordinateArray();
+        Double lastDistance = null;
         for (int i = 0; i < coordArr.length; i++) {
-            out.add(new P2<Double>(coordArr[i].x + distanceOffset, coordArr[i].y + heightOffset));
+            if (lastDistance == null || coordArr[i].x - lastDistance >
+                    MIN_ELEVATION_DISTANCE_DIFFERENCE) {
+                out.add(new P2<Double>(coordArr[i].x + distanceOffset,
+                        coordArr[i].y + heightOffset));
+                lastDistance = coordArr[i].x;
+            }
         }
         return out;
     }

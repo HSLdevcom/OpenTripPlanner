@@ -12,12 +12,14 @@ import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import org.junit.Test;
 import org.opentripplanner.common.geometry.GeometryUtils;
+import org.opentripplanner.common.geometry.PackedCoordinateSequence;
 import org.opentripplanner.common.geometry.SphericalDistanceLibrary;
 import org.opentripplanner.common.model.P2;
 import org.opentripplanner.profile.StopTreeCache;
 import org.opentripplanner.routing.edgetype.StreetEdge;
 import org.opentripplanner.routing.edgetype.StreetTransitLink;
 import org.opentripplanner.routing.edgetype.StreetTraversalPermission;
+import org.opentripplanner.routing.edgetype.StreetWithElevationEdge;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
@@ -76,6 +78,47 @@ public class LinkingTest {
             assertTrue(sp1.first.isBack());
             assertTrue(sp1.second.isBack());
         }
+    }
+
+    /**
+     * Makes sure edges resulting from the split have their parent's elevation data split among them
+     */
+    @Test
+    public void testSplittingWithElevation () {
+        GeometryFactory gf= GeometryUtils.getGeometryFactory();
+        double x = -122.123;
+        double y = 37.363;
+
+        StreetVertex v0 = new IntersectionVertex(null, "zero", x, y);
+        StreetVertex v1 = new IntersectionVertex(null, "one", x + 0.00005, y + 0.00005);
+        LineString geom = gf.createLineString(new Coordinate[] { v0.getCoordinate(), v1.getCoordinate() });
+        double dist = SphericalDistanceLibrary.distance(v0.getCoordinate(), v1.getCoordinate());
+        StreetWithElevationEdge s0 = new StreetWithElevationEdge(v0, v1, geom, "test", dist, StreetTraversalPermission.ALL, false);
+
+        int x_length = 10;
+        Coordinate[] c = new Coordinate[6];
+        // [(0, 10), (2, 8), (4, 6), (6, 4), (8, 2), (10, 0)]
+        for (int i = 0; i <= x_length; i += 2) {
+            c[i / 2] = new Coordinate(i, x_length - i);
+        }
+        PackedCoordinateSequence elevationProfile = new PackedCoordinateSequence.Double(c, 2);
+        s0.setElevationProfile(elevationProfile, false);
+
+        SplitterVertex sv0 = new SplitterVertex(null, "split", x + 0.000025, y + 0.000025, s0);
+
+        P2<StreetEdge> sp0 = s0.split(sv0, true);
+
+        StreetWithElevationEdge first = (StreetWithElevationEdge) sp0.first;
+        StreetWithElevationEdge second = (StreetWithElevationEdge) sp0.second;
+        Coordinate[] firstElevation = first.getElevationProfile().toCoordinateArray();
+        Coordinate[] secondElevation = second.getElevationProfile().toCoordinateArray();
+        assertEquals(s0.getDistance(), first.getDistance() + second.getDistance(), 0);
+        assertEquals(0, firstElevation[0].x, 0);
+        assertEquals(first.getDistance(), firstElevation[firstElevation.length - 1].x, 0);
+        assertEquals(0, secondElevation[0].x, 0);
+        // TODO distance and elevation distance are off by 1mm
+        assertEquals(second.getDistance(), secondElevation[secondElevation.length - 1].x, 0.0011);
+        assertTrue(firstElevation[0].y > secondElevation[0].y);
     }
 
     /**

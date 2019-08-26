@@ -45,7 +45,6 @@ import org.opentripplanner.routing.edgetype.AreaEdgeList;
 import org.opentripplanner.routing.edgetype.FreeEdge;
 import org.opentripplanner.routing.edgetype.LegSwitchingEdge;
 import org.opentripplanner.routing.edgetype.OnBoardDepartPatternHop;
-import org.opentripplanner.routing.edgetype.PartialStreetEdge;
 import org.opentripplanner.routing.edgetype.PatternDwell;
 import org.opentripplanner.routing.edgetype.PatternHop;
 import org.opentripplanner.routing.edgetype.PatternInterlineDwell;
@@ -59,6 +58,7 @@ import org.opentripplanner.routing.edgetype.StreetEdge;
 import org.opentripplanner.routing.edgetype.StreetTransitLink;
 import org.opentripplanner.routing.edgetype.StreetTraversalPermission;
 import org.opentripplanner.routing.edgetype.StreetWithElevationEdge;
+import org.opentripplanner.routing.edgetype.TemporaryPartialStreetEdge;
 import org.opentripplanner.routing.edgetype.TimetableSnapshot;
 import org.opentripplanner.routing.edgetype.TransitBoardAlight;
 import org.opentripplanner.routing.edgetype.TripPattern;
@@ -76,6 +76,7 @@ import org.opentripplanner.routing.vertextype.IntersectionVertex;
 import org.opentripplanner.routing.vertextype.OnboardDepartVertex;
 import org.opentripplanner.routing.vertextype.PatternArriveVertex;
 import org.opentripplanner.routing.vertextype.PatternDepartVertex;
+import org.opentripplanner.routing.vertextype.StreetVertex;
 import org.opentripplanner.routing.vertextype.TransitStop;
 import org.opentripplanner.routing.vertextype.TransitStopArrive;
 import org.opentripplanner.routing.vertextype.TransitStopDepart;
@@ -588,7 +589,7 @@ public class GraphPathToTripPlanConverterTest {
                 v50, v52, 0);
         StreetEdge e53p = new StreetEdge(v52, v54, l53, "Edge 53", 1.0,
                 StreetTraversalPermission.ALL, false);
-        PartialStreetEdge e53 = new PartialStreetEdge(e53p, v52, v54, l53, "Edge 53", 1.0);
+        TemporaryPartialStreetEdge e53 = newTemporaryPartialStreetEdge(e53p, v52, v54, l53, "Edge 53", 1.0);
         StreetBikeRentalLink e55 = new StreetBikeRentalLink(
                 v54, v56);
         RentABikeOffEdge e57 = new RentABikeOffEdge(
@@ -901,28 +902,7 @@ public class GraphPathToTripPlanConverterTest {
         }
         compareStopIds(stopIds, type);
 
-        /*
-         * This four-dimensional array is indexed as follows:
-         *
-         * [X][ ][ ][ ] The leg number
-         * [ ][X][ ][ ] The walk step number
-         * [ ][ ][X][ ] 0 for the start of the walk step, 1 for the end
-         * [ ][ ][ ][X] 0 for the distance traveled, 1 for the actual elevation
-         *
-         * Although technically, this particular array is not jagged, some of its elements are null.
-         */
-        Double[][][][] elevations = new Double[9][2][2][2];
-        for (int i = 0; i < elevations.length; i++) {
-            for (int j = 0; j < elevations[i].length; j++) {
-                if (steps[i].length <= j) break;
-                for (int k = 0; k < elevations[i][j].length; k++) {
-                    if (steps[i][j].elevation.size() <= k) break;
-                    elevations[i][j][k][0] = steps[i][j].elevation.get(k).first;
-                    elevations[i][j][k][1] = steps[i][j].elevation.get(k).second;
-                }
-            }
-        }
-        compareElevations(elevations, type);
+        compareElevations(steps, type);
     }
 
     /** Compare all simple itinerary fields to their expected values. */
@@ -1894,7 +1874,36 @@ public class GraphPathToTripPlanConverterTest {
     }
 
     /** Compare the elevations to their expected values, step by step. */
-    private void compareElevations(Double[][][][] elevations, Type type) {
+    private void compareElevations(WalkStep[][] steps, Type type) {
+
+        /*
+         * This four-dimensional array is indexed as follows:
+         *
+         * [X][ ][ ][ ] The leg number
+         * [ ][X][ ][ ] The walk step number
+         * [ ][ ][X][ ] 0 for the start of the walk step, 1 for the end
+         * [ ][ ][ ][X] 0 for the distance traveled, 1 for the actual elevation
+         *
+         * Although technically, this particular array is not jagged, some of its elements are null.
+         */
+        Double[][][][] elevations = new Double[9][2][2][2];
+        for (int i = 0; i < elevations.length; i++) {
+            for (int j = 0; j < elevations[i].length; j++) {
+                if (steps[i].length <= j) break;
+                Double lastDistance = null;
+                for (int k = 0; k < elevations[i][j].length; k++) {
+                    if (steps[i][j].elevation.size() <= k) break;
+                    elevations[i][j][k][0] = steps[i][j].elevation.get(k).first;
+                    elevations[i][j][k][1] = steps[i][j].elevation.get(k).second;
+                    lastDistance = steps[i][j].elevation.get(k).second;
+                }
+                if (lastDistance != null) {
+                    // Test that the total distance of the step equals the last elevation distance
+                    assertEquals(steps[i][j].distance, lastDistance, 0.0);
+                }
+            }
+        }
+
         if (type == Type.FORWARD || type == Type.BACKWARD) {
             assertEquals(0.0, elevations[0][0][0][0], 0.0);
             assertEquals(0.0, elevations[0][0][0][1], 0.0);
@@ -1991,6 +2000,11 @@ public class GraphPathToTripPlanConverterTest {
         assertNull(elevations[8][1][0][1]);
         assertNull(elevations[8][1][1][0]);
         assertNull(elevations[8][1][1][1]);
+    }
+
+
+    static TemporaryPartialStreetEdge newTemporaryPartialStreetEdge(StreetEdge parentEdge, StreetVertex v1, StreetVertex v2, LineString geometry, String name, double length) {
+        return new TemporaryPartialStreetEdge(parentEdge, v1, v2, geometry, new NonLocalizedString(name), length);
     }
 
     /**

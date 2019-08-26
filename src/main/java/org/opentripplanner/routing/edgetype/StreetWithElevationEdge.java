@@ -2,9 +2,10 @@ package org.opentripplanner.routing.edgetype;
 
 import org.opentripplanner.common.geometry.CompactElevationProfile;
 import org.opentripplanner.common.geometry.PackedCoordinateSequence;
-import org.opentripplanner.common.geometry.SphericalDistanceLibrary;
+import org.opentripplanner.common.model.P2;
 import org.opentripplanner.routing.util.ElevationUtils;
 import org.opentripplanner.routing.util.SlopeCosts;
+import org.opentripplanner.routing.vertextype.SplitterVertex;
 import org.opentripplanner.routing.vertextype.StreetVertex;
 
 import com.vividsolutions.jts.geom.LineString;
@@ -31,6 +32,8 @@ public class StreetWithElevationEdge extends StreetEdge {
     private boolean flattened;
 
     private double effectiveWalkFactor = 1.0;
+
+    private boolean elevationSet = false;
 
     /**
      * Remember to call the {@link #setElevationProfile(PackedCoordinateSequence, boolean)} to initiate elevation data.
@@ -70,7 +73,43 @@ public class StreetWithElevationEdge extends StreetEdge {
 
         bicycleSafetyFactor *= costs.lengthMultiplier;
         bicycleSafetyFactor += costs.slopeSafetyCost / getDistance();
+        elevationSet = true;
         return costs.flattened;
+    }
+
+    /** Create new StreetWithElevationEdge */
+    @Override
+    protected StreetEdge createEdge(StreetVertex fromVertex, StreetVertex toVertex,
+            LineString geometry, I18NString name, double length, StreetTraversalPermission permission,
+            boolean back) {
+        return new StreetWithElevationEdge(fromVertex, toVertex, geometry, name, length, permission, back);
+    }
+
+    /** Split this street edge and return the resulting street edges */
+    @Override
+    public P2<StreetEdge> split(SplitterVertex v, boolean destructive) {
+        P2<StreetEdge> edges = super.split(v, destructive);
+        StreetWithElevationEdge firstEdge = (StreetWithElevationEdge) edges.first;
+        // TemporaryPartialStreetEdges should already have elevation
+        if (firstEdge != null && !firstEdge.hasElevation()) {
+            firstEdge.setElevationProfile(
+                    ElevationUtils.getPartialElevationProfile(
+                            this.getElevationProfile(), 0, firstEdge.getDistance()
+                    ),
+                    false
+            );
+        }
+        StreetWithElevationEdge secondEdge = (StreetWithElevationEdge) edges.second;
+        if (secondEdge != null && !secondEdge.hasElevation()) {
+            secondEdge.setElevationProfile(
+                    ElevationUtils.getPartialElevationProfile(
+                            this.getElevationProfile(),
+                            this.getDistance() - secondEdge.getDistance(), this.getDistance()
+                    ),
+                    false
+            );
+        }
+        return edges;
     }
 
     @Override
@@ -105,6 +144,13 @@ public class StreetWithElevationEdge extends StreetEdge {
     public double getSlopeWalkSpeedEffectiveLength() {
         // Convert from fixed millimeters to double meters
         return effectiveWalkFactor * getDistance();
+    }
+
+    /**
+     * Has elevation been already set for this edge.
+     */
+    public boolean hasElevation() {
+        return elevationSet;
     }
 
     @Override

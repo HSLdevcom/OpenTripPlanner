@@ -4,7 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.opentripplanner.common.geometry.PackedCoordinateSequence;
-import org.opentripplanner.routing.util.elevation.ToblersHickingFunction;
+import org.opentripplanner.routing.util.elevation.ToblersHikingFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +24,7 @@ public class ElevationUtils {
 
     /**
      * If the calculated factor is more than this constant, we ignore the calculated factor and use this
-     * constant in stead. See ths table in {@link ToblersHickingFunction} for a mapping between the
+     * constant in stead. See ths table in {@link ToblersHikingFunction} for a mapping between the
      * factor and angels(degree and percentage). A factor of 3 with take effect for slopes with a
      * incline above 31.4% and a decline below 41.4%. The worlds steepest road ia about 35%, and the
      * steepest climes in Tour De France is usually in the range 8-12%. Some walking paths may be quite
@@ -32,7 +32,7 @@ public class ElevationUtils {
      */
     private static final double MAX_SLOPE_WALK_EFFECTIVE_LENGTH_FACTOR = 3;
 
-    private static final ToblersHickingFunction toblerWalkingFunction = new ToblersHickingFunction(MAX_SLOPE_WALK_EFFECTIVE_LENGTH_FACTOR);
+    private static final ToblersHikingFunction toblerWalkingFunction = new ToblersHikingFunction(MAX_SLOPE_WALK_EFFECTIVE_LENGTH_FACTOR);
 
     private static double[] getLengthsFromElevation(CoordinateSequence elev) {
 
@@ -253,7 +253,7 @@ public class ElevationUtils {
 
     /**
      * <p>
-     *     We use the Tobler function {@link ToblersHickingFunction} to calculate this.
+     *     We use the Tobler function {@link ToblersHikingFunction} to calculate this.
      * </p>
      * <p>
      *     When testing this we get good results in general, but for some edges
@@ -281,43 +281,43 @@ public class ElevationUtils {
         if (end > length)
             end = length;
 
-        boolean started = false;
-        boolean finished = false;
         Coordinate lastCoord = null;
         for (Coordinate coord : coordinateArray) {
             if (coord.x >= start && coord.x <= end) {
-                coordList.add(new Coordinate(coord.x - start, coord.y));
-                if (!started) {
-                    started = true;
-                    if (lastCoord == null) {
-                       //no need to interpolate as this is the first coordinate
-                        continue;
-                    }
-                    // interpolate start coordinate 
-                    double run = coord.x - lastCoord.x;
-                    if (run < 1) {
-                        //tiny runs are likely to lead to errors, so we'll skip them
-                        continue;
-                    }
+                // No point to try to interpolate the start coordinate when the current coord is
+                // the first coordinate or the current coordinate is close to the last coordinate
+                if (coordList.size() == 0 && lastCoord != null &&
+                        coord.x - start - lastCoord.x >= 1) {
+                    double run = coord.x - start - lastCoord.x;
                     double p = (coord.x - start) / run;
                     double rise = coord.y - lastCoord.y;
-                    Coordinate interpolatedStartCoordinate = new Coordinate(0, lastCoord.y + p * rise);
-                    coordList.add(0, interpolatedStartCoordinate);
+                    Coordinate interpolatedStartCoordinate =
+                            new Coordinate(0, lastCoord.y + p * rise);
+                    coordList.add(interpolatedStartCoordinate);
+                    lastCoord = interpolatedStartCoordinate;
                 }
-            } else if (coord.x > end && !finished && started && lastCoord != null) {
-                finished = true;
-                // interpolate end coordinate
-                double run = coord.x - lastCoord.x;
-                if (run < 1) {
-                    //tiny runs are likely to lead to errors, so we'll skip them
-                    continue;
+                Coordinate fixedCoord = new Coordinate(coord.x - start, coord.y);
+                coordList.add(fixedCoord);
+                lastCoord = fixedCoord;
+            } else if (coord.x > end) {
+                if (lastCoord != null && coord.x - start - lastCoord.x >= 1) {
+                    // interpolate end coordinate
+                    double run = coord.x - start - lastCoord.x;
+                    double p = (end - start - lastCoord.x) / run;
+                    double rise = coord.y - lastCoord.y;
+                    Coordinate interpolatedEndCoordinate =
+                            new Coordinate(end - start, lastCoord.y + p * rise);
+                    coordList.add(interpolatedEndCoordinate);
+                    break;
+                } else if (lastCoord == null) {
+                    // no last coordinate to interpolate from
+                    // so just use the elevation from the current coordinate
+                    coordList.add(new Coordinate(end - start, coord.y));
+                    break;
                 }
-                double p = (end - lastCoord.x) / run;
-                double rise = coord.y - lastCoord.y;
-                Coordinate interpolatedEndCoordinate = new Coordinate(end, lastCoord.y + p * rise);
-                coordList.add(interpolatedEndCoordinate);
+            } else {
+                lastCoord = new Coordinate(coord.x - start, coord.y);
             }
-            lastCoord = coord;
         }
 
         Coordinate coordArr[] = new Coordinate[coordList.size()];

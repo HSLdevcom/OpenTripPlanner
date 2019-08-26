@@ -242,13 +242,6 @@ public class StreetEdge extends Edge implements Cloneable {
         return length_mm / 1000.0; // CONVERT FROM FIXED MILLIMETERS TO FLOAT METERS
     }
 
-    /**
-     * Accessor to retrive the length in mm, for subclasses only.
-     */
-    protected int getLength_mm() {
-        return length_mm;
-    }
-
     @Override
     public State traverse(State s0) {
         final RoutingRequest options = s0.getOptions();
@@ -816,6 +809,13 @@ public class StreetEdge extends Edge implements Cloneable {
         length_mm = (int) (accumulatedMeters * 1000);
     }
 
+    /** Create new StreetEdge */
+    protected StreetEdge createEdge(StreetVertex fromVertex, StreetVertex toVertex,
+            LineString geometry, I18NString name, double length, StreetTraversalPermission permission,
+            boolean back) {
+        return new StreetEdge(fromVertex, toVertex, geometry, name, length, permission, back);
+    }
+
     /** Split this street edge and return the resulting street edges */
     public P2<StreetEdge> split(SplitterVertex v, boolean destructive) {
         P2<LineString> geoms = GeometryUtils.splitGeometryAtPoint(getGeometry(), v.getCoordinate());
@@ -824,8 +824,8 @@ public class StreetEdge extends Edge implements Cloneable {
         StreetEdge e2 = null;
 
         if (destructive) {
-            e1 = new StreetEdge((StreetVertex) fromv, v, geoms.first, name, 0, permission, this.isBack());
-            e2 = new StreetEdge(v, (StreetVertex) tov, geoms.second, name, 0, permission, this.isBack());
+            e1 = createEdge((StreetVertex) fromv, (StreetVertex) v, geoms.first, name, 0f, permission, this.isBack());
+            e2 = createEdge((StreetVertex) v, (StreetVertex) tov, geoms.second, name, 0f, permission, this.isBack());
 
             // copy the wayId to the split edges, so we can trace them back to their parent if need be
             e1.wayId = this.wayId;
@@ -879,13 +879,11 @@ public class StreetEdge extends Edge implements Cloneable {
             }
         } else {
             if (((TemporarySplitterVertex) v).isEndVertex()) {
-                e1 = new TemporaryPartialStreetEdge(this, (StreetVertex) fromv, (TemporarySplitterVertex) v, geoms.first, name, 0);
-                e1.calculateLengthFromGeometry();
+                e1 = new TemporaryPartialStreetEdge(this, (StreetVertex) fromv, v, geoms.first, name);
                 e1.setNoThruTraffic(this.isNoThruTraffic());
                 e1.setStreetClass(this.getStreetClass());
             } else {
-                e2 = new TemporaryPartialStreetEdge(this, (TemporarySplitterVertex) v, (StreetVertex) tov, geoms.second, name, 0);
-                e2.calculateLengthFromGeometry();
+                e2 = new TemporaryPartialStreetEdge(this, v, (StreetVertex) tov, geoms.second, name);
                 e2.setNoThruTraffic(this.isNoThruTraffic());
                 e2.setStreetClass(this.getStreetClass());
             }
