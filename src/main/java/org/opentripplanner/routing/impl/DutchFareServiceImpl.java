@@ -7,8 +7,9 @@ import java.util.List;
 import org.opentripplanner.common.model.P2;
 import org.opentripplanner.routing.core.FareRuleSet;
 import org.opentripplanner.routing.core.Fare;
-import org.opentripplanner.routing.core.Fare.FareType;
+import org.opentripplanner.routing.core.FareType;
 import org.opentripplanner.routing.core.Money;
+import org.opentripplanner.routing.core.StandardFareType;
 import org.opentripplanner.routing.spt.GraphPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +17,7 @@ import org.slf4j.LoggerFactory;
 public class DutchFareServiceImpl extends DefaultFareServiceImpl {
 
     public DutchFareServiceImpl(Collection<FareRuleSet> regularFareRules) {
-        addFareRules(FareType.regular, regularFareRules);
+        addFareRules(StandardFareType.regular, regularFareRules);
     }
 
     private static final long serialVersionUID = 1L;
@@ -26,14 +27,14 @@ public class DutchFareServiceImpl extends DefaultFareServiceImpl {
     public static final int TRANSFER_DURATION = 60 * 35; /* tranfers within 35 min won't require a new base fare */
 
     final Currency euros = Currency.getInstance("EUR");
-    
+
     /**
      * This overridden method completely ignores the Currency object supplied by the caller.
      * This is because the caller in the superclass assumes the input data uses only one currency.
      * However, Dutch data contains fares in both Euros and Dutch Railways fare units, with the added complexity
      * that these pseudo-currency units do not have sub-units in the way Euros have cents, which leads to
-     * incorrect rounding and scaling etc.  While the fare rules consulted by this fare service do have a mix of EUR 
-     * and train pseudo-units, this Fare object is accumulating the monetary fare returned to the user and is known 
+     * incorrect rounding and scaling etc.  While the fare rules consulted by this fare service do have a mix of EUR
+     * and train pseudo-units, this Fare object is accumulating the monetary fare returned to the user and is known
      * to always be in Euros. See issue #2679 for discussion.
      */
     @Override
@@ -46,7 +47,7 @@ public class DutchFareServiceImpl extends DefaultFareServiceImpl {
         }
         return false;
     }
- 
+
     /* The Netherlands has an almost uniform system for electronic ticketing using a NFC-card, branded as OV-chipkaart.
      *
      * To travel through all modes in The Netherlands a uses has two products on their card:
@@ -120,7 +121,7 @@ public class DutchFareServiceImpl extends DefaultFareServiceImpl {
 
         return null;
     }
-    
+
     private float getCostByUnits(String fareZone, int units, int prevSumUnits, Collection<FareRuleSet> fareRules) {
         if (units == 0) {
             return 0f;

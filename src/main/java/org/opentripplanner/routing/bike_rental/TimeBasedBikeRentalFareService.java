@@ -6,7 +6,7 @@ import java.util.List;
 
 import org.opentripplanner.common.model.P2;
 import org.opentripplanner.routing.core.Fare;
-import org.opentripplanner.routing.core.Fare.FareType;
+import org.opentripplanner.routing.core.StandardFareType;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.WrappedCurrency;
 import org.opentripplanner.routing.services.FareService;
@@ -64,7 +64,7 @@ public class TimeBasedBikeRentalFareService implements FareService, Serializable
         }
 
         Fare fare = new Fare();
-        fare.addFare(FareType.regular, new WrappedCurrency(currency), cost);
+        fare.addFare(StandardFareType.regular, new WrappedCurrency(currency), cost);
         return fare;
     }
 }

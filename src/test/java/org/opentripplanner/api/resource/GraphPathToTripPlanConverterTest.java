@@ -33,10 +33,10 @@ import org.opentripplanner.routing.alertpatch.AlertPatch;
 import org.opentripplanner.routing.alertpatch.TimePeriod;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.core.Fare;
-import org.opentripplanner.routing.core.Fare.FareType;
 import org.opentripplanner.routing.core.RoutingContext;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.ServiceDay;
+import org.opentripplanner.routing.core.StandardFareType;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.core.WrappedCurrency;
@@ -673,7 +673,7 @@ public class GraphPathToTripPlanConverterTest {
 
         // Create dummy TimetableSnapshot
         TimetableSnapshot snapshot = new TimetableSnapshot();
-        
+
         // Mock TimetableSnapshotSource to return dummy TimetableSnapshot
         TimetableSnapshotSource timetableSnapshotSource = mock(TimetableSnapshotSource.class);
 
@@ -978,11 +978,11 @@ public class GraphPathToTripPlanConverterTest {
 
     /** Compare the computed fare to its expected value. */
     private void compareFare(Fare fare) {
-        assertEquals(0, fare.getFare(FareType.regular).getCents());
-        assertEquals(1, fare.getFare(FareType.student).getCents());
-        assertEquals(2, fare.getFare(FareType.senior).getCents());
-        assertEquals(4, fare.getFare(FareType.tram).getCents());
-        assertEquals(8, fare.getFare(FareType.special).getCents());
+        assertEquals(0, fare.getFare(StandardFareType.regular).getCents());
+        assertEquals(1, fare.getFare(StandardFareType.student).getCents());
+        assertEquals(2, fare.getFare(StandardFareType.senior).getCents());
+        assertEquals(4, fare.getFare(StandardFareType.tram).getCents());
+        assertEquals(8, fare.getFare(StandardFareType.special).getCents());
     }
 
     /** Compare all simple leg fields to their expected values, leg by leg. */
@@ -2036,11 +2036,11 @@ public class GraphPathToTripPlanConverterTest {
         @Override
         public Fare getCost(GraphPath path) {
             Fare fare = new Fare();
-            fare.addFare(FareType.regular, new WrappedCurrency(), 0);
-            fare.addFare(FareType.student, new WrappedCurrency(), 1);
-            fare.addFare(FareType.senior, new WrappedCurrency(), 2);
-            fare.addFare(FareType.tram, new WrappedCurrency(), 4);
-            fare.addFare(FareType.special, new WrappedCurrency(), 8);
+            fare.addFare(StandardFareType.regular, new WrappedCurrency(), 0);
+            fare.addFare(StandardFareType.student, new WrappedCurrency(), 1);
+            fare.addFare(StandardFareType.senior, new WrappedCurrency(), 2);
+            fare.addFare(StandardFareType.tram, new WrappedCurrency(), 4);
+            fare.addFare(StandardFareType.special, new WrappedCurrency(), 8);
             return fare;
         }
     }

@@ -4,7 +4,7 @@ import org.opentripplanner.model.FeedScopedId;
 import org.opentripplanner.model.Route;
 import org.opentripplanner.model.Trip;
 import org.opentripplanner.routing.core.Fare;
-import org.opentripplanner.routing.core.Fare.FareType;
+import org.opentripplanner.routing.core.StandardFareType;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.WrappedCurrency;
 import org.opentripplanner.routing.edgetype.DwellEdge;
@@ -23,14 +23,14 @@ import java.util.LinkedList;
 import java.util.List;
 
 enum NycFareState {
-	INIT, 
+	INIT,
 	SUBWAY_PRE_TRANSFER,
 	SUBWAY_PRE_TRANSFER_WALKED,
 	SUBWAY_POST_TRANSFER,
-	SIR_PRE_TRANSFER, 
+	SIR_PRE_TRANSFER,
 	SIR_POST_TRANSFER_FROM_SUBWAY,
-	SIR_POST_TRANSFER_FROM_BUS, 
-	EXPENSIVE_EXPRESS_BUS, 
+	SIR_POST_TRANSFER_FROM_BUS,
+	EXPENSIVE_EXPRESS_BUS,
 	BUS_PRE_TRANSFER, CANARSIE,
 }
 
@@ -39,7 +39,7 @@ enum NycFareState {
  * with the following limitations:
  * (1) the two hour limit on transfers is not enforced
  * (2) the b61/b62 special case is not handled
- * (3) MNR, LIRR, and LI Bus are not supported -- only subways and buses   
+ * (3) MNR, LIRR, and LI Bus are not supported -- only subways and buses
  */
 public class NycFareServiceImpl implements FareService, Serializable {
         private static final Logger LOG = LoggerFactory.getLogger(NycFareServiceImpl.class);
@@ -139,7 +139,7 @@ public class NycFareServiceImpl implements FareService, Serializable {
 							|| shortName.startsWith("QM")
 							|| shortName.startsWith("BM")) {
 						newRide.classifier = EXPRESS_BUS; // Express bus
-					} 
+					}
 
 					newRide.startTime = state.getTimeSeconds();
 				}
@@ -269,10 +269,10 @@ public class NycFareServiceImpl implements FareService, Serializable {
 					totalFare += EXPRESS_FARE - ORDINARY_FARE;
 					state = NycFareState.INIT;
 				} else if (ride.classifier.equals(EXPENSIVE_EXPRESS_BUS)) {
-					totalFare += EXPENSIVE_EXPRESS_FARE; 
+					totalFare += EXPENSIVE_EXPRESS_FARE;
 					// no transfers to the BxMM4C
 				}
-				
+
 				break;
 			case SIR_PRE_TRANSFER:
 				if (ride.classifier.equals(SUBWAY)) {
@@ -329,7 +329,7 @@ public class NycFareServiceImpl implements FareService, Serializable {
 				break;
 		    case SUBWAY_POST_TRANSFER:
 		    	if (ride.classifier.equals(WALK)) {
-		    		if (!canarsieFreeTransfer) { 
+		    		if (!canarsieFreeTransfer) {
 			    		/* note: if we end up walking to another subway after alighting
 			    		 * at Canarsie, we will mistakenly not be charged, but nobody
 			    		 * would ever do this */
@@ -354,13 +354,13 @@ public class NycFareServiceImpl implements FareService, Serializable {
 				} else if (ride.classifier.equals(EXPENSIVE_EXPRESS_BUS)) {
 					totalFare += EXPENSIVE_EXPRESS_FARE;
 					state = NycFareState.BUS_PRE_TRANSFER;
-				} 
+				}
 			}
 		}
 
 		Currency currency = Currency.getInstance("USD");
 		Fare fare = new Fare();
-		fare.addFare(FareType.regular, new WrappedCurrency(currency),
+		fare.addFare(StandardFareType.regular, new WrappedCurrency(currency),
 				(int) Math.round(totalFare
 						* Math.pow(10, currency.getDefaultFractionDigits())));
 		return fare;

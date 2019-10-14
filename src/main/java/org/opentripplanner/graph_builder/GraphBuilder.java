@@ -2,6 +2,7 @@ package org.opentripplanner.graph_builder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
+import org.opentripplanner.annotation.ComponentAnnotationConfigurator;
 import org.opentripplanner.graph_builder.model.GtfsBundle;
 import org.opentripplanner.graph_builder.module.DirectTransferGenerator;
 import org.opentripplanner.graph_builder.module.EmbedConfig;
@@ -45,7 +46,7 @@ import java.util.zip.ZipFile;
  * It is modular: GraphBuilderModules are placed in a list and run in sequence.
  */
 public class GraphBuilder implements Runnable {
-    
+
     private static Logger LOG = LoggerFactory.getLogger(GraphBuilder.class);
 
     public static final String BUILDER_CONFIG_FILENAME = "build-config.json";
@@ -53,13 +54,13 @@ public class GraphBuilder implements Runnable {
     private List<GraphBuilderModule> _graphBuilderModules = new ArrayList<GraphBuilderModule>();
 
     private final File graphFile;
-    
+
     private boolean _alwaysRebuild = true;
 
     private List<RoutingRequest> modeList;
-    
+
     private String baseGraph = null;
-    
+
     private Graph graph = new Graph();
 
     /** Should the graph be serialized to disk after being created or not? */
@@ -86,7 +87,7 @@ public class GraphBuilder implements Runnable {
     public void setAlwaysRebuild(boolean alwaysRebuild) {
         _alwaysRebuild = alwaysRebuild;
     }
-    
+
     public void setBaseGraph(String baseGraph) {
         this.baseGraph = baseGraph;
         try {
@@ -113,7 +114,7 @@ public class GraphBuilder implements Runnable {
         long startTime = System.currentTimeMillis();
 
         if (serializeGraph) {
-        	
+
             if (graphFile == null) {
                 throw new RuntimeException("graphBuilderTask has no attribute graphFile.");
             }
@@ -122,7 +123,7 @@ public class GraphBuilder implements Runnable {
                 LOG.info("graph already exists and alwaysRebuild=false => skipping graph build");
                 return;
             }
-        	
+
             try {
                 if (!graphFile.getParentFile().exists()) {
                     if (!graphFile.getParentFile().mkdirs()) {
@@ -139,7 +140,7 @@ public class GraphBuilder implements Runnable {
         for (GraphBuilderModule builder : _graphBuilderModules) {
             builder.checkInputs();
         }
-        
+
         HashMap<Class<?>, Object> extra = new HashMap<Class<?>, Object>();
         for (GraphBuilderModule load : _graphBuilderModules)
             load.buildGraph(graph, extra);
@@ -181,6 +182,7 @@ public class GraphBuilder implements Runnable {
         }
         // Find and parse config files first to reveal syntax errors early without waiting for graph build.
         builderConfig = OTPMain.loadJson(new File(dir, BUILDER_CONFIG_FILENAME));
+        ComponentAnnotationConfigurator.getInstance().fromConfig(builderConfig);
         GraphBuilderParameters builderParams = new GraphBuilderParameters(builderConfig);
 
         GraphBuilder graphBuilder = new GraphBuilder(dir, builderParams);

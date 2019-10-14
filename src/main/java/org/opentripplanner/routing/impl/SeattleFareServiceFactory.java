@@ -8,8 +8,8 @@ import org.opentripplanner.annotation.ServiceType;
 import org.opentripplanner.model.FeedScopedId;
 import org.opentripplanner.model.Trip;
 import org.opentripplanner.model.OtpTransitService;
-import org.opentripplanner.routing.core.Fare.FareType;
 import org.opentripplanner.routing.core.FareRuleSet;
+import org.opentripplanner.routing.core.StandardFareType;
 import org.opentripplanner.routing.services.FareService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,9 +26,9 @@ public class SeattleFareServiceFactory extends DefaultFareServiceFactory {
     public FareService makeFareService() {
 
     	SeattleFareServiceImpl fareService = new SeattleFareServiceImpl();
-    	fareService.addFareRules(FareType.regular, regularFareRules.values());
-    	fareService.addFareRules(FareType.youth, regularFareRules.values());
-    	fareService.addFareRules(FareType.senior, regularFareRules.values());
+    	fareService.addFareRules(StandardFareType.regular, regularFareRules.values());
+    	fareService.addFareRules(StandardFareType.youth, regularFareRules.values());
+    	fareService.addFareRules(StandardFareType.senior, regularFareRules.values());
 
     	return fareService;
     }

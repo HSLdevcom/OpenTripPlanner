@@ -6,6 +6,7 @@ import org.opentripplanner.api.model.BoardAlightType;
 import org.opentripplanner.routing.algorithm.AStar;
 import org.opentripplanner.routing.core.Fare;
 import org.opentripplanner.routing.core.RoutingRequest;
+import org.opentripplanner.routing.core.StandardFareType;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.impl.GraphPathFinder;
 import org.opentripplanner.routing.services.FareService;
@@ -253,7 +254,7 @@ public class VermontFlexRoutingTest {
         FareService fareService = graph.getService(FareService.class);
         Fare cost = fareService.getCost(path);
         assertNotNull(cost);
-        assertEquals("920", cost.getDetails(Fare.FareType.regular).iterator().next().fareId.getId());
+        assertEquals("920", cost.getDetails(StandardFareType.regular).iterator().next().fareId.getId());
     }
 
     private void assertDateEquals(long timeSeconds, String date, String time, TimeZone timeZone) {

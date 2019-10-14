@@ -15,18 +15,15 @@ package org.opentripplanner.routing.impl;
 
 import org.opentripplanner.annotation.Component;
 import org.opentripplanner.annotation.ServiceType;
+import org.opentripplanner.routing.core.StandardFareType;
 import org.opentripplanner.routing.services.FareService;
-import org.opentripplanner.routing.services.FareServiceFactory;
-import org.opentripplanner.routing.core.Fare.FareType;
-
-import com.fasterxml.jackson.databind.JsonNode;
 
 @Component(key = "HSL",type = ServiceType.ServiceFactory)
 public class HSLFareServiceFactory extends DefaultFareServiceFactory {
 
     public FareService makeFareService() {
         HSLFareServiceImpl fareService = new HSLFareServiceImpl();
-        fareService.addFareRules(FareType.regular, regularFareRules.values());
+        fareService.addFareRules(StandardFareType.regular, regularFareRules.values());
         return fareService;
     }
 }

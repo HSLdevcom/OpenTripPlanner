@@ -49,11 +49,6 @@ public class ComponentAnnotationConfiguratorTest {
     assertTrue(GraphUpdater.class.isAssignableFrom(component.getClass()));
     assertTrue(ExternalGraphUpdater.class.isAssignableFrom(component.getClass()));
 
-    component = configurator
-        .getComponentInstance("opentraffic-updater", ServiceType.GraphUpdater);
-    assertNotNull(component);
-    assertTrue(GraphUpdater.class.isAssignableFrom(component.getClass()));
-
     FareServiceFactory factory = configurator
         .getComponentInstance("new-york", ServiceType.ServiceFactory);
     assertNotNull(factory);
