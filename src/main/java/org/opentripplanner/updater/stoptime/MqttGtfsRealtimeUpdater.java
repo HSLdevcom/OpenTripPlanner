@@ -10,6 +10,8 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.opentripplanner.annotation.Component;
+import org.opentripplanner.annotation.ServiceType;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.updater.GraphUpdater;
 import org.opentripplanner.updater.GraphUpdaterManager;
@@ -36,6 +38,7 @@ import java.util.List;
  * </pre>
  *
  */
+@Component(key = "MQTT-gtfs-rt-updater", type = ServiceType.GraphUpdater)
 public class MqttGtfsRealtimeUpdater implements GraphUpdater {
     private static Logger LOG = LoggerFactory.getLogger(MqttGtfsRealtimeUpdater.class);
 

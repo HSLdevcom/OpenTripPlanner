@@ -4,6 +4,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.prefs.Preferences;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.opentripplanner.annotation.Component;
+import org.opentripplanner.annotation.ServiceType;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.updater.GraphUpdater;
 import org.opentripplanner.updater.GraphUpdaterManager;
@@ -15,22 +17,23 @@ import org.slf4j.LoggerFactory;
  * This class shows an example of how to implement a graph updater. Besides implementing the methods
  * of the interface GraphUpdater, the updater also needs to be registered in the function
  * GraphUpdaterConfigurator.applyConfigurationToGraph.
- * 
+ *
  * This example is suited for streaming updaters. For polling updaters it is better to use the
  * abstract base class PollingGraphUpdater. The class ExamplePollingGraphUpdater shows an example of
  * this.
- * 
+ *
  * Usage example ('example' name is an example) in the file 'Graph.properties':
- * 
+ *
  * <pre>
  * example.type = example-updater
  * example.frequencySec = 60
  * example.url = https://api.updater.com/example-updater
  * </pre>
- * 
+ *
  * @see ExamplePollingGraphUpdater
  * @see GraphUpdaterConfigurator.applyConfigurationToGraph
  */
+@Component(key = "example-updater", type = ServiceType.GraphUpdater)
 public class ExampleGraphUpdater implements GraphUpdater {
 
     private static Logger LOG = LoggerFactory.getLogger(ExampleGraphUpdater.class);

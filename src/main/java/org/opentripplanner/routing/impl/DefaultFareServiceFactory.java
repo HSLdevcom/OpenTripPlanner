@@ -1,15 +1,16 @@
 package org.opentripplanner.routing.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.opentripplanner.annotation.Component;
+import org.opentripplanner.annotation.ComponentAnnotationConfigurator;
+import org.opentripplanner.annotation.ServiceType;
 import org.opentripplanner.model.FeedScopedId;
 import org.opentripplanner.model.FareAttribute;
 import org.opentripplanner.model.FareRule;
 import org.opentripplanner.model.Route;
 import org.opentripplanner.model.OtpTransitService;
-import org.opentripplanner.routing.bike_rental.TimeBasedBikeRentalFareServiceFactory;
 import org.opentripplanner.routing.core.Fare.FareType;
 import org.opentripplanner.routing.core.FareRuleSet;
-import org.opentripplanner.routing.fares.MultipleFareServiceFactory;
 import org.opentripplanner.routing.services.FareService;
 import org.opentripplanner.routing.services.FareServiceFactory;
 import org.slf4j.Logger;
@@ -26,6 +27,7 @@ import java.util.Map;
  * @author novalis
  *
  */
+@Component(key = "default", type = ServiceType.ServiceFactory)
 public class DefaultFareServiceFactory implements FareServiceFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(DefaultFareServiceFactory.class);
@@ -149,36 +151,15 @@ public class DefaultFareServiceFactory implements FareServiceFactory {
         }
         LOG.debug("Fare type = " + type);
         FareServiceFactory retval;
-        switch (type) {
-        case "default":
-            retval = new DefaultFareServiceFactory();
-            break;
-        case "composite:additive":
-            retval = new MultipleFareServiceFactory.AddingMultipleFareServiceFactory();
-            break;
-        case "bike-rental-time-based":
-            retval = new TimeBasedBikeRentalFareServiceFactory();
-            break;
-        case "dutch":
-            retval = new DutchFareServiceFactory();
-            break;
-        case "san-francisco":
-            retval = new SFBayFareServiceFactory();
-            break;
-        case "new-york":
-            retval = new NycFareServiceFactory();
-            break;
-        case "seattle":
-            retval = new SeattleFareServiceFactory();
-            break;
-        case "HSL":
-            retval = new HSLFareServiceFactory();
-            break;
-        default:
-            throw new IllegalArgumentException(String.format("Unknown fare type: '%s'", type));
+        try {
+            retval = ComponentAnnotationConfigurator.getInstance()
+                .getComponentInstance(type, ServiceType.ServiceFactory);
+            retval.configure(config);
+            return retval;
+        } catch (Exception e) {
+            throw new IllegalArgumentException(
+                String.format("Failed to initialize fare type: '%s'", type));
         }
-        retval.configure(config);
-        return retval;
     }
 
     public String toString() { return this.getClass().getSimpleName(); }

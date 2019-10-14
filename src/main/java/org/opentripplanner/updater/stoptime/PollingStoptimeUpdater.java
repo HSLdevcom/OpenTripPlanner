@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.opentripplanner.annotation.Component;
+import org.opentripplanner.annotation.ServiceType;
 import org.opentripplanner.updater.*;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.util.SentryUtilities;
@@ -27,6 +29,7 @@ import com.google.transit.realtime.GtfsRealtime.TripUpdate;
  * </pre>
  *
  */
+@Component(key = "stop-time-updater", type = ServiceType.GraphUpdater)
 public class PollingStoptimeUpdater extends PollingGraphUpdater {
     private static final Logger LOG = LoggerFactory.getLogger(PollingStoptimeUpdater.class);
 

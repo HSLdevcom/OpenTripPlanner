@@ -1,24 +1,16 @@
 package org.opentripplanner.updater;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.opentripplanner.annotation.ComponentAnnotationConfigurator;
+import org.opentripplanner.annotation.ServiceType;
 import org.opentripplanner.routing.graph.Graph;
-import org.opentripplanner.updater.alerts.GtfsRealtimeAlertsUpdater;
-import org.opentripplanner.updater.bike_park.BikeParkUpdater;
-import org.opentripplanner.updater.bike_rental.BikeRentalUpdater;
-import org.opentripplanner.updater.car_park.CarParkUpdater;
-import org.opentripplanner.updater.example.ExampleGraphUpdater;
-import org.opentripplanner.updater.example.ExamplePollingGraphUpdater;
-import org.opentripplanner.updater.stoptime.MqttGtfsRealtimeUpdater;
-import org.opentripplanner.updater.stoptime.PollingStoptimeUpdater;
-import org.opentripplanner.updater.stoptime.WebsocketGtfsRealtimeUpdater;
-import org.opentripplanner.updater.street_notes.WinkkiPollingGraphUpdater;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Upon loading a Graph, configure/decorate it using a JSON tree from Jackson. This mainly involves starting
  * graph updater processes (GTFS-RT, bike rental, etc.), hence the class name.
- * 
+ *
  * When a Graph is loaded, one should call setupGraph() with the JSON tree containing configuration for the Graph.
  * That method creates "graph updaters" according to the given JSON, which should contain an array or object field
  * called "updaters". Each child element represents one updater.
@@ -68,36 +60,13 @@ public abstract class GraphUpdaterConfigurator {
             // For each sub-node, determine which kind of updater is being created.
             String type = configItem.path("type").asText();
             GraphUpdater updater = null;
+
             if (type != null) {
-                if (type.equals("bike-rental")) {
-                    updater = new BikeRentalUpdater();
-                }
-                else if (type.equals("bike-park")) {
-                    updater = new BikeParkUpdater();
-                }
-                else if (type.equals("car-park")) {
-                    updater = new CarParkUpdater();
-                }
-                else if (type.equals("stop-time-updater")) {
-                    updater = new PollingStoptimeUpdater();
-                }
-                else if (type.equals("websocket-gtfs-rt-updater")) {
-                    updater = new WebsocketGtfsRealtimeUpdater();
-                }
-                else if (type.equals("MQTT-gtfs-rt-updater")) {
-                    updater = new MqttGtfsRealtimeUpdater();
-                }
-                else if (type.equals("real-time-alerts")) {
-                    updater = new GtfsRealtimeAlertsUpdater();
-                }
-                else if (type.equals("example-updater")) {
-                    updater = new ExampleGraphUpdater();
-                }
-                else if (type.equals("example-polling-updater")) {
-                    updater = new ExamplePollingGraphUpdater();
-                }
-                else if (type.equals("winkki-polling-updater")) {
-                    updater = new WinkkiPollingGraphUpdater();
+                try{
+                    updater = ComponentAnnotationConfigurator.getInstance().getComponentInstance(type,
+                        ServiceType.GraphUpdater);
+                }catch (Exception e){
+                    LOG.error("Unable to initialize updater type :" + type);
                 }
             }
 

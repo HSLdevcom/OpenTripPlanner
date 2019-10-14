@@ -1,5 +1,7 @@
 package org.opentripplanner.updater.bike_rental;
 
+import static org.opentripplanner.annotation.ServiceType.GraphUpdater;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -10,6 +12,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.opentripplanner.annotation.Component;
 import org.opentripplanner.graph_builder.linking.SimpleStreetSplitter;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.bike_rental.BikeRentalStationService;
@@ -29,6 +32,7 @@ import java.util.concurrent.ExecutionException;
 /**
  * Dynamic bike-rental station updater which updates the Graph with bike rental stations from one BikeRentalDataSource.
  */
+@Component(key = "bike-rental",type = GraphUpdater)
 public class BikeRentalUpdater extends PollingGraphUpdater {
 
     private static final Logger LOG = LoggerFactory.getLogger(BikeRentalUpdater.class);

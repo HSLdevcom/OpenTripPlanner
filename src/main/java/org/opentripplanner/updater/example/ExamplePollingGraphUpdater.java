@@ -3,6 +3,8 @@ package org.opentripplanner.updater.example;
 import java.util.prefs.Preferences;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.opentripplanner.annotation.Component;
+import org.opentripplanner.annotation.ServiceType;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.updater.GraphUpdaterManager;
 import org.opentripplanner.updater.GraphWriterRunnable;
@@ -14,21 +16,22 @@ import org.slf4j.LoggerFactory;
  * This class shows an example of how to implement a polling graph updater. Besides implementing the
  * methods of the interface PollingGraphUpdater, the updater also needs to be registered in the
  * function GraphUpdaterConfigurator.applyConfigurationToGraph.
- * 
+ *
  * This example is suited for polling updaters. For streaming updaters (aka push updaters) it is
  * better to use the GraphUpdater interface directly for this purpose. The class ExampleGraphUpdater
  * shows an example of how to implement this.
- * 
+ *
  * Usage example ('polling-example' name is an example) in file 'Graph.properties':
- * 
+ *
  * <pre>
  * polling-example.type = example-polling-updater
  * polling-example.frequencySec = 60
  * polling-example.url = https://api.updater.com/example-polling-updater
  * </pre>
- * 
+ *
  * @see ExampleGraphUpdater
  */
+@Component(key = "example-polling-updater", type = ServiceType.GraphUpdater)
 public class ExamplePollingGraphUpdater extends PollingGraphUpdater {
 
     private static Logger LOG = LoggerFactory.getLogger(ExamplePollingGraphUpdater.class);
@@ -72,7 +75,7 @@ public class ExamplePollingGraphUpdater extends PollingGraphUpdater {
     public void teardown() {
         LOG.info("Teardown example polling updater");
     }
-    
+
     // This is a private GraphWriterRunnable that can be executed to modify the graph
     private class ExampleGraphWriter implements GraphWriterRunnable {
         @Override
