@@ -547,6 +547,7 @@ public class Timetable implements Serializable {
             Integer delay = null;
             Integer firstDelay = null;
             boolean hasMatched = false;
+            FeedScopedId deviationStop = null;
             for (int i = 0; i < numStops; i++) {
                 boolean match = false;
                 if (update != null) {
@@ -554,6 +555,16 @@ public class Timetable implements Serializable {
                         match = update.getStopSequence() == newTimes.getStopSequence(i);
                     } else if (update.hasStopId()) {
                         match = pattern.getStop(i).getId().getId().equals(update.getStopId());
+                        //Check if the trip has been deviated to another stop within the same station
+                        if (!match && pattern.stopPattern.alternateStops[i] != null) {
+                            for (Stop alternateStop : pattern.stopPattern.alternateStops[i]) {
+                                if (alternateStop.getId().getId().equals(update.getStopId())) {
+                                    deviationStop = alternateStop.getId();
+                                    match = true;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -562,6 +573,9 @@ public class Timetable implements Serializable {
                     StopTimeUpdate.ScheduleRelationship scheduleRelationship =
                             update.hasScheduleRelationship() ? update.getScheduleRelationship()
                             : StopTimeUpdate.ScheduleRelationship.SCHEDULED;
+                    if (deviationStop != null) {
+                        newTimes.updateDeviationStop(i, deviationStop);
+                    }
                     if (scheduleRelationship ==
                             StopTimeUpdate.ScheduleRelationship.NO_DATA) {
                         newTimes.updateArrivalDelay(i, 0);
