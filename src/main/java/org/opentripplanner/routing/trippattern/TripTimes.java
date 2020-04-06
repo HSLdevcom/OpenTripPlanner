@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 
+import org.opentripplanner.model.FeedScopedId;
 import org.opentripplanner.model.StopTime;
 import org.opentripplanner.model.Trip;
 import org.opentripplanner.common.MavenVersion;
@@ -84,6 +85,8 @@ public class TripTimes implements Serializable, Comparable<TripTimes>, Cloneable
      * any real-time updates. Non-final to allow updates.
      */
     int[] departureTimes;
+
+    FeedScopedId[] deviationStops;
 
     BitSet canceledArrivalTimes;
 
@@ -198,6 +201,7 @@ public class TripTimes implements Serializable, Comparable<TripTimes>, Cloneable
         // We cannot point to the scheduled times because they are shifted, and updated times are not.
         this.arrivalTimes = null;
         this.departureTimes = null;
+        this.deviationStops = null;
         this.timepoints = deduplicator.deduplicateBitSet(timepoints);
         this.continuousPickup = deduplicator.deduplicateIntArray(continuousPickup);
         this.continuousDropOff = deduplicator.deduplicateIntArray(continuousDropOff);
@@ -427,6 +431,10 @@ public class TripTimes implements Serializable, Comparable<TripTimes>, Cloneable
         return serviceArea[stop];
     }
 
+    public FeedScopedId getDeviationStop(final int stopIndex) {
+        return deviationStops[stopIndex];
+    }
+
     /** Used in debugging / dumping times. */
     public static String formatSeconds(int s) {
         int m = s / 60;
@@ -517,6 +525,14 @@ public class TripTimes implements Serializable, Comparable<TripTimes>, Cloneable
     public void updateArrivalDelay(final int stop, final int delay) {
         checkCreateTimesArrays();
         arrivalTimes[stop] = scheduledArrivalTimes[stop] + timeShift + delay;
+    }
+
+    public void updateDeviationStop(final int stopIndex, FeedScopedId deviationStop) {
+        if (deviationStops == null) {
+            deviationStops = new FeedScopedId[scheduledArrivalTimes.length];
+        }
+
+        deviationStops[stopIndex] = deviationStop;
     }
 
     /**
