@@ -2,7 +2,9 @@ package org.opentripplanner.model;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import com.google.common.hash.HashCode;
@@ -54,6 +56,8 @@ public class StopPattern implements Serializable {
     public final int[]  pickups;
     public final int[]  dropoffs;
 
+    public final List<Stop>[] alternateStops;
+
     /** GTFS-Flex specific fields; will be null unless GTFS-Flex dataset is in use. */
     private StopPatternFlexFields flexFields;
 
@@ -95,17 +99,19 @@ public class StopPattern implements Serializable {
      * @param stopTimes List of StopTimes; assumes that stopTimes are already sorted by time.
      * @param deduplicator Deduplicator. If null, do not deduplicate arrays.
      */
-    public StopPattern (List<StopTime> stopTimes, Deduplicator deduplicator) {
+    public StopPattern (List<StopTime> stopTimes, Map<FeedScopedId, List<Stop>> alternateStops, Deduplicator deduplicator) {
         this.size = stopTimes.size();
         if (size == 0) {
             this.stops = new Stop[size];
             this.pickups = new int[0];
             this.dropoffs = new int[0];
+            this.alternateStops = new List[0];
             return;
         }
         stops = new Stop[size];
         int[] pickups = new int[size];
         int[] dropoffs = new int[size];
+        this.alternateStops = new List[size];
         for (int i = 0; i < size; ++i) {
             StopTime stopTime = stopTimes.get(i);
             stops[i] = stopTime.getStop();
@@ -113,6 +119,7 @@ public class StopPattern implements Serializable {
             // pick/drop messages could be stored in individual trips
             pickups[i] = stopTime.getPickupType();
             dropoffs[i] = stopTime.getDropOffType();
+            this.alternateStops[i] = alternateStops.get(new FeedScopedId(stopTime.getStop().getId().getAgencyId(), stopTime.getStop().getParentStation()));
         }
         /*
          * TriMet GTFS has many trips that differ only in the pick/drop status of their initial and
@@ -139,7 +146,7 @@ public class StopPattern implements Serializable {
      * @param stopTimes List of StopTimes; assumes that stopTimes are already sorted by time.
      */
     public StopPattern (List<StopTime> stopTimes) {
-        this(stopTimes, null);
+        this(stopTimes, Collections.emptyMap(), null);
     }
 
     /**
