@@ -1727,6 +1727,12 @@ public class IndexGraphQLSchema {
                         .dataFetcher(
                                 environment -> ((TripTimeShort) environment.getSource()).stopSequence)
                         .build())
+                .field(GraphQLFieldDefinition.newFieldDefinition()
+                        .name("deviationStop")
+                        .description("The stop where this stop time has been deviated to.  \n`null` if the trip has not been deviated to another stop.")
+                        .type(stopType)
+                        .dataFetcher(environment -> index.stopForId.get(((TripTimeShort)environment.getSource()).deviationStop))
+                        .build())
                 .build();
 
         tripType = GraphQLObjectType.newObject()
