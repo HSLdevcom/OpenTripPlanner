@@ -733,8 +733,29 @@ public class GraphIndex {
      * Fetch upcoming vehicle departures from a stop.
      * Fetches two departures for each pattern during the next 24 hours as default
      */
-    public Collection<StopTimesInPattern> stopTimesForStop(Stop stop, boolean omitNonPickups, boolean omitCanceled) {
-        return stopTimesForStop(stop, System.currentTimeMillis()/1000, 24 * 60 * 60, 2, omitNonPickups, omitCanceled);
+    public Collection<StopTimesInPattern> stopTimesForStop(Stop stop, boolean omitNonPickups, boolean omitCanceled, boolean omitDeviated) {
+        return stopTimesForStop(stop, System.currentTimeMillis()/1000, 24 * 60 * 60, 2, omitNonPickups, omitCanceled, omitDeviated);
+    }
+
+    /**
+     * Returns a list of patterns that go through the stop
+     * This includes patterns that do not go throught the stop in the static schedule, but have been deviated to it with trip updates
+     * @param stop Stop
+     * @return List of patterns
+     */
+    private Collection<TripPattern> getPatternsForStop(Stop stop) {
+        return patternsForStop.get(stop).stream()
+                .flatMap(tripPattern -> {
+                    int stopIndex = tripPattern.getStops().indexOf(stop);
+
+                    if (stopIndex == -1) {
+                        return Stream.empty();
+                    }
+
+                    return Stream.concat(Stream.of(tripPattern.stopPattern.stops[stopIndex]), tripPattern.stopPattern.alternateStops[stopIndex].stream());
+                })
+                .flatMap(s -> patternsForStop.get(s).stream())
+                .collect(Collectors.toSet());
     }
 
     /**
@@ -749,13 +770,14 @@ public class GraphIndex {
      * @param timeRange Searches forward for timeRange seconds from startTime
      * @param numberOfDepartures Number of departures to fetch per pattern
      * @param omitNonPickups If true, do not include vehicles that will not pick up passengers.
+     * @param omitDeviated Whether trips that have been deviated to this stop should be included
      * @return
      */
-    public List<StopTimesInPattern> stopTimesForStop(final Stop stop, final long startTime, final int timeRange, final int numberOfDepartures, boolean omitNonPickups, boolean omitCanceled) {
+    public List<StopTimesInPattern> stopTimesForStop(final Stop stop, final long startTime, final int timeRange, final int numberOfDepartures, boolean omitNonPickups, boolean omitCanceled, boolean omitDeviated) {
 
         final List<StopTimesInPattern> ret = new ArrayList<>();
 
-        for (final TripPattern pattern : patternsForStop.get(stop)) {
+        for (final TripPattern pattern : (omitDeviated ? patternsForStop.get(stop) : getPatternsForStop(stop))) {
 
             final List<TripTimeShort> stopTimesForStop = stopTimesForPattern(stop, pattern, startTime, timeRange, numberOfDepartures, omitNonPickups, omitCanceled);
 
@@ -831,15 +853,18 @@ public class GraphIndex {
             int stopIndex = 0;
 
             // loop through all stops of pattern
-            for (final Stop currStop : pattern.stopPattern.stops) {
-                if (currStop.equals(stop)) {
+            for (int i = 0; i < pattern.stopPattern.size; i++) {
+                Set<Stop> stops = new HashSet<>();
+                stops.add(pattern.stopPattern.stops[i]);
+                stops.addAll(pattern.stopPattern.alternateStops[i]);
+                if (stops.contains(stop)) {
                     if(omitNonPickups && pattern.stopPattern.pickups[stopIndex] == pattern.stopPattern.PICKDROP_NONE) continue;
                     for (final TripTimes triptimes : tt.tripTimes) {
                         if (!sd.serviceRunning(triptimes.serviceCode))
                             continue;
                         int stopDepartureTime = triptimes.getDepartureTime(stopIndex);
                         if (!(omitCanceled && triptimes.isCanceledDeparture(stopIndex)) && stopDepartureTime >= starttimeSecondsSinceMidnight && stopDepartureTime < starttimeSecondsSinceMidnight + timeRange) {
-                            ret.insertWithOverflow(new TripTimeShort(triptimes, stopIndex, currStop, sd));
+                            ret.insertWithOverflow(new TripTimeShort(triptimes, stopIndex, stop, sd));
                             }
                         }
 
@@ -852,7 +877,7 @@ public class GraphIndex {
                                 - freq.tripTimes.getDepartureTime(0);
                         while (departureTime <= lastDeparture && ret.size() < numberOfDepartures) {
                             ret.insertWithOverflow(new TripTimeShort(freq.materialize(stopIndex, departureTime, true),
-                                    stopIndex, currStop, sd));
+                                    stopIndex, stop, sd));
                                 departureTime += freq.headway;
                             }
                         }
@@ -878,15 +903,16 @@ public class GraphIndex {
      * @param stop Stop object to perform the search for
      * @param serviceDate Return all departures for the specified date
      * @param omitCanceled
+     * @param omitDeviated Whether trips that have been deviated to this stop should be included
      * @return
      */
-    public List<StopTimesInPattern> getStopTimesForStop(Stop stop, ServiceDate serviceDate, boolean omitNonPickups, boolean omitCanceled) {
+    public List<StopTimesInPattern> getStopTimesForStop(Stop stop, ServiceDate serviceDate, boolean omitNonPickups, boolean omitCanceled, boolean omitDeviated) {
         List<StopTimesInPattern> ret = new ArrayList<>();
         TimetableSnapshot snapshot = null;
         if (graph.timetableSnapshotSource != null) {
             snapshot = graph.timetableSnapshotSource.getTimetableSnapshot();
         }
-        Collection<TripPattern> patterns = patternsForStop.get(stop);
+        Collection<TripPattern> patterns = omitDeviated ? patternsForStop.get(stop) : getPatternsForStop(stop);
         for (TripPattern pattern : patterns) {
             StopTimesInPattern stopTimes = new StopTimesInPattern(pattern);
             Timetable tt;
@@ -897,8 +923,11 @@ public class GraphIndex {
             }
             ServiceDay sd = new ServiceDay(graph, serviceDate, calendarService, pattern.route.getAgency().getId());
             int sidx = 0;
-            for (Stop currStop : pattern.stopPattern.stops) {
-                if (currStop.equals(stop)) {
+            for (int i = 0; i < pattern.stopPattern.size; i++) {
+                Set<Stop> stops = new HashSet<>();
+                stops.add(pattern.stopPattern.stops[i]);
+                stops.addAll(pattern.stopPattern.alternateStops[i]);
+                if (stops.contains(stop)) {
                     if(omitNonPickups && pattern.stopPattern.pickups[sidx] == pattern.stopPattern.PICKDROP_NONE) continue;
                     for (TripTimes t : tt.tripTimes) {
                         if (!sd.serviceRunning(t.serviceCode)) continue;
