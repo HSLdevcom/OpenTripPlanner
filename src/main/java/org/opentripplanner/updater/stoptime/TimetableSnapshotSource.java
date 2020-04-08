@@ -1,12 +1,7 @@
 package org.opentripplanner.updater.stoptime;
 
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Set;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.opentripplanner.model.Agency;
@@ -682,7 +677,7 @@ public class TimetableSnapshotSource {
         // TODO: filter/interpolate stop times like in PatternHopFactory?
 
         // Create StopPattern
-        final StopPattern stopPattern = new StopPattern(stopTimes, graph.deduplicator);
+        final StopPattern stopPattern = new StopPattern(stopTimes, /*TODO: alternate stops for added trips*/ Collections.emptyMap(), graph.deduplicator);
 
         // Get cached trip pattern or create one if it doesn't exist yet
         final TripPattern pattern = tripPatternCache.getOrCreateTripPattern(stopPattern, trip.getRoute(), graph);
