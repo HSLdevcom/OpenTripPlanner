@@ -119,7 +119,7 @@ public class StopPattern implements Serializable {
             // pick/drop messages could be stored in individual trips
             pickups[i] = stopTime.getPickupType();
             dropoffs[i] = stopTime.getDropOffType();
-            this.alternateStops[i] = alternateStops.get(new FeedScopedId(stopTime.getStop().getId().getAgencyId(), stopTime.getStop().getParentStation()));
+            this.alternateStops[i] = alternateStops.getOrDefault(new FeedScopedId(stopTime.getStop().getId().getAgencyId(), stopTime.getStop().getParentStation()), Collections.emptyList());
         }
         /*
          * TriMet GTFS has many trips that differ only in the pick/drop status of their initial and
