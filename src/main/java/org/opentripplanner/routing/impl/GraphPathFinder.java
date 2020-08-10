@@ -223,6 +223,7 @@ public class GraphPathFinder {
                             : path.getDuration();
                         return duration < options.maxHours * 60 * 60;
                     })
+                    .filter(path -> isPathValidForRequest(options, path))
                     .collect(Collectors.toList()));
 
             LOG.debug("we have {} paths", paths.size());
@@ -399,16 +400,8 @@ public class GraphPathFinder {
             while (gpi.hasNext()) {
                 GraphPath graphPath = gpi.next();
                 // TODO check, is it possible that arriveBy and time are modifed in-place by the search?
-                if (request.arriveBy) {
-                    if (graphPath.states.getLast().getTimeSeconds() > request.dateTime) {
-                        LOG.error("A graph path arrives after the requested time. This implies a bug.");
-                        gpi.remove();
-                    }
-                } else {
-                    if (graphPath.states.getFirst().getTimeSeconds() < request.dateTime) {
-                        LOG.error("A graph path leaves before the requested time. This implies a bug.");
-                        gpi.remove();
-                    }
+                if (!isPathValidForRequest(request, graphPath)) {
+                    gpi.remove();
                 }
             }
         }
@@ -425,6 +418,21 @@ public class GraphPathFinder {
         }
 
         return paths;
+    }
+
+    private boolean isPathValidForRequest(RoutingRequest request, GraphPath graphPath) {
+        if (request.arriveBy) {
+            if (graphPath.states.getLast().getTimeSeconds() > request.dateTime) {
+                LOG.error("A graph path arrives after the requested time. This implies a bug.");
+                return false;
+            }
+        } else {
+            if (graphPath.states.getFirst().getTimeSeconds() < request.dateTime) {
+                LOG.error("A graph path leaves before the requested time. This implies a bug.");
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

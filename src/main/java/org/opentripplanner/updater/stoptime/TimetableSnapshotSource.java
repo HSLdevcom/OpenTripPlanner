@@ -4,6 +4,11 @@ import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.google.common.base.Preconditions;
+import com.google.transit.realtime.GtfsRealtime.TripDescriptor;
+import com.google.transit.realtime.GtfsRealtime.TripUpdate;
+import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate;
+
 import org.opentripplanner.model.Agency;
 import org.opentripplanner.model.FeedScopedId;
 import org.opentripplanner.model.Route;
@@ -24,10 +29,6 @@ import org.opentripplanner.util.SentryUtilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
-import com.google.transit.realtime.GtfsRealtime.TripDescriptor;
-import com.google.transit.realtime.GtfsRealtime.TripUpdate;
-import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate;
 
 /**
  * This class should be used to create snapshots of lookup tables of realtime data. This is
@@ -399,6 +400,16 @@ public class TimetableSnapshotSource {
     }
 
     /**
+     * Checks if stop time update has data, i.e. schedule relationship is not NO_DATA
+     * @param stopTimeUpdate
+     * @return
+     */
+    private static boolean hasData(StopTimeUpdate stopTimeUpdate) {
+        return !stopTimeUpdate.hasScheduleRelationship() /*No schedule relationship -> defaults to SCHEDULED*/ ||
+                stopTimeUpdate.getScheduleRelationship() != StopTimeUpdate.ScheduleRelationship.NO_DATA;
+    }
+
+    /**
      * Check stop time updates of trip update that results in a new trip (ADDED or MODIFIED) and
      * find all stops of that trip.
      *
@@ -416,6 +427,9 @@ public class TimetableSnapshotSource {
 
             // Determine whether stop is skipped
             final boolean skippedStop = isStopSkipped(stopTimeUpdate);
+
+            // Determine whether stop has data
+            final boolean hasData = hasData(stopTimeUpdate);
 
             // Check stop sequence
             if (stopTimeUpdate.hasStopSequence()) {
@@ -457,8 +471,8 @@ public class TimetableSnapshotSource {
                 return null;
             }
 
-            // Only check arrival and departure times for non-skipped stops
-            if (!skippedStop) {
+            // Only check arrival and departure times for non-skipped stops that have data
+            if (!skippedStop && hasData) {
                 // Check arrival time
                 if (stopTimeUpdate.hasArrival() && stopTimeUpdate.getArrival().hasTime()) {
                     // Check for increasing time

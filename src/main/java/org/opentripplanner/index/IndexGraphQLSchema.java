@@ -368,18 +368,6 @@ public class IndexGraphQLSchema {
                     .build())
             .build();
 
-
-    private Agency getAgency(GraphIndex index, String agencyId) {
-        //xxx what if there are duplciate agency ids?
-        //now we return the first
-        for (Map<String, Agency> feedAgencies : index.agenciesForFeedId.values()) {
-            if (feedAgencies.get(agencyId) != null) {
-                return feedAgencies.get(agencyId);
-            }
-        }
-        return null;
-    }
-
     @SuppressWarnings("unchecked")
     public IndexGraphQLSchema(GraphIndex index) {
         createPlanType(index);
@@ -883,7 +871,10 @@ public class IndexGraphQLSchema {
                         .name("agency")
                         .description("Agency affected by the disruption. Note that this value is present only if the disruption has an effect on all operations of the agency (e.g. in case of a strike).")
                         .type(agencyType)
-                        .dataFetcher(environment -> getAgency(index, ((AlertPatch) environment.getSource()).getAgency()))
+                        .dataFetcher(environment -> {
+                            AlertPatch patch = (AlertPatch) environment.getSource();
+                            return index.getAgencyWithFeedScopeId(patch.getFeedId() + ":" + patch.getAgency());
+                        })
                         .build())
                 .field(GraphQLFieldDefinition.newFieldDefinition()
                         .name("route")
@@ -2286,7 +2277,7 @@ public class IndexGraphQLSchema {
                         .description("Global object ID provided by Relay. This value can be used to refetch this object using **node** query.")
                         .type(new GraphQLNonNull(Scalars.GraphQLID))
                         .dataFetcher(environment -> relay
-                                .toGlobalId(agencyType.getName(), ((Agency) environment.getSource()).getId()))
+                                .toGlobalId(agencyType.getName(), environment.<Agency>getSource().getFeedScopeId().toString()))
                         .build())
                 .field(GraphQLFieldDefinition.newFieldDefinition()
                         .name("gtfsId")
@@ -2643,7 +2634,7 @@ public class IndexGraphQLSchema {
                     return index.patternForId.get(id.id);
                 }
                 if (id.type.equals(agencyType.getName())) {
-                    return index.getAgencyWithoutFeedId(id.id);
+                    return index.getAgencyWithFeedScopeId(id.id);
                 }
                 if (id.type.equals(alertType.getName())) {
                     return index.getAlertForId(id.id);
@@ -3752,7 +3743,10 @@ public class IndexGraphQLSchema {
                         .name("agency")
                         .description("For transit legs, the transit agency that operates the service used for this leg. For non-transit legs, `null`.")
                         .type(agencyType)
-                        .dataFetcher(environment -> getAgency(index, ((Leg) environment.getSource()).agencyId))
+                        .dataFetcher(environment -> {
+                            Leg leg = environment.getSource();
+                            return index.getAgencyWithFeedScopeId(leg.routeId.getAgencyId() + ":" + leg.agencyId);
+                        })
                         .build())
                 .field(GraphQLFieldDefinition.newFieldDefinition()
                         .name("realTime")
@@ -3813,6 +3807,12 @@ public class IndexGraphQLSchema {
                         .description("For transit legs, the service date of the trip. Format: YYYYMMDD. For non-transit legs, null.")
                         .type(Scalars.GraphQLString)
                         .dataFetcher(environment -> ((Leg) environment.getSource()).serviceDate)
+                        .build())
+                .field(GraphQLFieldDefinition.newFieldDefinition()
+                        .name("interlineWithPreviousLeg")
+                        .description("Interlines with previous leg. This is true when the same vehicle is used for the previous leg as for this leg and passenger can stay inside the vehicle.")
+                        .type(Scalars.GraphQLBoolean)
+                        .dataFetcher(environment -> ((Leg) environment.getSource()).interlineWithPreviousLeg)
                         .build())
                 .field(GraphQLFieldDefinition.newFieldDefinition()
                         .name("intermediateStops")

@@ -1,20 +1,15 @@
 package org.opentripplanner.routing.edgetype;
 
-import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
-
 import com.beust.jcommander.internal.Lists;
-
+import com.google.transit.realtime.GtfsRealtime.TripDescriptor;
+import com.google.transit.realtime.GtfsRealtime.TripUpdate;
+import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeEvent;
+import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate;
+import org.opentripplanner.common.MavenVersion;
 import org.opentripplanner.model.FeedScopedId;
 import org.opentripplanner.model.Stop;
 import org.opentripplanner.model.Trip;
 import org.opentripplanner.model.calendar.ServiceDate;
-import org.opentripplanner.common.MavenVersion;
 import org.opentripplanner.routing.core.ServiceDay;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.StopTransfer;
@@ -24,10 +19,8 @@ import org.opentripplanner.routing.trippattern.TripTimes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.transit.realtime.GtfsRealtime.TripDescriptor;
-import com.google.transit.realtime.GtfsRealtime.TripUpdate;
-import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeEvent;
-import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate;
+import java.io.Serializable;
+import java.util.*;
 
 
 /**
@@ -188,6 +181,9 @@ public class Timetable implements Serializable {
 
         boolean omitCanceled =  s0.getOptions().omitCanceled;
 
+        boolean isReverseOptimizing = s0.getOptions().reverseOptimizing;
+        int requestStartTime = serviceDay.secondsSinceMidnight(s0.getOptions().getSecondsSinceEpoch());
+
         for (TripTimes tt : tripTimes) {
             if (tt.isCanceled() && omitCanceled) continue;
             if ((tt.getNumStops() <= stopIndex)) continue;
@@ -238,6 +234,9 @@ public class Timetable implements Serializable {
 
                 int arvTime = tt.getArrivalTime(stopIndex) + flexTimeAdjustment;
                 if (arvTime < 0) continue;
+                if (isReverseOptimizing && arvTime < requestStartTime) {
+                    continue;
+                }
                 if (arvTime <= adjustedTime && arvTime > bestTime) {
                     bestTrip = tt;
                     bestTime = arvTime;
@@ -535,6 +534,10 @@ public class Timetable implements Serializable {
                 == TripDescriptor.ScheduleRelationship.CANCELED) {
             newTimes.cancel();
         } else {
+            //Whether the trip update has any stop estimates (some trip updates can contain only stop cancellations)
+            boolean hasUpdates = tripUpdate.getStopTimeUpdateList().stream()
+                                    .anyMatch(stopTimeUpdate -> !stopTimeUpdate.hasScheduleRelationship() || stopTimeUpdate.getScheduleRelationship() == StopTimeUpdate.ScheduleRelationship.SCHEDULED);
+
             // The GTFS-RT reference specifies that StopTimeUpdates are sorted by stop_sequence.
             Iterator<StopTimeUpdate> updates = tripUpdate.getStopTimeUpdateList().iterator();
             if (!updates.hasNext()) {
@@ -580,6 +583,10 @@ public class Timetable implements Serializable {
                             StopTimeUpdate.ScheduleRelationship.NO_DATA) {
                         newTimes.updateArrivalDelay(i, 0);
                         newTimes.updateDepartureDelay(i, 0);
+                        if (!hasUpdates) {
+                            //If trip update does not contain stop estimates, mark stop in TripTimes having no data
+                            newTimes.setStopWithNoData(i);
+                        }
                         delay = 0;
                         if (firstDelay == null) firstDelay = delay;
                     } else {

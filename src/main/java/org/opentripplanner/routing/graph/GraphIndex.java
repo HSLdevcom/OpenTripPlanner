@@ -1187,28 +1187,6 @@ public class GraphIndex {
         return getAlertPatchStream().filter(alertPatch -> id.equals(alertPatch.getId())).findFirst().get();
     }
 
-    /**
-     * Fetch an agency by its string ID, ignoring the fact that this ID should be scoped by a feedId.
-     * This is a stopgap (i.e. hack) method for fetching agencies where no feed scope is available.
-     * I am creating this method only to allow merging pull request #2032 which adds GraphQL.
-     * Note that if the same agency ID is defined in several feeds, this will return one of them
-     * at random. That is obviously not the right behavior. The problem is that agencies are
-     * not currently keyed on an FeedScopedId object, but on separate feedId and id Strings.
-     * A real fix will involve replacing or heavily modifying the OBA GTFS loader, which is now
-     * possible since we have forked it.
-     */
-    public Agency getAgencyWithoutFeedId(String agencyId) {
-        // Iterate over the agency map for each feed.
-        for (Map<String, Agency> agencyForId : agenciesForFeedId.values()) {
-            Agency agency = agencyForId.get(agencyId);
-            if (agency != null) {
-                return agency;
-            }
-        }
-        return null;
-    }
-
-
     public Agency getAgencyWithFeedScopeId(String agencyFeedScopeIdRaw) {
         FeedScopedId agencyFeedScopeId = FeedScopedId.convertFromString(agencyFeedScopeIdRaw);
 

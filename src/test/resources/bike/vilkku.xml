@@ -1,0 +1,8 @@
+<xml>
+    <station>
+        <name>test station</name>
+        <externallyLockedBikes>2</externallyLockedBikes>
+        <latitude>62,887</latitude>
+        <longitude>27,687</longitude>
+    </station>
+</xml>

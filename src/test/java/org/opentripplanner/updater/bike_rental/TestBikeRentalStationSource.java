@@ -11,6 +11,7 @@ import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 public class TestBikeRentalStationSource extends TestCase {
     
     private static final String NEXT_BIKE_TEST_DATA_URL = "file:src/test/resources/bike/next.xml";
+    private static final String VILKKU_BIKE_TEST_DATA_URL = "file:src/test/resources/bike/vilkku.xml";
     
     public void testKeolisRennes() {
 
@@ -231,5 +232,35 @@ public class TestBikeRentalStationSource extends TestCase {
         assertTrue(source.update());
         return source;
     }
-    
+
+    public void testVilkku() {
+        VilkkuBikeRentalDataSource source = createAndUpdateVilkkuBikeRentalDataSource(VILKKU_BIKE_TEST_DATA_URL, null);
+        List<BikeRentalStation> rentalStations = source.getStations();
+        assertEquals(1, rentalStations.size());
+
+        Map<String,BikeRentalStation> stationByName = rentalStations.stream()
+                .peek(System.out::println)
+                .collect(Collectors.toMap(BikeRentalStation::getName, station -> station));
+
+        BikeRentalStation testStation = stationByName.get("test station");
+        assertEquals("test station", testStation.id);
+        assertEquals(27.687, testStation.x);
+        assertEquals(62.887, testStation.y);
+        assertEquals(2, testStation.bikesAvailable);
+        assertEquals("Station on", testStation.state);
+        assertEquals("[vilkku]", testStation.networks.toString());
+
+        // Test giving network name to data source
+        VilkkuBikeRentalDataSource sourceWithCustomNetwork = createAndUpdateVilkkuBikeRentalDataSource(VILKKU_BIKE_TEST_DATA_URL, "kuopio");
+        List<BikeRentalStation> rentalStationsWithCustomNetwork = sourceWithCustomNetwork.getStations();
+        BikeRentalStation tempClosedStationWithCustomNetwork  = rentalStationsWithCustomNetwork.get(0);
+        assertEquals("[kuopio]", tempClosedStationWithCustomNetwork.networks.toString());
+    }
+
+    private VilkkuBikeRentalDataSource createAndUpdateVilkkuBikeRentalDataSource(String url, String networkName) {
+        VilkkuBikeRentalDataSource source = new VilkkuBikeRentalDataSource(networkName);
+        source.setUrl(url);
+        assertTrue(source.update());
+        return source;
+    }
 }

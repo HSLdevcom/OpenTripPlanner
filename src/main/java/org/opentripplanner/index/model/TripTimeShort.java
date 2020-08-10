@@ -1,18 +1,16 @@
 package org.opentripplanner.index.model;
 
-import java.util.List;
-import java.util.Objects;
-
+import com.beust.jcommander.internal.Lists;
 import org.opentripplanner.model.FeedScopedId;
 import org.opentripplanner.model.Stop;
 import org.opentripplanner.model.Trip;
-import org.onebusaway.gtfs.model.calendar.ServiceDate;
 import org.opentripplanner.routing.core.ServiceDay;
 import org.opentripplanner.routing.edgetype.Timetable;
 import org.opentripplanner.routing.trippattern.RealTimeState;
 import org.opentripplanner.routing.trippattern.TripTimes;
 
-import com.beust.jcommander.internal.Lists;
+import java.util.List;
+import java.util.Objects;
 
 public class TripTimeShort {
 
@@ -54,7 +52,7 @@ public class TripTimeShort {
         realtimeDeparture  = tt.getDepartureTime(i);
         departureDelay     = tt.getDepartureDelay(i);
         timepoint          = tt.isTimepoint(i);
-        realtime           = !tt.isScheduled();
+        realtime           = !tt.isScheduled() && !tt.isNoDataStop(i);
         tripId             = tt.trip.getId();
         realtimeState      = tt.isTimeCanceled(i) ? RealTimeState.CANCELED : tt.getRealTimeState();
         blockId            = tt.trip.getBlockId();
