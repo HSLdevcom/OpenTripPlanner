@@ -790,6 +790,18 @@ type Leg {
     """
     intermediatePlace: Boolean
     steps: [step]
+
+    """
+    Whether the vehicle can be boarded at this stop. This field can also be used
+    to indicate if boarding is possible only with special arrangements.
+    """
+    pickupType: PickupDropoffType
+
+    """
+    Whether the vehicle can be disembarked at this stop. This field can also be
+    used to indicate if disembarkation is possible only with special arrangements.
+    """
+    dropoffType: PickupDropoffType
 }
 
 """Identifies whether this stop represents a stop or station."""
