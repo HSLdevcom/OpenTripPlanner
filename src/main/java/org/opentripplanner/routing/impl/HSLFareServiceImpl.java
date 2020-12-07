@@ -20,17 +20,14 @@ import java.util.LinkedList;
 import java.util.Set;
 import java.util.Map;
 
-import org.opentripplanner.model.FeedScopedId;
 import org.opentripplanner.model.FareAttribute;
-import org.opentripplanner.routing.core.Fare;
-import org.opentripplanner.routing.core.Fare.FareType;
 import org.opentripplanner.routing.core.FareRuleSet;
+import org.opentripplanner.routing.core.FareType;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.edgetype.HopEdge;
 import org.opentripplanner.routing.edgetype.TransitBoardAlight;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.spt.GraphPath;
-import org.opentripplanner.routing.impl.DefaultFareServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

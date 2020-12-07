@@ -17,10 +17,11 @@ import org.opentripplanner.model.FeedScopedId;
 import org.opentripplanner.model.FareAttribute;
 import org.opentripplanner.model.Stop;
 import org.opentripplanner.routing.core.Fare;
-import org.opentripplanner.routing.core.Fare.FareType;
 import org.opentripplanner.routing.core.FareComponent;
 import org.opentripplanner.routing.core.FareRuleSet;
+import org.opentripplanner.routing.core.FareType;
 import org.opentripplanner.routing.core.Money;
+import org.opentripplanner.routing.core.StandardFareType;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.WrappedCurrency;
 import org.opentripplanner.routing.edgetype.HopEdge;
@@ -40,7 +41,7 @@ class Ride {
     FeedScopedId route;
 
     FeedScopedId trip;
-    
+
     Set<String> zones;
 
     String startZone;
@@ -141,7 +142,7 @@ class FareAndId {
  * It cannot necessarily handle multi-feed graphs, because a rule-less fare attribute
  * might be applied to rides on routes in another feed, for example.
  * For more interesting fare structures like New York's MTA, or cities with multiple
- * feeds and inter-feed transfer rules, you get to implement your own FareService. 
+ * feeds and inter-feed transfer rules, you get to implement your own FareService.
  * See this thread on gtfs-changes explaining the proper interpretation of fares.txt:
  * http://groups.google.com/group/gtfs-changes/browse_thread/thread/8a4a48ae1e742517/4f81b826cb732f3b
  */
@@ -190,7 +191,7 @@ public class DefaultFareServiceImpl implements FareService, Serializable {
             ride.endZone  = ride.lastStop.getZoneId();
             ride.zones.add(ride.endZone);
             ride.endTime  = state.getTimeSeconds();
-            // in default fare service, classify rides by mode 
+            // in default fare service, classify rides by mode
             ride.classifier = state.getBackMode();
         }
         return rides;
@@ -244,10 +245,10 @@ public class DefaultFareServiceImpl implements FareService, Serializable {
         if (rides.size() == 0) {
             return true;
         }
-        Collection<FareRuleSet> fareRules = fareRulesPerType.get(FareType.regular).stream().
+        Collection<FareRuleSet> fareRules = fareRulesPerType.get(StandardFareType.regular).stream().
             filter(f -> allowedFareIds.contains(f.getFareAttribute().getId().toString())).collect(Collectors.toList());
 
-        return fareIsKnown(FareType.regular, rides, fareRules);
+        return fareIsKnown(StandardFareType.regular, rides, fareRules);
     }
 
     protected static Money getMoney(Currency currency, float cost) {
@@ -387,7 +388,7 @@ public class DefaultFareServiceImpl implements FareService, Serializable {
         Set<String> agencies = new HashSet<String>();
         Set<FeedScopedId> trips = new HashSet<FeedScopedId>();
         int transfersUsed = -1;
-        
+
         Ride firstRide = rides.get(0);
         long   startTime = firstRide.startTime;
         String startZone = firstRide.startZone;
@@ -409,12 +410,12 @@ public class DefaultFareServiceImpl implements FareService, Serializable {
             trips.add(ride.trip);
             transfersUsed += 1;
         }
-        
+
         FareAttribute bestAttribute = null;
         float bestFare = Float.POSITIVE_INFINITY;
         long tripTime = lastRideStartTime - startTime;
         long journeyTime = lastRideEndTime - startTime;
-        	
+
         // find the best fare that matches this set of rides
         for (FareRuleSet ruleSet : fareRules) {
             FareAttribute attribute = ruleSet.getFareAttribute();
@@ -422,7 +423,7 @@ public class DefaultFareServiceImpl implements FareService, Serializable {
             // check only if the fare is not mapped to an agency
             if (!ruleSet.hasAgencyDefined() && !attribute.getId().getAgencyId().equals(feedId))
                 continue;
-            
+
             if (ruleSet.matches(agencies, startZone, endZone, zones, routes, trips)) {
                 // TODO Maybe move the code below in FareRuleSet::matches() ?
                 if (attribute.isTransfersSet() && attribute.getTransfers() < transfersUsed) {
@@ -430,11 +431,11 @@ public class DefaultFareServiceImpl implements FareService, Serializable {
                 }
                 // assume transfers are evaluated at boarding time,
                 // as trimet does
-                if (attribute.isTransferDurationSet() && 
+                if (attribute.isTransferDurationSet() &&
                     tripTime > attribute.getTransferDuration()) {
                     continue;
                 }
-                if (attribute.isJourneyDurationSet() && 
+                if (attribute.isJourneyDurationSet() &&
                     journeyTime > attribute.getJourneyDuration()) {
                     continue;
                 }
@@ -453,22 +454,17 @@ public class DefaultFareServiceImpl implements FareService, Serializable {
     }
 
     protected float getFarePrice(FareAttribute fare, FareType type) {
-    	switch(type) {
-		case senior:
-			if (fare.getSeniorPrice() >= 0) {
-				return fare.getSeniorPrice();
-			}
-			break;
-		case youth:
-			if (fare.getYouthPrice() >= 0) {
-				return fare.getYouthPrice();
-			}
-			break;
-		case regular:
-		default:
-			break;
-    	}
-    	return fare.getPrice();
+        if (StandardFareType.senior.equals(type)) {
+            if (fare.getSeniorPrice() >= 0) {
+                return fare.getSeniorPrice();
+            }
+        }
+        if (StandardFareType.youth.equals(type)) {
+            if (fare.getYouthPrice() >= 0) {
+                return fare.getYouthPrice();
+            }
+        }
+        return fare.getPrice();
     }
 
 }

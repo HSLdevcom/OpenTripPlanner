@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import org.opentripplanner.annotation.Component;
+import org.opentripplanner.annotation.ServiceType;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.updater.GraphUpdater;
 import org.opentripplanner.updater.GraphUpdaterManager;
@@ -38,6 +40,7 @@ import com.ning.http.client.websocket.WebSocketUpgradeHandler;
  * </pre>
  *
  */
+@Component(key = "websocket-gtfs-rt-updater", type = ServiceType.GraphUpdater)
 public class WebsocketGtfsRealtimeUpdater implements GraphUpdater {
     /**
      * Number of seconds to wait before checking again whether we are still connected
@@ -159,7 +162,7 @@ public class WebsocketGtfsRealtimeUpdater implements GraphUpdater {
                 // Decode message
                 feedMessage = FeedMessage.PARSER.parseFrom(message);
                 feedEntityList = feedMessage.getEntityList();
-                
+
                 // Change fullDataset value if this is an incremental update
                 if (feedMessage.hasHeader()
                         && feedMessage.getHeader().hasIncrementality()
@@ -167,7 +170,7 @@ public class WebsocketGtfsRealtimeUpdater implements GraphUpdater {
                                 .equals(GtfsRealtime.FeedHeader.Incrementality.DIFFERENTIAL)) {
                     fullDataset = false;
                 }
-                
+
                 // Create List of TripUpdates
                 updates = new ArrayList<TripUpdate>(feedEntityList.size());
                 for (FeedEntity feedEntity : feedEntityList) {

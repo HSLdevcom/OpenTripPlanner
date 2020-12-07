@@ -12,6 +12,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.prefs.Preferences;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.opentripplanner.annotation.Component;
+import org.opentripplanner.annotation.ServiceType;
 import org.opentripplanner.graph_builder.linking.SimpleStreetSplitter;
 import org.opentripplanner.routing.bike_park.BikePark;
 import org.opentripplanner.routing.bike_rental.BikeRentalStationService;
@@ -31,10 +33,11 @@ import org.slf4j.LoggerFactory;
  *
  * Bike park-and-ride and "OV-fiets mode" development has been funded by GoAbout
  * (https://goabout.com/).
- * 
+ *
  * @author laurent
  * @author GoAbout
  */
+@Component(key = "bike-park", type = ServiceType.GraphUpdater)
 public class BikeParkUpdater extends PollingGraphUpdater {
 
     private static final Logger LOG = LoggerFactory.getLogger(BikeParkUpdater.class);

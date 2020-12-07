@@ -84,10 +84,11 @@ import org.opentripplanner.routing.algorithm.strategies.SearchTerminationStrateg
 import org.opentripplanner.routing.bike_park.BikePark;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.car_park.CarPark;
-import org.opentripplanner.routing.core.Fare.FareType;
 import org.opentripplanner.routing.core.FareRuleSet;
+import org.opentripplanner.routing.core.FareType;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.ServiceDay;
+import org.opentripplanner.routing.core.StandardFareType;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.TicketType;
 import org.opentripplanner.routing.core.TraverseMode;
@@ -187,7 +188,7 @@ public class GraphIndex {
             DefaultFareServiceImpl defaultFareServiceImpl = (DefaultFareServiceImpl) fareService;
             Map<FareType, Collection<FareRuleSet>> data = defaultFareServiceImpl.getFareRulesPerType();
             for(Entry<FareType, Collection<FareRuleSet>> kv:data.entrySet()) {
-                if(FareType.regular == kv.getKey()) {
+                if(StandardFareType.regular == kv.getKey()) {
                     for(FareRuleSet rs: kv.getValue()) {
                         ticketTypesForId.put(rs.getFareAttribute().getId(), new TicketType(rs));
                     }

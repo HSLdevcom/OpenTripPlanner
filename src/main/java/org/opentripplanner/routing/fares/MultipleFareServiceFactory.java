@@ -5,6 +5,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.opentripplanner.annotation.Component;
+import org.opentripplanner.annotation.ServiceType;
 import org.opentripplanner.model.OtpTransitService;
 import org.opentripplanner.routing.impl.DefaultFareServiceFactory;
 import org.opentripplanner.routing.services.FareService;
@@ -39,7 +41,7 @@ public abstract class MultipleFareServiceFactory implements FareServiceFactory {
 
     /**
      * Accept several ways to define fares to compose. Examples:
-     * 
+     *
      * <pre>
      * { combinationStrategy : "additive",
      *   // An array of 'fares'
@@ -79,6 +81,7 @@ public abstract class MultipleFareServiceFactory implements FareServiceFactory {
         }
     }
 
+    @Component(key = "composite:additive",type = ServiceType.ServiceFactory)
     public static class AddingMultipleFareServiceFactory extends MultipleFareServiceFactory {
         @Override
         protected FareService makeMultipleFareService(List<FareService> subServices) {
