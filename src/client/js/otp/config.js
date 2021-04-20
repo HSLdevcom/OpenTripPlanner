@@ -152,7 +152,7 @@ otp.config = {
         {
             id : 'planner',
             className : 'otp.modules.multimodal.MultimodalPlannerModule',
-            defaultBaseLayer : 'Stamen Terrain',
+            defaultBaseLayer : 'OSM Standard Tiles',
             isDefault: true
         },
         {
@@ -301,7 +301,7 @@ otp.config.modes = {
     //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
     "AIRPLANE,WALK"       : _tr("Airplane Only"),
     //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
-    "BUS,TRAM,RAIL,SUBWAY,FUNICULAR,GONDOLA,WALK"   : _tr("Transit, No Airplane"),
+    "BUS,TRAM,RAIL,FERRY,SUBWAY,FUNICULAR,GONDOLA,WALK" : _tr("Transit, No Airplane"),
     //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
     "BICYCLE"             : _tr('Bicycle Only'),
     //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
@@ -310,10 +310,13 @@ otp.config.modes = {
     "WALK"                : _tr('Walk Only'),
     //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
     "CAR"                 : _tr('Drive Only'),
+    "CAR_PICKUP,WALK"     : _tr('Taxi'),
     //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
     "CAR_PARK,WALK,TRANSIT"     : _tr('Park and Ride'),
     //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
-    "CAR,WALK,TRANSIT"          : _tr('Kiss and Ride'),
+    "CAR_PICKUP,WALK,TRANSIT"   : _tr('Ride and Kiss (Car Pickup)'),
+    //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
+    "CAR_DROPOFF,WALK,TRANSIT"   : _tr('Kiss and Ride (Car Dropoff)'),
     //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
     "BICYCLE_PARK,WALK,TRANSIT" : _tr('Bike and Ride'),
     //uncomment only if bike rental exists in a map
@@ -323,5 +326,13 @@ otp.config.modes = {
     //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
     'WALK,BICYCLE_RENT'        : _tr('Rented Bicycle'),
     //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
-    'TRANSIT,WALK,BICYCLE_RENT': _tr('Transit & Rented Bicycle')
+    'TRANSIT,WALK,BICYCLE_RENT': _tr('Transit & Rented Bicycle'),
+    //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
+    "FLEX_ACCESS,WALK,TRANSIT" : _tr('Transit with flex access'),
+    //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
+    "FLEX_EGRESS,WALK,TRANSIT" : _tr('Transit with flex egress'),
+    //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
+    "FLEX_ACCESS,FLEX_EGRESS,TRANSIT" : _tr('Transit with flex access and egress'),
+    //TRANSLATORS: Travel by: mode of transport (Used in selection in Travel Options widgets)
+    "FLEX_DIRECT" : _tr('Direct flex search')
 };

@@ -12,7 +12,7 @@ import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.routing.spt.ShortestPathTree;
-import org.opentripplanner.util.DateUtils;
+import org.opentripplanner.util.time.DateUtils;
 import org.opentripplanner.util.monitoring.MonitoringStore;
 import org.opentripplanner.util.monitoring.MonitoringStoreFactory;
 import org.slf4j.Logger;
@@ -124,7 +124,7 @@ public class AStar {
         runState.targetAcceptedStates = Lists.newArrayList();
         
         if (addToQueue) {
-            for (State initialState : State.getStates(options)) {
+            for (State initialState : State.getInitialStates(options)) {
                 runState.spt.add(initialState);
                 runState.pq.insert(initialState, 0);
             }
@@ -334,10 +334,12 @@ public class AStar {
     }
 
     private boolean isWorstTimeExceeded(State v, RoutingRequest opt) {
-        if (opt.arriveBy)
+        if (opt.arriveBy) {
             return v.getTimeSeconds() < opt.worstTime;
-        else
+        }
+        else {
             return v.getTimeSeconds() > opt.worstTime;
+        }
     }
 
     public void setTraverseVisitor(TraverseVisitor traverseVisitor) {

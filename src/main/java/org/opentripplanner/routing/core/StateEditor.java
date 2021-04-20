@@ -182,6 +182,10 @@ public class StateEditor {
     public void setEnteredNoThroughTrafficArea() {
         child.stateData.enteredNoThroughTrafficArea = true;
     }
+
+    public void resetEnteredNoThroughTrafficArea() {
+        child.stateData.enteredNoThroughTrafficArea = false;
+    }
     
 
     public void setBackMode(TraverseMode mode) {
@@ -272,7 +276,8 @@ public class StateEditor {
         child.stateData.usingRentedBike = state.isBikeRenting();
     }
 
-    public void setTaxiState(CarPickupState carPickupState) {
+    public void setCarPickupState(CarPickupState carPickupState) {
+        cloneStateDataAsNeeded();
         child.stateData.carPickupState = carPickupState;
         switch (carPickupState) {
             case WALK_TO_PICKUP:
