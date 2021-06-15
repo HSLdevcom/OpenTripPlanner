@@ -32,6 +32,8 @@ public class BikeRentalStation implements Serializable, Cloneable {
     public boolean isFloatingBike = false;
     @JsonSerialize
     public boolean isCarStation = false;
+    @JsonIgnore
+    public boolean isKeepingBicycleRentalAtDestinationAllowed = false;
 
     /**
      * List of compatible network names. Null (default) to be compatible with all.
@@ -59,7 +61,7 @@ public class BikeRentalStation implements Serializable, Cloneable {
      *
      */
     @JsonIgnore
-    public Locale locale = ResourceBundleSingleton.INSTANCE.getLocale(null);
+    public transient Locale locale = ResourceBundleSingleton.INSTANCE.getLocale(null);
 
     /**
      * FIXME nonstandard definition of equals, relying on only the station field.

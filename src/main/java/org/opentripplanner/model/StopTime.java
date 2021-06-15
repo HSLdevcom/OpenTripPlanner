@@ -1,6 +1,7 @@
 /* This file is based on code copied from project OneBusAway, see the LICENSE file for further information. */
 package org.opentripplanner.model;
 
+import java.util.Objects;
 import org.opentripplanner.util.time.TimeUtils;
 
 
@@ -12,8 +13,6 @@ import org.opentripplanner.util.time.TimeUtils;
  *           - object structure.
  */
 public final class StopTime implements Comparable<StopTime> {
-
-    private static final long serialVersionUID = 1L;
 
     public static final int MISSING_VALUE = -999;
 
@@ -52,7 +51,9 @@ public final class StopTime implements Comparable<StopTime> {
     // Disabled by default
     private int flexContinuousDropOff = MISSING_VALUE;
 
-    private BookingInfo bookingInfo;
+    private BookingInfo dropOffBookingInfo;
+
+    private BookingInfo pickupBookingInfo;
 
     public StopTime() { }
 
@@ -73,6 +74,8 @@ public final class StopTime implements Comparable<StopTime> {
         this.flexWindowEnd = st.flexWindowEnd;
         this.flexContinuousPickup = st.flexContinuousPickup;
         this.flexContinuousDropOff = st.flexContinuousDropOff;
+        this.dropOffBookingInfo = st.dropOffBookingInfo;
+        this.pickupBookingInfo = st.pickupBookingInfo;
     }
 
     /**
@@ -257,12 +260,20 @@ public final class StopTime implements Comparable<StopTime> {
         this.flexContinuousDropOff = flexContinuousDropOff;
     }
 
-    public BookingInfo getBookingInfo() {
-        return bookingInfo;
+    public BookingInfo getDropOffBookingInfo() {
+        return dropOffBookingInfo;
     }
 
-    public void setBookingInfo(BookingInfo bookingInfo) {
-        this.bookingInfo = bookingInfo;
+    public void setDropOffBookingInfo(BookingInfo dropOffBookingInfo) {
+        this.dropOffBookingInfo = dropOffBookingInfo;
+    }
+
+    public BookingInfo getPickupBookingInfo() {
+        return pickupBookingInfo;
+    }
+
+    public void setPickupBookingInfo(BookingInfo pickupBookingInfo) {
+        this.pickupBookingInfo = pickupBookingInfo;
     }
 
     public int compareTo(StopTime o) {

@@ -39,11 +39,7 @@ public abstract class DominanceFunction implements Serializable {
     public boolean betterOrEqualAndComparable(State a, State b) {
 
         // Does one state represent riding a rented bike and the other represent walking before/after rental?
-        if (a.isBikeRenting() != b.isBikeRenting()) {
-            return false;
-        }
-
-        if (a.hasUsedRentedBike() != b.hasUsedRentedBike()) {
+        if (!a.isCompatibleBikeRentalState(b)) {
             return false;
         }
 
@@ -82,7 +78,7 @@ public abstract class DominanceFunction implements Serializable {
          */
         if (a.backEdge != b.getBackEdge()
                 && (a.backEdge instanceof StreetEdge)
-                && a.getBackMode() != null && a.getBackMode().isDriving()
+                && a.getBackMode() != null && (a.getBackMode().isDriving() || a.getBackMode().isCycling())
                 && a.getOptions().isCloseToStartOrEnd(a.getVertex())) {
             return false;
         }

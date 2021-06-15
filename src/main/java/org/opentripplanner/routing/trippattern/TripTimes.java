@@ -1,22 +1,21 @@
 package org.opentripplanner.routing.trippattern;
 
+import static org.opentripplanner.model.StopPattern.PICKDROP_NONE;
+
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
-import org.opentripplanner.model.BookingInfo;
-import org.opentripplanner.model.StopTime;
-import org.opentripplanner.model.Trip;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.List;
-
-import static org.opentripplanner.model.StopPattern.PICKDROP_NONE;
+import org.opentripplanner.model.BookingInfo;
+import org.opentripplanner.model.StopTime;
+import org.opentripplanner.model.Trip;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A TripTimes represents the arrival and departure times for a single trip in an Timetable. It is carried
@@ -120,8 +119,9 @@ public class TripTimes implements Serializable, Comparable<TripTimes>, Cloneable
      */
     int[] dropoffs;
 
-    List<BookingInfo> bookingInfos;
+    List<BookingInfo> dropOffBookingInfos;
 
+    List<BookingInfo> pickupBookingInfos;
 
     /**
      * These are the GTFS stop sequence numbers, which show the order in which the vehicle visits
@@ -157,7 +157,8 @@ public class TripTimes implements Serializable, Comparable<TripTimes>, Cloneable
         timeShift = stopTimes.iterator().next().getArrivalTime();
         final int[] pickups   = new int[nStops];
         final int[] dropoffs   = new int[nStops];
-        final List<BookingInfo> bookingInfos = new ArrayList<>();
+        final List<BookingInfo> dropOffBookingInfos = new ArrayList<>();
+        final List<BookingInfo> pickupBookingInfos = new ArrayList<>();
         int s = 0;
         for (final StopTime st : stopTimes) {
             departures[s] = st.getDepartureTime() - timeShift;
@@ -167,7 +168,8 @@ public class TripTimes implements Serializable, Comparable<TripTimes>, Cloneable
 
             pickups[s] = st.getPickupType();
             dropoffs[s] = st.getDropOffType();
-            bookingInfos.add(st.getBookingInfo());
+            dropOffBookingInfos.add(st.getDropOffBookingInfo());
+            pickupBookingInfos.add(st.getPickupBookingInfo());
             s++;
         }
         this.scheduledDepartureTimes = deduplicator.deduplicateIntArray(departures);
@@ -176,7 +178,8 @@ public class TripTimes implements Serializable, Comparable<TripTimes>, Cloneable
         this.headsigns = deduplicator.deduplicateStringArray(makeHeadsignsArray(stopTimes));
         this.pickups = deduplicator.deduplicateIntArray(pickups);
         this.dropoffs = deduplicator.deduplicateIntArray(dropoffs);
-        this.bookingInfos = deduplicator.deduplicateImmutableList(BookingInfo.class, bookingInfos);
+        this.dropOffBookingInfos = deduplicator.deduplicateImmutableList(BookingInfo.class, dropOffBookingInfos);
+        this.pickupBookingInfos = deduplicator.deduplicateImmutableList(BookingInfo.class, pickupBookingInfos);
         // We set these to null to indicate that this is a non-updated/scheduled TripTimes.
         // We cannot point to the scheduled times because they are shifted, and updated times are not.
         this.arrivalTimes = null;
@@ -200,7 +203,8 @@ public class TripTimes implements Serializable, Comparable<TripTimes>, Cloneable
         this.timepoints = object.timepoints;
         this.pickups = object.pickups;
         this.dropoffs = object.dropoffs;
-        this.bookingInfos = object.bookingInfos;
+        this.dropOffBookingInfos = object.dropOffBookingInfos;
+        this.pickupBookingInfos = object.pickupBookingInfos;
     }
 
     /**
@@ -260,6 +264,16 @@ public class TripTimes implements Serializable, Comparable<TripTimes>, Cloneable
     /** @return the amount of time in seconds that the vehicle waits at the stop. */
     public int getScheduledDepartureTime(final int stop) {
         return scheduledDepartureTimes[stop] + timeShift;
+    }
+
+    /**
+     * Return an integer witch can be used to sort TripTimes in order of departure/arrivals.
+     * <p>
+     * This sorted trip times is used to search for trips. OTP assume one trip do NOT pass another
+     * trip down the line.
+     */
+    public int sortIndex() {
+        return getArrivalTime(0);
     }
 
     /** @return the time in seconds after midnight that the vehicle arrives at the stop. */
@@ -363,8 +377,12 @@ public class TripTimes implements Serializable, Comparable<TripTimes>, Cloneable
         return dropoffs[stop];
     }
 
-    public BookingInfo getBookingInfo(int stop) {
-        return bookingInfos.get(stop);
+    public BookingInfo getDropOffBookingInfo(int stop) {
+        return dropOffBookingInfos.get(stop);
+    }
+
+    public BookingInfo getPickupBookingInfo(int stop) {
+        return pickupBookingInfos.get(stop);
     }
 
     /**
@@ -408,7 +426,7 @@ public class TripTimes implements Serializable, Comparable<TripTimes>, Cloneable
     /**
      * When creating a scheduled TripTimes or wrapping it in updates, we could potentially imply
      * negative running or dwell times. We really don't want those being used in routing.
-     * This method check that all times are increasing, and logs errors if this is not the case.
+     * This method check that all times are increasing, and logs warnings if this is not the case.
      * @return whether the times were found to be increasing.
      */
     public boolean timesIncreasing() {
@@ -419,11 +437,11 @@ public class TripTimes implements Serializable, Comparable<TripTimes>, Cloneable
             final int dep = getDepartureTime(s);
 
             if (dep < arr) {
-                LOG.error("Negative dwell time in TripTimes at stop index {}.", s);
+                LOG.warn("Negative dwell time in TripTimes at stop index {}.", s);
                 return false;
             }
             if (prevDep > arr) {
-                LOG.error("Negative running time in TripTimes after stop index {}.", s);
+                LOG.warn("Negative running time in TripTimes after stop index {}.", s);
                 return false;
             }
             prevDep = dep;

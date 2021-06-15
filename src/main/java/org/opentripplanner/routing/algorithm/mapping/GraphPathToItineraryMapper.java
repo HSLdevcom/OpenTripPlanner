@@ -1,5 +1,13 @@
 package org.opentripplanner.routing.algorithm.mapping;
 
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.stream.Stream;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
@@ -25,11 +33,10 @@ import org.opentripplanner.routing.core.RoutingContext;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.edgetype.AreaEdge;
+import org.opentripplanner.routing.edgetype.BikeRentalEdge;
 import org.opentripplanner.routing.edgetype.ElevatorAlightEdge;
 import org.opentripplanner.routing.edgetype.FreeEdge;
 import org.opentripplanner.routing.edgetype.PathwayEdge;
-import org.opentripplanner.routing.edgetype.RentABikeOffEdge;
-import org.opentripplanner.routing.edgetype.RentABikeOnEdge;
 import org.opentripplanner.routing.edgetype.StreetEdge;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
@@ -45,15 +52,6 @@ import org.opentripplanner.util.OTPFeature;
 import org.opentripplanner.util.PolylineEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.TimeZone;
-import java.util.stream.Stream;
 
 // TODO OTP2 There is still a lot of transit-related logic here that should be removed. We also need
 //      to decide where real-time updates should be applied to the itinerary.
@@ -142,6 +140,7 @@ public abstract class GraphPathToItineraryMapper {
         calculateElevations(itinerary, edges);
 
         itinerary.generalizedCost = (int) lastState.weight;
+        itinerary.arrivedAtDestinationWithRentedBicycle = lastState.isBikeRentingFromStation();
 
         return itinerary;
     }
@@ -205,12 +204,17 @@ public abstract class GraphPathToItineraryMapper {
         List<int[]> legsIndexes = new ArrayList<int[]>();
 
         for (int i = 1; i < states.length - 1; i++) {
-            TraverseMode backMode = states[i].getBackMode();
-            TraverseMode forwardMode = states[i + 1].getBackMode();
+            var backState = states[i];
+            var forwardState = states[i + 1];
+            var backMode = backState.getBackMode();
+            var forwardMode = forwardState.getBackMode();
 
-            if (backMode == null || forwardMode == null) continue;
+            var modeChange = backMode != forwardMode && backMode != null && forwardMode != null;
+            var rentalChange = isRentalPickUp(backState) || isRentalDropOff(backState);
+            var parkingChange = backState.isBikeParked() != forwardState.isBikeParked()
+                    || backState.isCarParked() != forwardState.isCarParked();
 
-            if (backMode != forwardMode) {
+            if (modeChange || rentalChange || parkingChange) {
                 legIndexPairs[1] = i;
                 legsIndexes.add(legIndexPairs);
                 legIndexPairs = new int[] {i, states.length - 1};
@@ -226,9 +230,11 @@ public abstract class GraphPathToItineraryMapper {
         for (int i = 0; i < legsStates.length; i++) {
             legIndexPairs = legsIndexes.get(i);
             legsStates[i] = new State[legIndexPairs[1] - legIndexPairs[0] + 1];
-            for (int j = 0; j <= legIndexPairs[1] - legIndexPairs[0]; j++) {
-                legsStates[i][j] = states[legIndexPairs[0] + j];
-            }
+            if (legIndexPairs[1] - legIndexPairs[0] + 1 >= 0)
+                System.arraycopy(
+                        states, legIndexPairs[0], legsStates[i], 0,
+                        legIndexPairs[1] - legIndexPairs[0] + 1
+                );
         }
 
         return legsStates;
@@ -288,7 +294,14 @@ public abstract class GraphPathToItineraryMapper {
         // But in any case, with Raptor this method is only being used to translate non-transit legs of paths.
         leg.interlineWithPreviousLeg = false;
 
-        leg.rentedBike = states[0].isBikeRenting() && states[states.length - 1].isBikeRenting();
+        leg.rentedBike = states[0].isBikeRenting();
+
+        if (leg.rentedBike) {
+            Set<String> bikeRentalNetworks = states[0].getBikeRentalNetworks();
+            if (bikeRentalNetworks != null) {
+                leg.addBikeRentalNetworks(states[0].getBikeRentalNetworks());
+            }
+        }
 
         addAlerts(graph, leg, states);
 
@@ -498,13 +511,17 @@ public abstract class GraphPathToItineraryMapper {
 
         State onBikeRentalState = null, offBikeRentalState = null;
 
+        if (isRentalPickUp(states[states.length - 1])) {
+            onBikeRentalState = states[states.length - 1];
+        }
+        if (isRentalDropOff(states[0])) {
+            offBikeRentalState = states[0];
+        }
+
         for (int i = 0; i < states.length - 1; i++) {
             State backState = states[i];
             State forwardState = states[i + 1];
             Edge edge = forwardState.getBackEdge();
-
-            if(edge instanceof RentABikeOnEdge) onBikeRentalState = forwardState;
-            if(edge instanceof RentABikeOffEdge) offBikeRentalState = forwardState;
 
             boolean createdNewStep = false, disableZagRemovalForThisStep = false;
             if (edge instanceof FreeEdge) {
@@ -523,7 +540,7 @@ public abstract class GraphPathToItineraryMapper {
             // before or will come after
             if (edge instanceof ElevatorAlightEdge) {
                 // don't care what came before or comes after
-                step = createWalkStep(graph, forwardState, requestedLocale);
+                step = createWalkStep(graph, forwardState, backState, requestedLocale);
                 createdNewStep = true;
                 disableZagRemovalForThisStep = true;
 
@@ -551,7 +568,7 @@ public abstract class GraphPathToItineraryMapper {
 
             if (step == null) {
                 // first step
-                step = createWalkStep(graph, forwardState, requestedLocale);
+                step = createWalkStep(graph, forwardState, backState, requestedLocale);
                 createdNewStep = true;
 
                 steps.add(step);
@@ -579,7 +596,7 @@ public abstract class GraphPathToItineraryMapper {
                     roundaboutExit = 0;
                 }
                 /* start a new step */
-                step = createWalkStep(graph, forwardState, requestedLocale);
+                step = createWalkStep(graph, forwardState, backState, requestedLocale);
                 createdNewStep = true;
 
                 steps.add(step);
@@ -666,7 +683,7 @@ public abstract class GraphPathToItineraryMapper {
 
                     if (shouldGenerateContinue) {
                         // turn to stay on same-named street
-                        step = createWalkStep(graph, forwardState, requestedLocale);
+                        step = createWalkStep(graph, forwardState, backState, requestedLocale);
                         createdNewStep = true;
                         steps.add(step);
                         step.setDirections(lastAngle, thisAngle, false);
@@ -772,14 +789,23 @@ public abstract class GraphPathToItineraryMapper {
         // add bike rental information if applicable
         if(onBikeRentalState != null && !steps.isEmpty()) {
             steps.get(steps.size()-1).bikeRentalOnStation = 
-                    new BikeRentalStationInfo((BikeRentalStationVertex) onBikeRentalState.getBackEdge().getToVertex());
+                    new BikeRentalStationInfo((BikeRentalStationVertex) onBikeRentalState.getVertex());
         }
         if(offBikeRentalState != null && !steps.isEmpty()) {
             steps.get(0).bikeRentalOffStation = 
-                    new BikeRentalStationInfo((BikeRentalStationVertex) offBikeRentalState.getBackEdge().getFromVertex());
+                    new BikeRentalStationInfo((BikeRentalStationVertex) offBikeRentalState.getVertex());
         }
 
         return steps;
+    }
+
+    private static boolean isRentalPickUp(State state) {
+        return state.getBackEdge() instanceof BikeRentalEdge && (state.getBackState() == null || !state.getBackState()
+                .isBikeRenting());
+    }
+
+    private static boolean isRentalDropOff(State state) {
+        return state.getBackEdge() instanceof BikeRentalEdge && state.getBackState().isBikeRenting();
     }
 
     private static boolean isLink(Edge edge) {
@@ -798,21 +824,21 @@ public abstract class GraphPathToItineraryMapper {
         return angleDiff;
     }
 
-    private static WalkStep createWalkStep(Graph graph, State s, Locale wantedLocale) {
-        Edge en = s.getBackEdge();
+    private static WalkStep createWalkStep(Graph graph, State forwardState, State backState, Locale wantedLocale) {
+        Edge en = forwardState.getBackEdge();
         WalkStep step;
         step = new WalkStep();
         step.streetName = en.getName(wantedLocale);
         step.startLocation = new WgsCoordinate(
-                en.getFromVertex().getLat(),
-                en.getFromVertex().getLon()
+                backState.getVertex().getLat(),
+                backState.getVertex().getLon()
         );
-        step.elevation = encodeElevationProfile(s.getBackEdge(), 0,
-                s.getOptions().geoidElevation ? -graph.ellipsoidToGeoidDifference : 0);
+        step.elevation = encodeElevationProfile(forwardState.getBackEdge(), 0,
+                forwardState.getOptions().geoidElevation ? -graph.ellipsoidToGeoidDifference : 0);
         step.bogusName = en.hasBogusName();
-        step.addStreetNotes(graph.streetNotesService.getNotes(s));
-        step.angle = DirectionUtils.getFirstAngle(s.getBackEdge().getGeometry());
-        if (s.getBackEdge() instanceof AreaEdge) {
+        step.addStreetNotes(graph.streetNotesService.getNotes(forwardState));
+        step.angle = DirectionUtils.getFirstAngle(forwardState.getBackEdge().getGeometry());
+        if (forwardState.getBackEdge() instanceof AreaEdge) {
             step.area = true;
         }
         return step;
