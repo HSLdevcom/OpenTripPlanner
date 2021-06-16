@@ -1,10 +1,21 @@
 package org.opentripplanner.updater.stoptime;
 
+import java.text.ParseException;
+import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
+
 import com.google.common.base.Preconditions;
 import com.google.transit.realtime.GtfsRealtime.TripDescriptor;
 import com.google.transit.realtime.GtfsRealtime.TripUpdate;
 import com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate;
-import org.opentripplanner.model.*;
+
+import org.opentripplanner.model.Agency;
+import org.opentripplanner.model.FeedScopedId;
+import org.opentripplanner.model.Route;
+import org.opentripplanner.model.Stop;
+import org.opentripplanner.model.StopPattern;
+import org.opentripplanner.model.StopTime;
+import org.opentripplanner.model.Trip;
 import org.opentripplanner.model.calendar.ServiceDate;
 import org.opentripplanner.routing.edgetype.Timetable;
 import org.opentripplanner.routing.edgetype.TimetableSnapshot;
@@ -18,9 +29,6 @@ import org.opentripplanner.util.SentryUtilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.text.ParseException;
-import java.util.*;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * This class should be used to create snapshots of lookup tables of realtime data. This is
@@ -683,7 +691,7 @@ public class TimetableSnapshotSource {
         // TODO: filter/interpolate stop times like in PatternHopFactory?
 
         // Create StopPattern
-        final StopPattern stopPattern = new StopPattern(stopTimes, graph.deduplicator);
+        final StopPattern stopPattern = new StopPattern(stopTimes, /*TODO: alternate stops for added trips*/ Collections.emptyMap(), graph.deduplicator);
 
         // Get cached trip pattern or create one if it doesn't exist yet
         final TripPattern pattern = tripPatternCache.getOrCreateTripPattern(stopPattern, trip.getRoute(), graph);
