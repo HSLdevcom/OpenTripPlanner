@@ -297,7 +297,12 @@ public class TripPattern extends TransitEntity implements Cloneable, Serializabl
      * The direction for all the trips in this pattern.
      */
     public Direction getDirection() {
-        return getTrips().get(0).getDirection();
+        if(getTrips().isEmpty()) {
+            LOG.error("{} with route {} contains no trips.", this, route);
+            return Direction.UNKNOWN;
+        } else {
+            return getTrips().get(0).getDirection();
+        }
     }
 
     /**
