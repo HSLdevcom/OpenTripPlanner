@@ -91,8 +91,6 @@ public class DefaultFareServiceImpl implements FareService {
   @Override
   public Fare getCost(Itinerary itinerary) {
     List<Ride> rides = RideMapper.ridesForItinerary(itinerary);
-
-    // If there are no rides, there's no fare.
     if (rides.size() == 0) {
       return null;
     }
@@ -243,7 +241,7 @@ public class DefaultFareServiceImpl implements FareService {
     return r;
   }
 
-  private FareAndId getBestFareAndId(
+  protected FareAndId getBestFareAndId(
     FareType fareType,
     List<Ride> rides,
     Collection<FareRuleSet> fareRules
@@ -320,7 +318,7 @@ public class DefaultFareServiceImpl implements FareService {
     return new FareAndId(bestFare, bestAttribute == null ? null : bestAttribute.getId());
   }
 
-  private float getFarePrice(FareAttribute fare, FareType type) {
+  protected float getFarePrice(FareAttribute fare, FareType type) {
     switch (type) {
       case senior:
         if (fare.getSeniorPrice() >= 0) {

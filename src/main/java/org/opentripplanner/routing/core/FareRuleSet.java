@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 import org.opentripplanner.common.model.P2;
+import org.opentripplanner.common.model.P3;
 import org.opentripplanner.model.FareAttribute;
 import org.opentripplanner.model.FeedScopedId;
 
@@ -17,12 +18,21 @@ public class FareRuleSet implements Serializable {
   private final FareAttribute fareAttribute;
   private final Set<FeedScopedId> trips;
 
+  private Set<P3<String>> routeOriginDestinations;// = new HashSet<>();
+
   public FareRuleSet(FareAttribute fareAttribute) {
     this.fareAttribute = fareAttribute;
     routes = new HashSet<>();
     originDestinations = new HashSet<>();
     contains = new HashSet<>();
     trips = new HashSet<>();
+    routeOriginDestinations = new HashSet<P3<String>>();
+
+  }
+
+
+  public Set<String> getContains() {
+    return contains;
   }
 
   public void addOriginDestination(String origin, String destination) {
@@ -56,6 +66,15 @@ public class FareRuleSet implements Serializable {
   public Set<FeedScopedId> getTrips() {
     return trips;
   }
+
+  public void addRouteOriginDestination(String route, String origin, String destination) {
+    routeOriginDestinations.add(new P3<String>(route, origin, destination));
+  }
+
+  public Set<P3<String>> getRouteOriginDestinations() {
+    return routeOriginDestinations;
+  }
+
 
   public boolean matches(
     String startZone,

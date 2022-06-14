@@ -147,13 +147,16 @@ public class DefaultFareServiceFactory implements FareServiceFactory {
       }
       String origin = rule.getOriginId();
       String destination = rule.getDestinationId();
-      if (origin != null || destination != null) {
-        fareRule.addOriginDestination(origin, destination);
-      }
+
       Route route = rule.getRoute();
       if (route != null) {
         FeedScopedId routeId = route.getId();
         fareRule.addRoute(routeId);
+        if (origin != null || destination != null) {
+          fareRule.addRouteOriginDestination(rule.getRoute().getId().toString(), origin, destination);
+        }
+      } else {
+          fareRule.addOriginDestination(origin, destination);
       }
     }
   }
@@ -177,6 +180,8 @@ public class DefaultFareServiceFactory implements FareServiceFactory {
         return new NycFareServiceFactory();
       case "seattle":
         return new SeattleFareServiceFactory();
+      case "HSL":
+        return new HSLFareServiceFactory();
       default:
         throw new IllegalArgumentException(String.format("Unknown fare type: '%s'", type));
     }
