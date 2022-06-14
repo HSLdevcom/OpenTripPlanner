@@ -21,7 +21,6 @@ public class HSLFareServiceFactory extends DefaultFareServiceFactory {
 
   public FareService makeFareService() {
     HSLFareServiceImpl fareService = new HSLFareServiceImpl();
-    System.out.println("HSL FareServiceFactory");
     fareService.addFareRules(FareType.regular, regularFareRules.values());
     return fareService;
   }
