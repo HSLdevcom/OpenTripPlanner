@@ -56,6 +56,8 @@ import org.opentripplanner.routing.algorithm.RoutingWorker;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.TransitLayer;
 import org.opentripplanner.routing.api.request.RoutingRequest;
 import org.opentripplanner.routing.api.response.RoutingResponse;
+import org.opentripplanner.routing.core.FareRuleSet;
+import org.opentripplanner.routing.core.TicketType;
 import org.opentripplanner.routing.core.intersection_model.IntersectionTraversalCostModel;
 import org.opentripplanner.routing.edgetype.StreetEdge;
 import org.opentripplanner.routing.graph.Edge;
@@ -806,6 +808,10 @@ public class RoutingService {
 
   public Map<FeedScopedId, TripOnServiceDate> getTripOnServiceDateById() {
     return graphIndex.getTripOnServiceDateById();
+  }
+
+  public Collection<TicketType> getAllTicketTypes() {
+    return graphIndex.getAllTicketTypes();
   }
 
   /**

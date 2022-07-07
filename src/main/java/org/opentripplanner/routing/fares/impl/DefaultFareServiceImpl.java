@@ -88,6 +88,10 @@ public class DefaultFareServiceImpl implements FareService {
     fareRulesPerType.put(fareType, new ArrayList<>(fareRules));
   }
 
+  public Map<FareType, Collection<FareRuleSet>> getFareRulesPerType() {
+    return fareRulesPerType;
+  }
+
   @Override
   public Fare getCost(Itinerary itinerary) {
     List<Ride> rides = RideMapper.ridesForItinerary(itinerary);

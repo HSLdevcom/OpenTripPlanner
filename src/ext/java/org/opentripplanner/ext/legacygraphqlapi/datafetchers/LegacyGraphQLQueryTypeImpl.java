@@ -51,7 +51,7 @@ import org.opentripplanner.routing.alertpatch.TransitAlert;
 import org.opentripplanner.routing.api.request.RoutingRequest;
 import org.opentripplanner.routing.api.response.RoutingResponse;
 import org.opentripplanner.routing.core.BicycleOptimizeType;
-import org.opentripplanner.routing.core.FareRuleSet;
+import org.opentripplanner.routing.core.TicketType;
 import org.opentripplanner.routing.error.RoutingValidationException;
 import org.opentripplanner.routing.graphfinder.NearbyStop;
 import org.opentripplanner.routing.graphfinder.PatternAtStop;
@@ -541,7 +541,7 @@ public class LegacyGraphQLQueryTypeImpl
             return new NearbyStop(stop, Integer.parseInt(parts[0]), null, null, null);
           }
         case "TicketType":
-          return null; //TODO
+          return routingService.getAllTicketTypes();//null; //TODO
         case "Trip":
           var scopedId = FeedScopedId.parseId(id);
           return routingService.getTripForId().get(scopedId);
@@ -1048,8 +1048,14 @@ public class LegacyGraphQLQueryTypeImpl
 
   //TODO
   @Override
-  public DataFetcher<Iterable<FareRuleSet>> ticketTypes() {
-    return environment -> null;
+  public DataFetcher<Iterable<TicketType>> ticketTypes() {
+    return environment -> {
+
+
+      Iterable<TicketType> result =  getRoutingService(environment).getAllTicketTypes();
+      System.out.println("All ticket types: "  + result);//+ getRoutingService(environment).getAllTicketTypes());//.stream().map(TicketType::getId).collect(Collectors.toList()));
+      return result;
+    };
   }
 
   @Override

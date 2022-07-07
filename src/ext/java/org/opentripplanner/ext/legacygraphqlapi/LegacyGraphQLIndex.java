@@ -63,6 +63,7 @@ import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLStopRe
 import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLStoptimeImpl;
 import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLStoptimesInPatternImpl;
 import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLSystemNoticeImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLTicketTypeImpl;
 import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLTranslatedStringImpl;
 import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLTripImpl;
 import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLUnknownImpl;
@@ -119,6 +120,7 @@ class LegacyGraphQLIndex {
         .type(IntrospectionTypeWiring.build(LegacyGraphQLdebugOutputImpl.class))
         .type(IntrospectionTypeWiring.build(LegacyGraphQLDepartureRowImpl.class))
         .type(IntrospectionTypeWiring.build(LegacyGraphQLelevationProfileComponentImpl.class))
+        .type(IntrospectionTypeWiring.build(LegacyGraphQLTicketTypeImpl.class))
         .type(IntrospectionTypeWiring.build(LegacyGraphQLfareComponentImpl.class))
         .type(IntrospectionTypeWiring.build(LegacyGraphQLfareImpl.class))
         .type(IntrospectionTypeWiring.build(LegacyGraphQLFeedImpl.class))
@@ -155,6 +157,7 @@ class LegacyGraphQLIndex {
         .type(IntrospectionTypeWiring.build(LegacyGraphQLStopGeometriesImpl.class))
         .type(IntrospectionTypeWiring.build(LegacyGraphQLVehiclePositionImpl.class))
         .type(IntrospectionTypeWiring.build(LegacyGraphQLStopRelationshipImpl.class))
+
         .build();
       SchemaGenerator schemaGenerator = new SchemaGenerator();
       return schemaGenerator.makeExecutableSchema(typeRegistry, runtimeWiring);

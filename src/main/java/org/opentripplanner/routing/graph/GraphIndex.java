@@ -33,6 +33,11 @@ import org.opentripplanner.model.TripOnServiceDate;
 import org.opentripplanner.model.TripPattern;
 import org.opentripplanner.model.calendar.CalendarService;
 import org.opentripplanner.model.calendar.ServiceDate;
+import org.opentripplanner.routing.core.Fare;
+import org.opentripplanner.routing.core.FareRuleSet;
+import org.opentripplanner.routing.core.TicketType;
+import org.opentripplanner.routing.fares.FareService;
+import org.opentripplanner.routing.fares.impl.DefaultFareServiceImpl;
 import org.opentripplanner.routing.vertextype.TransitStopVertex;
 import org.opentripplanner.util.OTPFeature;
 import org.slf4j.Logger;
@@ -58,11 +63,28 @@ public class GraphIndex {
   private final Map<ServiceDate, TIntSet> serviceCodesRunningForDate = new HashMap<>();
   private final Map<FeedScopedId, TripOnServiceDate> tripOnServiceDateById = new HashMap<>();
   private final Map<TripIdAndServiceDate, TripOnServiceDate> tripOnServiceDateForTripAndDay = new HashMap<>();
+
+  public final Map<FeedScopedId, TicketType> ticketTypesForId = new HashMap();
+
   private FlexIndex flexIndex = null;
 
   public GraphIndex(Graph graph) {
     LOG.info("GraphIndex init...");
     CompactElevationProfile.setDistanceBetweenSamplesM(graph.getDistanceBetweenElevationSamples());
+
+    FareService fareService = graph.getService(FareService.class);
+    if(fareService instanceof DefaultFareServiceImpl) {
+      LOG.info("Collecting fare information...");
+      DefaultFareServiceImpl defaultFareServiceImpl = (DefaultFareServiceImpl) fareService;
+      Map<Fare.FareType, Collection<FareRuleSet>> data = defaultFareServiceImpl.getFareRulesPerType();
+      for(Map.Entry<Fare.FareType, Collection<FareRuleSet>> kv:data.entrySet()) {
+        if(Fare.FareType.regular == kv.getKey()) {
+          for(FareRuleSet rs: kv.getValue()) {
+            ticketTypesForId.put(rs.getFareAttribute().getId(), new TicketType(rs));
+          }
+        }
+      }
+    }
 
     for (Agency agency : graph.getAgencies()) {
       this.agencyForId.put(agency.getId(), agency);
@@ -208,6 +230,10 @@ public class GraphIndex {
     return stopForId.values();
   }
 
+  public Collection<TicketType> getAllTicketTypes() {
+    //return getAllTicketTypes();
+    return ticketTypesForId.values();
+  }
   public Map<FeedScopedId, Trip> getTripForId() {
     return tripForId;
   }
@@ -293,3 +319,5 @@ public class GraphIndex {
     }
   }
 }
+
+
