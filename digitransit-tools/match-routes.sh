@@ -14,7 +14,7 @@ then
 fi
 
 GTFS_INPUT=$1
-REGEXP=${2:-'^(21(4[3-9]|5[0-9]|6[0-5])(A|[B-Z]A).*|2321)$'}
+REGEXP=${2:-'^(21(4[3-9]|5[0-9]|6[0-5])(A|[B-Z]A).*|2321|7.*)$'}
 
 # create sandbox directory
 WD=$(mktemp -d -t gtfs-XXXXXX)
