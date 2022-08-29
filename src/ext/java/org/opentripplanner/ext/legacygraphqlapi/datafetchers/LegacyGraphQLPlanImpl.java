@@ -7,8 +7,9 @@ import org.opentripplanner.api.mapping.PlannerErrorMapper;
 import org.opentripplanner.api.resource.DebugOutput;
 import org.opentripplanner.ext.legacygraphqlapi.generated.LegacyGraphQLDataFetchers;
 import org.opentripplanner.model.plan.Itinerary;
-import org.opentripplanner.model.plan.PageCursor;
 import org.opentripplanner.model.plan.StopArrival;
+import org.opentripplanner.model.plan.pagecursor.PageCursor;
+import org.opentripplanner.routing.api.response.RoutingError;
 import org.opentripplanner.routing.api.response.RoutingResponse;
 import org.opentripplanner.routing.api.response.TripSearchMetadata;
 
@@ -16,17 +17,18 @@ public class LegacyGraphQLPlanImpl implements LegacyGraphQLDataFetchers.LegacyGr
 
   @Override
   public DataFetcher<Long> date() {
-    return environment -> getSource(environment).getTripPlan().date.getTime();
+    return environment -> getSource(environment).getTripPlan().date.toEpochMilli();
+  }
+
+  @Override
+  public DataFetcher<DebugOutput> debugOutput() {
+    return environment -> getSource(environment).getDebugTimingAggregator().finishedRendering();
   }
 
   @Override
   public DataFetcher<StopArrival> from() {
-    return environment -> new StopArrival(getSource(environment).getTripPlan().from, null, null);
-  }
-
-  @Override
-  public DataFetcher<StopArrival> to() {
-    return environment -> new StopArrival(getSource(environment).getTripPlan().to, null, null);
+    return environment ->
+      new StopArrival(getSource(environment).getTripPlan().from, null, null, null, null);
   }
 
   @Override
@@ -36,7 +38,8 @@ public class LegacyGraphQLPlanImpl implements LegacyGraphQLDataFetchers.LegacyGr
 
   @Override
   public DataFetcher<Iterable<String>> messageEnums() {
-    return environment -> getSource(environment)
+    return environment ->
+      getSource(environment)
         .getRoutingErrors()
         .stream()
         .map(routingError -> routingError.code)
@@ -46,7 +49,8 @@ public class LegacyGraphQLPlanImpl implements LegacyGraphQLDataFetchers.LegacyGr
 
   @Override
   public DataFetcher<Iterable<String>> messageStrings() {
-    return environment -> getSource(environment)
+    return environment ->
+      getSource(environment)
         .getRoutingErrors()
         .stream()
         .map(PlannerErrorMapper::mapMessage)
@@ -55,28 +59,18 @@ public class LegacyGraphQLPlanImpl implements LegacyGraphQLDataFetchers.LegacyGr
   }
 
   @Override
-  public DataFetcher<Long> prevDateTime() {
-    return environment -> {
-      TripSearchMetadata metadata = getSource(environment).getMetadata();
-      if ( metadata == null || metadata.prevDateTime == null ) { return null; }
-      return metadata.prevDateTime.getEpochSecond() * 1000;
-    };
+  public DataFetcher<Iterable<RoutingError>> routingErrors() {
+    return environment -> getSource(environment).getRoutingErrors();
   }
 
   @Override
   public DataFetcher<Long> nextDateTime() {
     return environment -> {
       TripSearchMetadata metadata = getSource(environment).getMetadata();
-      if ( metadata == null || metadata.nextDateTime == null ) { return null; }
+      if (metadata == null || metadata.nextDateTime == null) {
+        return null;
+      }
       return metadata.nextDateTime.getEpochSecond() * 1000;
-    };
-  }
-
-  @Override
-  public DataFetcher<String> previousPageCursor() {
-    return environment -> {
-      final PageCursor pageCursor = getSource(environment).getPreviousPageCursor();
-      return pageCursor != null ? pageCursor.encode() : null;
     };
   }
 
@@ -89,17 +83,39 @@ public class LegacyGraphQLPlanImpl implements LegacyGraphQLDataFetchers.LegacyGr
   }
 
   @Override
+  public DataFetcher<Long> prevDateTime() {
+    return environment -> {
+      TripSearchMetadata metadata = getSource(environment).getMetadata();
+      if (metadata == null || metadata.prevDateTime == null) {
+        return null;
+      }
+      return metadata.prevDateTime.getEpochSecond() * 1000;
+    };
+  }
+
+  @Override
+  public DataFetcher<String> previousPageCursor() {
+    return environment -> {
+      final PageCursor pageCursor = getSource(environment).getPreviousPageCursor();
+      return pageCursor != null ? pageCursor.encode() : null;
+    };
+  }
+
+  @Override
   public DataFetcher<Long> searchWindowUsed() {
     return environment -> {
       TripSearchMetadata metadata = getSource(environment).getMetadata();
-      if ( metadata == null || metadata.searchWindowUsed == null ) { return null; }
+      if (metadata == null || metadata.searchWindowUsed == null) {
+        return null;
+      }
       return metadata.searchWindowUsed.toSeconds();
     };
   }
 
   @Override
-  public DataFetcher<DebugOutput> debugOutput() {
-    return environment -> getSource(environment).getDebugTimingAggregator().finishedRendering();
+  public DataFetcher<StopArrival> to() {
+    return environment ->
+      new StopArrival(getSource(environment).getTripPlan().to, null, null, null, null);
   }
 
   private RoutingResponse getSource(DataFetchingEnvironment environment) {

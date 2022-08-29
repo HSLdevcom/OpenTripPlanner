@@ -33,9 +33,31 @@ type Agency implements Node {
     routes: [Route]
 
     """
-    List of alerts which have an effect on all operations of the agency (e.g. a strike)
+    By default, list of alerts which have an effect on all operations of the agency (e.g. a strike).
+    It's also possible to return other relevant alerts through defining types.
     """
-    alerts: [Alert]
+    alerts(
+        """
+        Returns alerts for these types that are relevant for the agency.
+        By default only returns alerts that have an effect on all operations of the agency (e.g. a strike).
+        """
+        types: [AgencyAlertType]
+    ): [Alert]
+}
+
+"""Entities, which are relevant for an agency and can contain alerts"""
+enum AgencyAlertType {
+    """Alerts affecting the agency."""
+    AGENCY
+
+    """Alerts affecting agency's routes"""
+    ROUTES
+
+    """
+    Alerts affecting the different route types of the agency.
+    Alerts that affect route types on all agencies can be fetched through Feed.
+    """
+    ROUTE_TYPES
 }
 
 """Alert of a current or upcoming disruption in public transportation"""
@@ -213,7 +235,7 @@ enum AlertEffectType {
 
 
 """Entity related to an alert"""
-union AlertEntity = Agency | Route | Pattern | Stop | Trip | StopOnRoute | StopOnTrip
+union AlertEntity = Agency | Route | Pattern | Stop | Trip | StopOnRoute | StopOnTrip | RouteType | Unknown
 
 """Severity level of a alert"""
 enum AlertSeverityLevelType {
@@ -596,6 +618,9 @@ type RentalVehicle implements Node & PlaceInterface {
     If true, vehicle is not disabled.
     """
     operative: Boolean
+
+    """The type of the rental vehicle (scooter, bicycle, car...)"""
+    vehicleType: RentalVehicleType
 }
 
 type BikeRentalStationUris {
@@ -639,6 +664,38 @@ type VehicleRentalUris {
     May be {@code null} if a rental URL does not exist.
     """
     web: String
+}
+
+type RentalVehicleType {
+    """The vehicle's general form factor"""
+    formFactor: FormFactor
+
+    """The primary propulsion type of the vehicle"""
+    propulsionType: PropulsionType
+}
+
+enum FormFactor {
+    """A bicycle"""
+    BICYCLE
+    """An automobile"""
+    CAR
+    """A moped that the rider sits on. For a disambiguation see https://github.com/NABSA/gbfs/pull/370#issuecomment-982631989"""
+    MOPED
+    """A scooter that the rider stands on. For a disambiguation see https://github.com/NABSA/gbfs/pull/370#issuecomment-982631989"""
+    SCOOTER
+    """A vehicle that doesn't fit into any other category"""
+    OTHER
+}
+
+enum PropulsionType {
+    """Pedal or foot propulsion"""
+    HUMAN
+    """Provides power only alongside human propulsion"""
+    ELECTRIC_ASSIST
+    """Contains throttle mode with a battery-powered motor"""
+    ELECTRIC
+    """Contains throttle mode with a gas engine-powered motor"""
+    COMBUSTION
 }
 
 enum BikesAllowed {
@@ -839,6 +896,29 @@ type Feed {
 
     """List of agencies which provide data to this feed"""
     agencies: [Agency]
+
+    """
+    Alerts relevant for the feed.
+    """
+    alerts(
+        """
+        Returns alerts for these types that are relevant for the feed.
+        """
+        types: [FeedAlertType!]
+    ): [Alert]
+}
+
+"""Entities, which are relevant for a feed and can contain alerts"""
+enum FeedAlertType {
+    """Alerts affecting the feed's agencies"""
+    AGENCIES
+
+    """
+    Alerts affecting the route types across the feed.
+    There might be alerts that only affect route types within an agency of the feed,
+    and those can be fetched through the Agency.
+    """
+    ROUTE_TYPES
 }
 
 enum FilterPlaceType {
@@ -848,13 +928,16 @@ enum FilterPlaceType {
     """Departure rows"""
     DEPARTURE_ROW
 
-    """Bicycle rent stations"""
-    BICYCLE_RENT
+    """Old value for VEHICLE_RENT"""
+    BICYCLE_RENT @deprecated(reason: "Use VEHICLE_RENT instead as it's clearer that it also returns rental scooters, cars...")
 
-    """Bike parks"""
+    """Vehicle (bicycles, scooters, cars ...) rental stations and vehicles"""
+    VEHICLE_RENT
+
+    """Parking lots (not rental stations) that contain spaces for bicycles"""
     BIKE_PARK
 
-    """Car parks"""
+    """Parking lots that contain spaces for cars"""
     CAR_PARK
 }
 
@@ -1031,10 +1114,64 @@ input InputUnpreferred {
     agencies: String
 
     """
-    Penalty added for using route that is unpreferred, i.e. number of seconds that
-    we are willing to wait for route that is unpreferred.
+    An cost function used to calculate penalty for an unpreferred route. Function should return
+    number of seconds that we are willing to wait for preferred route. String must be of the format:
+    `A + B x`, where A is fixed penalty and B is a multiplier of transit leg travel time x.
+    For example: `600 + 2.0 x`
     """
-    useUnpreferredRoutesPenalty: Int
+    unpreferredRouteCost: String
+
+    """
+    Penalty added for using route that is unpreferred, i.e. number of seconds that we are willing to
+    wait for route that is unpreferred.
+
+    Deprecated: Use `unpreferredRouteCost` instead.
+    """
+    useUnpreferredRoutesPenalty: Int @deprecated(reason: "Use unpreferredRouteCost instead")
+}
+
+enum RoutingErrorCode {
+    """No transit connection was found between the origin and destination withing the operating day or the next day"""
+    NO_TRANSIT_CONNECTION
+
+    """Transit connection was found, but it was outside the search window, see metadata for the next search window"""
+    NO_TRANSIT_CONNECTION_IN_SEARCH_WINDOW
+
+    """The date specified is outside the range of data currently loaded into the system"""
+    OUTSIDE_SERVICE_PERIOD
+
+    """The coordinates are outside the bounds of the data currently loaded into the system"""
+    OUTSIDE_BOUNDS
+
+    """The specified location is not close to any streets or transit stops"""
+    LOCATION_NOT_FOUND
+
+    """No stops are reachable from the location specified. You can try searching using a different access or egress mode"""
+    NO_STOPS_IN_RANGE
+
+    """The origin and destination are so close to each other, that walking is always better, but no direct mode was specified for the search"""
+    WALKING_BETTER_THAN_TRANSIT
+
+    """An unknown error happened during the search. The details have been logged to the server logs"""
+    SYSTEM_ERROR
+}
+
+enum InputField {
+    DATE_TIME
+    FROM
+    TO
+}
+
+"""Description of the reason, why the planner did not return any results"""
+type RoutingError {
+    """An enum describing the reason"""
+    code: RoutingErrorCode!
+
+    """An enum describing the field which should be changed, in order for the search to succeed"""
+    inputField: InputField
+
+    """A textual description of why the search failed. The clients are expected to have their own translations based on the code, for user visible error messages."""
+    description: String!
 }
 
 type Itinerary {
@@ -1350,6 +1487,54 @@ type PageInfo {
     endCursor: String
 }
 
+"""Realtime vehicle position"""
+type VehiclePosition {
+    """Feed-scoped ID that uniquely identifies the vehicle in the format FeedId:VehicleId"""
+    vehicleId: String,
+    """Human-readable label of the vehicle, eg. a publicly visible number or a license plate"""
+    label: String
+    """Latitude of the vehicle"""
+    lat: Float
+    """Longitude of the vehicle"""
+    lon: Float
+    """The current stop where the vehicle will be or is currently arriving."""
+    stopRelationship: StopRelationship
+    """Speed of the vehicle in meters/second"""
+    speed: Float
+    """
+    Bearing, in degrees, clockwise from North, i.e., 0 is North and 90 is East. This can be the
+    compass bearing, or the direction towards the next stop or intermediate location.
+    """
+    heading: Float
+    """When the position of the vehicle was recorded in seconds since the UNIX epoch."""
+    lastUpdated: Long
+    """Which trip this vehicles runs on."""
+    trip: Trip!
+}
+
+"""Upcoming or current stop and how close the vehicle is to it."""
+type StopRelationship {
+    """How close the vehicle is to `stop`"""
+    status: VehicleStopStatus!
+    stop: Stop!
+}
+
+"""How close the vehicle is to the stop."""
+enum VehicleStopStatus {
+    """
+    The vehicle is standing at the stop.
+    """
+    STOPPED_AT,
+    """
+    The vehicle has departed the previous stop and is in transit.
+    """
+    IN_TRANSIT_TO,
+    """
+    The vehicle is just about to arrive at the stop (on a stop display, the vehicle symbol typically flashes).
+    """
+    INCOMING_AT
+}
+
 """
 Pattern is sequence of stops used by trips on a specific direction and variant
 of a route. Most routes have only two patterns: one for outbound trips and one
@@ -1407,8 +1592,46 @@ type Pattern implements Node {
     """
     semanticHash: String
 
-    """List of alerts which have an effect on trips of the pattern"""
-    alerts: [Alert]
+    """
+    By default, list of alerts which have directly an effect on just the pattern.
+    It's also possible to return other relevant alerts through defining types.
+    """
+    alerts(
+        """
+        Returns alerts for these types that are relevant for the pattern.
+        By default, list of alerts which have directly an effect on just the pattern.
+        """
+        types: [PatternAlertType]
+    ): [Alert]
+
+    """
+    Realtime-updated position of vehicles that are serving this pattern.
+    """
+    vehiclePositions: [VehiclePosition!]
+}
+
+"""Entities, which are relevant for a pattern and can contain alerts"""
+enum PatternAlertType {
+    """Alerts affecting the pattern"""
+    PATTERN
+
+    """Alerts affecting the pattern's route's agency"""
+    AGENCY
+
+    """Alerts affecting the route that the pattern runs on"""
+    ROUTE
+
+    """Alerts affecting the route type of the route that the pattern runs on"""
+    ROUTE_TYPE
+
+    """Alerts affecting the trips which run on this pattern"""
+    TRIPS
+
+    """Alerts affecting the stops which are on this pattern"""
+    STOPS_ON_PATTERN
+
+    """Alerts affecting the stops of the trips which run on this pattern"""
+    STOPS_ON_TRIPS
 }
 
 enum PickupDropoffType {
@@ -1555,10 +1778,13 @@ type Plan {
     """A list of possible error messages in cleartext"""
     messageStrings: [String]!
 
+    """A list of routing errors, and fields which caused them"""
+    routingErrors: [RoutingError!]!
+
     """
     Use the cursor to go to the next "page" of itineraries. Copy the cursor from the last response
-    to the pageCursor query parameter and keep the original request otherwise as is.
-    This will enable you to search for itineraries in the next time-window.
+    to the pageCursor query parameter and keep the original request as is. This will enable you to
+    search for itineraries in the next search-window.
     The cursor based paging only support stepping to the next page, as it does not support jumping.
     This is only usable when public transportation mode(s) are included in the query.
     """
@@ -1567,7 +1793,7 @@ type Plan {
     """
     Use the cursor to go to the previous "page" of itineraries. Copy the cursor from the last
     response to the pageCursor query parameter and keep the original request otherwise as is.
-    This will enable you to search for itineraries in the previous time-window.
+    This will enable you to search for itineraries in the previous search-window.
     The cursor based paging only support stepping to the previous page, as it does not support
     jumping.
     This is only usable when public transportation mode(s) are included in the query.
@@ -1577,7 +1803,7 @@ type Plan {
     """
     This is the suggested search time for the "previous page" or time window. Insert it together
     with the searchWindowUsed in the request to get a new set of trips preceding in the
-    time-window BEFORE the current search. No duplicate trips should be returned, unless a trip
+    search-window BEFORE the current search. No duplicate trips should be returned, unless a trip
     is delayed and new realtime-data is available.
     """
     prevDateTime: Long @deprecated(reason: "Use previousPageCursor instead")
@@ -1585,16 +1811,18 @@ type Plan {
     """
     This is the suggested search time for the "next page" or time window. Insert it together
     with the searchWindowUsed in the request to get a new set of trips following in the
-    time-window AFTER the current search. No duplicate trips should be returned, unless a trip
+    search-window AFTER the current search. No duplicate trips should be returned, unless a trip
     is delayed and new realtime-data is available.
     """
     nextDateTime: Long @deprecated(reason: "Use nextPageCursor instead")
 
     """
-    This is the time window used by the raptor search. The window is an optional parameter and
-    OTP might override it/dynamically assign a new value. The unit is seconds.
+    This is the `searchWindow` used by the raptor search. It is provided here for debugging
+    purpousess.
+
+    The unit is seconds.
     """
-    searchWindowUsed: Long @deprecated(reason: "Use previousPageCursor or nextPageCursor instead")
+    searchWindowUsed: Long
 
     """Information about the timings for the plan generation"""
     debugOutput: debugOutput!
@@ -1962,8 +2190,15 @@ type QueryType {
         Return rental vehicles with these ids, i.e. value of field `vehicleId`.
         **Note:** if an id is invalid (or the rental service is unavailable)
         the returned list will contain `null` values.
+
+        If this is provided all other filters are ignored.
         """
-        ids: [String]
+        ids: [String],
+
+        """
+        Return only rental vehicles that have this form factor.
+        """
+        formFactors: [FormFactor]
     ): [RentalVehicle]
 
     """
@@ -2075,13 +2310,30 @@ type QueryType {
         numItineraries: Int = 3
 
         """
-        The length of the search-window in seconds. This is normally dynamically
-        calculated by the server, but you may override this by setting it. The
-        search-window used in a request is returned in the response metadata.
-        To get the \"next page\" of trips use the metadata(searchWindowUsed and
-        nextWindowDateTime) to create a new request. If not provided the value
-        is resolved depending on the other input parameters, available transit
-        options and realtime changes.
+        The length of the search-window in seconds. This parameter is optional.
+
+        The search-window is defined as the duration between the earliest-departure-time(EDT) and
+        the latest-departure-time(LDT). OTP will search for all itineraries in this departure
+        window. If `arriveBy=true` the `dateTime` parameter is the latest-arrival-time, so OTP
+        will dynamically calculate the EDT. Using a short search-window is faster than using a
+        longer one, but the search duration is not linear. Using a \"too\" short search-window will
+        waste resources server side, while using a search-window that is too long will be slow.
+
+        OTP will dynamically calculate a reasonable value for the search-window, if not provided.
+        The calculation comes with a significant overhead (10-20% extra). Whether you should use the
+        dynamic calculated value or pass in a value depends on your use-case. For a travel planner
+        in a small geographical area, with a dense network of public transportation, a fixed value
+        between 40 minutes and 2 hours makes sense. To find the appropriate search-window, adjust
+        it so that the number of itineraries on average is around the wanted `numItineraries`. Make
+        sure you set the `numItineraries` to a high number while testing. For a country wide area
+        like Norway, using the dynamic search-window is the best.
+
+        When paginating, the search-window is calculated using the `numItineraries` in the original
+        search together with statistics from the search for the last page. This behaviour is
+        configured server side, and can not be overridden from the client.
+
+        The search-window used is returned to the response metadata as `searchWindowUsed` for
+        debugging purposes.
         """
         searchWindow: Long,
 
@@ -2106,7 +2358,7 @@ type QueryType {
 
         DEPRECATED - Use walkReluctance instead
         """
-        maxWalkDistance: Float
+        maxWalkDistance: Float @deprecated(reason: "Does nothing. Use walkReluctance instead.")
 
         """
         The maximum time (in seconds) of pre-transit travel when using
@@ -2151,17 +2403,21 @@ type QueryType {
 
         """
         A multiplier for how bad walking is, compared to being in transit for equal
-        lengths of time.Empirically, values between 10 and 20 seem to correspond
+        lengths of time. Empirically, values between 2 and 4 seem to correspond
         well to the concept of not wanting to walk too much without asking for
         totally ridiculous itineraries, but this observation should in no way be
-        taken as scientific or definitive. Your mileage may vary. Default value: 2.0
+        taken as scientific or definitive. Your mileage may vary. See
+        https://github.com/opentripplanner/OpenTripPlanner/issues/4090 for impact on
+        performance with high values. Default value: 2.0
         """
         walkReluctance: Float
 
         """
         How much more reluctant is the user to walk on streets with car traffic allowed. Default value: 1.0
+
+        Deprecated, use walkSafetyFactor instead.
         """
-        walkOnStreetReluctance: Float
+        walkOnStreetReluctance: Float @deprecated(reason: "Use walkSafetyFactor instead")
 
         """
         How much worse is waiting for a transit vehicle than being on a transit
@@ -2373,7 +2629,7 @@ type QueryType {
         ~~If true, the remaining weight heuristic is disabled. Currently only
         implemented for the long distance path service. Default value: false.~~
         """
-        disableRemainingWeightHeuristic: Boolean
+        disableRemainingWeightHeuristic: Boolean @deprecated(reason: "Removed in OTP 2.2")
 
         """
         Two-letter language code (ISO 639-1) used for returned text.
@@ -2399,9 +2655,27 @@ type QueryType {
         compactLegsByReversedSearch: Boolean
 
         """
-        Which bike rental networks can be used. By default, all networks are allowed.
+        Which vehicle rental networks can be used. By default, all networks are allowed.
+
+        Deprecated: Use `allowedVehicleRentalNetworks` instead.
         """
-        allowedBikeRentalNetworks: [String]
+        allowedBikeRentalNetworks: [String] @deprecated(reason: "Use allowedBikeRentalNetworks instead")
+
+        """
+        Which vehicle rental networks can be used. By default, all networks are allowed.
+        """
+        allowedVehicleRentalNetworks: [String]
+
+        """
+        Which vehicle rental networks cannot be used. By default, all networks are allowed.
+        """
+        bannedVehicleRentalNetworks: [String]
+
+        """
+        Factor for how much the walk safety is considered in routing. Value should be between 0 and 1.
+        If the value is set to be 0, safety is ignored. Default is 1.0.
+        """
+        walkSafetyFactor: Float
     ): Plan
 }
 
@@ -2454,7 +2728,11 @@ type Route implements Node {
     shortName: String
 
     """Long name of the route, e.g. Helsinki-Leppävaara"""
-    longName: String
+    longName(
+        """If translated longName is found from gtfs translation.txt and wanted language is not same as
+        feed's language then returns wanted translation. Otherwise uses name from routes.txt.
+        """
+        language: String): String
 
     """Transport mode of this route, e.g. `BUS`"""
     mode: Mode
@@ -2492,8 +2770,67 @@ type Route implements Node {
     """List of trips which operate on this route"""
     trips: [Trip]
 
-    """List of alerts which have an effect on the route"""
-    alerts: [Alert]
+    """
+    List of alerts which have an effect on the route directly or indirectly.
+    By default only alerts directly affecting this route are returned. It's also possible
+    to return other relevant alerts through defining types.
+    """
+    alerts(
+        """
+        Returns alerts for these types that are relevant for the route.
+        By default only returns alerts that directly affect this route.
+        """
+        types: [RouteAlertType]
+    ): [Alert]
+}
+
+"""Entities that are relevant for routes that can contain alerts"""
+enum RouteAlertType {
+    """Alerts affecting the route's agency."""
+    AGENCY
+
+    """Alerts directly affecting the route."""
+    ROUTE
+
+    """Alerts affecting the route type of the route."""
+    ROUTE_TYPE
+
+    """Alerts affecting the stops that are on the route."""
+    STOPS_ON_ROUTE
+
+    """Alerts affecting the route's trips."""
+    TRIPS
+
+    """Alerts affecting the stops on some trips of the route."""
+    STOPS_ON_TRIPS
+
+    """
+    Alerts affecting route's patterns.
+    """
+    PATTERNS
+}
+
+"""
+Route type entity which covers all agencies if agency is null,
+otherwise only relevant for one agency.
+"""
+type RouteType {
+    """
+    GTFS Route type.
+    For the list of possible values, see:
+        https://developers.google.com/transit/gtfs/reference/#routestxt and
+        https://developers.google.com/transit/gtfs/reference/extended-route-types
+    """
+    routeType: Int!
+
+    """A public transport agency"""
+    agency: Agency
+
+    """
+    The routes which have the defined routeType and belong to the agency, if defined.
+    Otherwise all routes of the feed that have the defined routeType.
+    """
+    routes: [Route]
 }
 
 """Time range for which the API has data available"""
@@ -2561,7 +2898,11 @@ type Stop implements Node & PlaceInterface {
     gtfsId: String!
 
     """Name of the stop, e.g. Pasilan asema"""
-    name: String!
+    name(
+        """If translated name is found from gtfs translation.txt and wanted language is not same as
+        feed's language then returns wanted translation. Otherwise uses name from stops.txt.
+        E.g. Swedish name for Pasilan asema is Böle station."""
+        language: String): String!
 
     """Latitude of the stop (WGS 84)"""
     lat: Float
@@ -2588,11 +2929,19 @@ type Stop implements Node & PlaceInterface {
     code: String
 
     """Description of the stop, usually a street name"""
-    desc: String
+    desc(
+        """If translated description is found from gtfs translation.txt and wanted language is not same as
+        feed's language then returns wanted translation. Otherwise uses descriptions from stops.txt.
+        """
+        language: String): String
 
     """ID of the zone where this stop is located"""
     zoneId: String
-    url: String
+
+    url(
+        """If translated url is found from gtfs translation.txt and wanted language is not same as
+        feed's language then returns wanted translation. Otherwise uses url from stops.txt."""
+        language: String): String
 
     """Identifies whether this stop represents a stop or station."""
     locationType: LocationType
@@ -2709,8 +3058,41 @@ type Stop implements Node & PlaceInterface {
         omitCanceled: Boolean = true
     ): [Stoptime]
 
-    """List of alerts which have an effect on this stop"""
-    alerts: [Alert]
+    """
+    By default, list of alerts which have directly an effect on just the stop.
+    It's also possible to return other relevant alerts through defining types.
+    """
+    alerts(
+        """
+        Returns alerts for these types that are relevant for the stop.
+        By default, list of alerts which have directly an effect on just the stop.
+        """
+        types: [StopAlertType]
+    ): [Alert]
+}
+
+"""Entities, which are relevant for a stop and can contain alerts"""
+enum StopAlertType {
+    """Alerts affecting the stop"""
+    STOP
+
+    """Alerts affecting the stop's patterns"""
+    PATTERNS
+
+    """Alerts affecting the agencies of the routes going through the stop"""
+    AGENCIES_OF_ROUTES
+
+    """Alerts affecting the routes that go through the stop"""
+    ROUTES
+
+    """Alerts affecting the trips that go through this stop"""
+    TRIPS
+
+    """Alerts affecting the stop on specific routes"""
+    STOP_ON_ROUTES
+
+    """Alerts affecting the stop on specific trips"""
+    STOP_ON_TRIPS
 }
 
 type stopAtDistance implements Node {
@@ -2742,14 +3124,11 @@ Stop that should (but not guaranteed) to exist on a route.
 """
 type StopOnRoute {
     """
-    Stop at the route. It's also possible that the stop is no longer on the route
-    or that the stop is null when it can no longer be found.
+    Stop at the route. It's also possible that the stop is no longer on the route.
     """
-    stop: Stop
-    """
-    Route which contains the stop. Route is null if it can't be found anymore.
-    """
-    route: Route
+    stop: Stop!
+    """Route which contains the stop."""
+    route: Route!
 }
 
 """
@@ -2757,14 +3136,13 @@ Stop that should (but not guaranteed) to exist on a trip.
 """
 type StopOnTrip {
     """
-    Stop at the trip. It's also possible that the stop is no longer on the trip
-    or that the stop is null when it can no longer be found.
+    Stop at the trip. It's also possible that the stop is no longer on the trip.
     """
-    stop: Stop
+    stop: Stop!
     """
-    Trip which contains the stop. Route is null if it can't be found anymore.
+    Trip which contains the stop.
     """
-    trip: Trip
+    trip: Trip!
 }
 
 """
@@ -2980,8 +3358,41 @@ type Trip implements Node {
     """
     tripGeometry: Geometry
 
-    """List of alerts which have an effect on this trip"""
-    alerts: [Alert]
+    """
+    By default, list of alerts which have directly an effect on just the trip.
+    It's also possible to return other relevant alerts through defining types.
+    """
+    alerts(
+        """
+        Returns alerts for these types that are relevant for the trip.
+        By default, list of alerts which have directly an effect on just the trip.
+        """
+        types: [TripAlertType]
+    ): [Alert]
+}
+
+"""Entities, which are relevant for a trip and can contain alerts"""
+enum TripAlertType {
+    """Alerts affecting the trip"""
+    TRIP
+
+    """Alerts affecting the trip's pattern"""
+    PATTERN
+
+    """Alerts affecting the trip's agency"""
+    AGENCY
+
+    """Alerts affecting the trip's route"""
+    ROUTE
+
+    """Alerts affecting the route type of the trip's route"""
+    ROUTE_TYPE
+
+    """
+    Alerts affecting the stops visited on the trip.
+    Some of the alerts can only affect the trip or its route on the stop.
+    """
+    STOPS_ON_TRIP
 }
 
 """
@@ -2997,6 +3408,14 @@ type SystemNotice {
     tag: String
     """Notice's description"""
     text: String
+}
+
+"""
+This is used for alert entities that we don't explicitly handle or they are missing.
+"""
+type Unknown {
+    """Entity's description"""
+    description: String
 }
 
 enum VertexType {

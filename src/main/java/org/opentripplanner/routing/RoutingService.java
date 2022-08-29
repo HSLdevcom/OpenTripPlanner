@@ -1,179 +1,184 @@
 package org.opentripplanner.routing;
 
-import java.util.Calendar;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.List;
-import lombok.experimental.Delegate;
-import org.opentripplanner.model.Stop;
-import org.opentripplanner.model.StopLocation;
-import org.opentripplanner.model.StopTimesInPattern;
-import org.opentripplanner.model.Timetable;
-import org.opentripplanner.model.TimetableSnapshot;
-import org.opentripplanner.model.Trip;
-import org.opentripplanner.model.TripPattern;
-import org.opentripplanner.model.TripTimeOnDate;
-import org.opentripplanner.model.calendar.ServiceDate;
+import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.geom.Geometry;
+import org.opentripplanner.graph_builder.module.osm.WayPropertySetSource.DrivingDirection;
 import org.opentripplanner.routing.algorithm.RoutingWorker;
 import org.opentripplanner.routing.api.request.RoutingRequest;
 import org.opentripplanner.routing.api.response.RoutingResponse;
+import org.opentripplanner.routing.core.intersection_model.IntersectionTraversalCostModel;
+import org.opentripplanner.routing.edgetype.StreetEdge;
+import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
-import org.opentripplanner.routing.graph.GraphIndex;
+import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.graphfinder.GraphFinder;
-import org.opentripplanner.routing.stoptimes.ArrivalDeparture;
-import org.opentripplanner.routing.stoptimes.StopTimesHelper;
-import org.opentripplanner.standalone.server.Router;
+import org.opentripplanner.routing.graphfinder.NearbyStop;
+import org.opentripplanner.routing.graphfinder.PlaceAtDistance;
+import org.opentripplanner.routing.graphfinder.PlaceType;
+import org.opentripplanner.routing.impl.StreetVertexIndex;
+import org.opentripplanner.routing.services.RealtimeVehiclePositionService;
+import org.opentripplanner.routing.vehicle_parking.VehicleParkingService;
+import org.opentripplanner.routing.vehicle_rental.VehicleRentalStationService;
+import org.opentripplanner.standalone.api.OtpServerRequestContext;
+import org.opentripplanner.transit.model.basic.TransitMode;
+import org.opentripplanner.transit.model.framework.FeedScopedId;
+import org.opentripplanner.transit.service.TransitService;
+import org.opentripplanner.util.WorldEnvelope;
 
 /**
- * This is the entry point of all API requests towards the OTP graph. A new instance of this class
- * should be created for each request. This ensures that the same TimetableSnapshot is used for the
- * duration of the request (which may involve several method calls).
+ * Entry point for requests towards the routing API.
  */
 public class RoutingService {
 
-    @Delegate(types = Graph.class)
-    private final Graph graph;
+  private final OtpServerRequestContext serverContext;
+  private final Graph graph;
 
-    @Delegate(types = GraphIndex.class)
-    private final GraphIndex graphIndex;
+  private final ZoneId timeZone;
 
-    @Delegate(types = GraphFinder.class)
-    private final GraphFinder graphFinder;
+  private final GraphFinder graphFinder;
 
-    /**
-     * This should only be accessed through the getTimetableSnapshot method.
-     */
-    private TimetableSnapshot timetableSnapshot;
+  public RoutingService(OtpServerRequestContext serverContext) {
+    this.serverContext = serverContext;
+    this.graph = serverContext.graph();
+    this.timeZone = serverContext.transitService().getTimeZone();
+    this.graphFinder = serverContext.graphFinder();
+  }
 
-    public RoutingService(Graph graph) {
-        this.graph = graph;
-        this.graphIndex = graph.index;
-        this.graphFinder = GraphFinder.getInstance(graph);
-    }
+  public RoutingResponse route(RoutingRequest request) {
+    RoutingWorker worker = new RoutingWorker(serverContext, request, timeZone);
+    return worker.route();
+  }
 
-    // TODO We should probably not have the Router as a parameter here
-    public RoutingResponse route(RoutingRequest request, Router router) {
-        try {
-            var zoneId = graph.getTimeZone().toZoneId();
-            RoutingWorker worker = new RoutingWorker(router, request, zoneId);
-            return worker.route();
-        } finally {
-            if (request != null) {
-                request.cleanup();
-            }
-        }
-    }
+  /** {@link Graph#getVertex(String)} */
+  public Vertex getVertex(String label) {
+    return this.graph.getVertex(label);
+  }
 
-    /**
-     * Fetch upcoming vehicle departures from a stop. It goes though all patterns passing the stop
-     * for the previous, current and next service date. It uses a priority queue to keep track of
-     * the next departures. The queue is shared between all dates, as services from the previous
-     * service date can visit the stop later than the current service date's services. This happens
-     * eg. with sleeper trains.
-     * <p>
-     * TODO: Add frequency based trips
-     *
-     * @param stop                  Stop object to perform the search for
-     * @param startTime             Start time for the search. Seconds from UNIX epoch
-     * @param timeRange             Searches forward for timeRange seconds from startTime
-     * @param numberOfDepartures    Number of departures to fetch per pattern
-     * @param arrivalDeparture      Filter by arrivals, departures, or both
-     * @param includeCancelledTrips If true, cancelled trips will also be included in result.
-     */
-    public List<StopTimesInPattern> stopTimesForStop(
-            StopLocation stop, long startTime, int timeRange, int numberOfDepartures, ArrivalDeparture arrivalDeparture, boolean includeCancelledTrips
-    ) {
-        return StopTimesHelper.stopTimesForStop(
-                this,
-                lazyGetTimeTableSnapShot(),
-                stop,
-                startTime,
-                timeRange,
-                numberOfDepartures,
-                arrivalDeparture,
-                includeCancelledTrips
-        );
-    }
+  /** {@link Graph#getVertices()} */
+  public Collection<Vertex> getVertices() {
+    return this.graph.getVertices();
+  }
 
-    /**
-     * Get a list of all trips that pass through a stop during a single ServiceDate. Useful when
-     * creating complete stop timetables for a single day.
-     *
-     * @param stop        Stop object to perform the search for
-     * @param serviceDate Return all departures for the specified date
-     */
-    public List<StopTimesInPattern> getStopTimesForStop(
-            StopLocation stop, ServiceDate serviceDate, ArrivalDeparture arrivalDeparture
-    ) {
-        return StopTimesHelper.stopTimesForStop(this, stop, serviceDate, arrivalDeparture);
-    }
+  /** {@link Graph#getVerticesOfType(Class)} */
+  public <T extends Vertex> List<T> getVerticesOfType(Class<T> cls) {
+    return this.graph.getVerticesOfType(cls);
+  }
 
+  /** {@link Graph#getEdges()} */
+  public Collection<Edge> getEdges() {
+    return this.graph.getEdges();
+  }
 
-    /**
-     * Fetch upcoming vehicle departures from a stop for a specific pattern, passing the stop
-     * for the previous, current and next service date. It uses a priority queue to keep track of
-     * the next departures. The queue is shared between all dates, as services from the previous
-     * service date can visit the stop later than the current service date's services.
-     * <p>
-     * TODO: Add frequency based trips
-     *
-     * @param stop               Stop object to perform the search for
-     * @param pattern            Pattern object to perform the search for
-     * @param startTime          Start time for the search. Seconds from UNIX epoch
-     * @param timeRange          Searches forward for timeRange seconds from startTime
-     * @param numberOfDepartures Number of departures to fetch per pattern
-     * @param arrivalDeparture   Filter by arrivals, departures, or both
-     */
-    public List<TripTimeOnDate> stopTimesForPatternAtStop(
-            StopLocation stop, TripPattern pattern, long startTime, int timeRange, int numberOfDepartures, ArrivalDeparture arrivalDeparture
-    ) {
-        return StopTimesHelper.stopTimesForPatternAtStop(
-                this,
-                lazyGetTimeTableSnapShot(),
-                stop,
-                pattern,
-                startTime,
-                timeRange,
-                numberOfDepartures,
-                arrivalDeparture
-        );
-    }
+  /** {@link Graph#getEdgesOfType(Class)} */
+  public <T extends Edge> List<T> getEdgesOfType(Class<T> cls) {
+    return this.graph.getEdgesOfType(cls);
+  }
 
-    /**
-     * Returns all the patterns for a specific stop. If includeRealtimeUpdates is set, new patterns
-     * added by realtime updates are added to the collection.
-     */
-    public Collection<TripPattern> getPatternsForStop(StopLocation stop, boolean includeRealtimeUpdates) {
-        return graph.index.getPatternsForStop(stop,
-                includeRealtimeUpdates ? lazyGetTimeTableSnapShot() : null
-        );
-    }
+  /** {@link Graph#getStreetEdges()} */
+  public Collection<StreetEdge> getStreetEdges() {
+    return this.graph.getStreetEdges();
+  }
 
-    /**
-     * Get the most up-to-date timetable for the given TripPattern, as of right now. There should
-     * probably be a less awkward way to do this that just gets the latest entry from the resolver
-     * without making a fake routing request.
-     */
-    public Timetable getTimetableForTripPattern(TripPattern tripPattern) {
-        TimetableSnapshot timetableSnapshot = lazyGetTimeTableSnapShot();
-        return timetableSnapshot != null ? timetableSnapshot.resolve(
-                tripPattern,
-                new ServiceDate(Calendar.getInstance().getTime())
-        ) : tripPattern.getScheduledTimetable();
-    }
+  /** {@link Graph#containsVertex(Vertex)} */
+  public boolean containsVertex(Vertex v) {
+    return this.graph.containsVertex(v);
+  }
 
-    public List<TripTimeOnDate> getTripTimesShort(Trip trip, ServiceDate serviceDate) {
-        return TripTimesShortHelper.getTripTimesShort(this, trip, serviceDate);
-    }
+  /** {@link Graph#getExtent()} */
+  public Envelope getExtent() {
+    return this.graph.getExtent();
+  }
 
-    /**
-     * Lazy-initialization of TimetableSnapshot
-     *
-     * @return The same TimetableSnapshot is returned throughout the lifecycle of this object.
-     */
-    private TimetableSnapshot lazyGetTimeTableSnapShot() {
-        if (this.timetableSnapshot == null) {
-            timetableSnapshot = graph.getTimetableSnapshot();
-        }
-        return this.timetableSnapshot;
-    }
+  /** {@link Graph#countVertices()} */
+  public int countVertices() {
+    return this.graph.countVertices();
+  }
+
+  /** {@link Graph#countEdges()} */
+  public int countEdges() {
+    return this.graph.countEdges();
+  }
+
+  /** {@link Graph#getStreetIndex()} */
+  public StreetVertexIndex getStreetIndex() {
+    return this.graph.getStreetIndex();
+  }
+
+  /** {@link Graph#getConvexHull()} */
+  public Geometry getConvexHull() {
+    return this.graph.getConvexHull();
+  }
+
+  /** {@link Graph#getEnvelope()} */
+  public WorldEnvelope getEnvelope() {
+    return this.graph.getEnvelope();
+  }
+
+  /** {@link Graph#getDistanceBetweenElevationSamples()} */
+  public double getDistanceBetweenElevationSamples() {
+    return this.graph.getDistanceBetweenElevationSamples();
+  }
+
+  public RealtimeVehiclePositionService getVehiclePositionService() {
+    return this.graph.getVehiclePositionService();
+  }
+
+  /** {@link Graph#getVehicleRentalStationService()} */
+  public VehicleRentalStationService getVehicleRentalStationService() {
+    return this.graph.getVehicleRentalStationService();
+  }
+
+  /** {@link Graph#getVehicleParkingService()} */
+  public VehicleParkingService getVehicleParkingService() {
+    return this.graph.getVehicleParkingService();
+  }
+
+  /** {@link Graph#getDrivingDirection()} */
+  public DrivingDirection getDrivingDirection() {
+    return this.graph.getDrivingDirection();
+  }
+
+  /** {@link Graph#getIntersectionTraversalModel()} */
+  public IntersectionTraversalCostModel getIntersectionTraversalModel() {
+    return this.graph.getIntersectionTraversalModel();
+  }
+
+  /** {@link GraphFinder#findClosestStops(double, double, double)} */
+  public List<NearbyStop> findClosestStops(double lat, double lon, double radiusMeters) {
+    return this.graphFinder.findClosestStops(lat, lon, radiusMeters);
+  }
+
+  /**
+   * {@link GraphFinder#findClosestPlaces(double, double, double, int, List, List, List, List, List, TransitService)}
+   */
+  public List<PlaceAtDistance> findClosestPlaces(
+    double lat,
+    double lon,
+    double radiusMeters,
+    int maxResults,
+    List<TransitMode> filterByModes,
+    List<PlaceType> filterByPlaceTypes,
+    List<FeedScopedId> filterByStops,
+    List<FeedScopedId> filterByRoutes,
+    List<String> filterByBikeRentalStations,
+    List<String> filterByBikeParks,
+    List<String> filterByCarParks,
+    TransitService transitService
+  ) {
+    return this.graphFinder.findClosestPlaces(
+        lat,
+        lon,
+        radiusMeters,
+        maxResults,
+        filterByModes,
+        filterByPlaceTypes,
+        filterByStops,
+        filterByRoutes,
+        filterByBikeRentalStations,
+        transitService
+      );
+  }
 }

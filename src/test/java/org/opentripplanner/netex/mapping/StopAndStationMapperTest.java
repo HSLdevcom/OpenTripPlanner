@@ -1,10 +1,22 @@
 package org.opentripplanner.netex.mapping;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 import org.opentripplanner.graph_builder.DataImportIssueStore;
-import org.opentripplanner.model.Station;
-import org.opentripplanner.model.Stop;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalVersionMapById;
+import org.opentripplanner.transit.model.basic.WheelchairAccessibility;
+import org.opentripplanner.transit.model.site.RegularStop;
+import org.opentripplanner.transit.model.site.Station;
+import org.rutebanken.netex.model.AccessibilityAssessment;
+import org.rutebanken.netex.model.AccessibilityLimitation;
+import org.rutebanken.netex.model.AccessibilityLimitations_RelStructure;
+import org.rutebanken.netex.model.LimitationStatusEnumeration;
 import org.rutebanken.netex.model.LocationStructure;
 import org.rutebanken.netex.model.MultilingualString;
 import org.rutebanken.netex.model.Quay;
@@ -13,157 +25,260 @@ import org.rutebanken.netex.model.SimplePoint_VersionStructure;
 import org.rutebanken.netex.model.StopPlace;
 import org.rutebanken.netex.model.VehicleModeEnumeration;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collection;
-
-import static org.junit.Assert.assertEquals;
-
 public class StopAndStationMapperTest {
-    @Test
-    public void mapStopPlaceAndQuays() {
-        Collection<StopPlace> stopPlaces = new ArrayList<>();
 
-        StopPlace stopPlaceNew = createStopPlace(
-                "NSR:StopPlace:1",
-                "Oslo S",
-                "2",
-                59.909584,
-                10.755165,
-                VehicleModeEnumeration.TRAM);
+  @Test
+  public void testWheelChairBoarding() {
+    var stopPlace = createStopPlace(
+      "ST:StopPlace:1",
+      "Lunce C",
+      "1",
+      55.707005,
+      13.186816,
+      VehicleModeEnumeration.BUS
+    );
 
-        StopPlace stopPlaceOld = createStopPlace(
-                "NSR:StopPlace:1",
-                "Oslo S",
-                "1",
-                59.909584,
-                10.755165,
-                VehicleModeEnumeration.TRAM);
+    // Create on quay with access, one without, and one with NULL
+    var quay1 = createQuay("ST:Quay:1", "Quay1", "1", 55.706063, 13.186708, "a");
+    var quay2 = createQuay("ST:Quay:2", "Quay2", "1", 55.706775, 13.186482, "a");
 
-        stopPlaces.add(stopPlaceNew);
-        stopPlaces.add(stopPlaceOld);
+    var quay3 = createQuay("ST:Quay:3", "Quay3", "1", 55.707330, 13.186397, "a");
 
-        Quay quay1a = createQuay(
-                "NSR:Quay:1",
-                "",
-                "1",
-                59.909323,
-                10.756205,
-                "a");
+    var quay4 = createQuay("ST:Quay:4", "Quay4", "1", 55.707330, 13.186397, "a");
 
-        Quay quay1b = createQuay(
-                "NSR:Quay:1",
-                "",
-                "2",
-                59.909911,
-                10.753008,
-                "A");
+    quay1.withAccessibilityAssessment(
+      createAccessibilityAssessment(LimitationStatusEnumeration.TRUE)
+    );
 
-        Quay quay2 = createQuay(
-                "NSR:Quay:2",
-                "",
-                "1",
-                59.909911,
-                10.753008,
-                "B");
+    quay2.withAccessibilityAssessment(
+      createAccessibilityAssessment(LimitationStatusEnumeration.FALSE)
+    );
 
-        Quay quay3 = createQuay(
-                "NSR:Quay:3",
-                "",
-                "1",
-                59.909911,
-                10.753008,
-                "C");
+    stopPlace.setQuays(
+      new Quays_RelStructure()
+        .withQuayRefOrQuay(quay1)
+        .withQuayRefOrQuay(quay2)
+        .withQuayRefOrQuay(quay3)
+    );
 
-        stopPlaceNew.setQuays(
-                new Quays_RelStructure()
-                        .withQuayRefOrQuay(quay1b)
-                        .withQuayRefOrQuay(quay2));
+    var stopPlaceById = new HierarchicalVersionMapById<StopPlace>();
+    stopPlaceById.add(stopPlace);
 
-        stopPlaceOld.setQuays(
-                new Quays_RelStructure()
-                        .withQuayRefOrQuay(quay1a)
-                    .withQuayRefOrQuay(quay3)
-        );
+    var stopAndStationMapper = new StopAndStationMapper(
+      MappingSupport.ID_FACTORY,
+      new HierarchicalVersionMapById<>(),
+      null,
+      DataImportIssueStore.noopIssueStore()
+    );
 
-        HierarchicalVersionMapById<Quay> quaysById = new HierarchicalVersionMapById<>();
-        quaysById.add(quay1a);
-        quaysById.add(quay1a);
-        quaysById.add(quay2);
-        quaysById.add(quay3);
+    stopAndStationMapper.mapParentAndChildStops(List.of(stopPlace));
 
-        StopAndStationMapper stopMapper = new StopAndStationMapper(
-                MappingSupport.ID_FACTORY,
-                quaysById,
-                null,
-                new DataImportIssueStore(false)
-        );
+    var stops = stopAndStationMapper.resultStops;
 
-        stopMapper.mapParentAndChildStops(stopPlaces);
+    assertEquals(3, stops.size(), "Stops.size must be 3 found " + stops.size());
 
-        Collection<Stop> stops = stopMapper.resultStops;
-        Collection<Station> stations = stopMapper.resultStations;
+    assertWheelchairAccessibility("ST:Quay:1", WheelchairAccessibility.POSSIBLE, stops);
+    assertWheelchairAccessibility("ST:Quay:2", WheelchairAccessibility.NOT_POSSIBLE, stops);
+    assertWheelchairAccessibility("ST:Quay:3", WheelchairAccessibility.NO_INFORMATION, stops);
 
-        assertEquals(3, stops.size());
-        assertEquals(1, stations.size());
+    // Now test with AccessibilityAssessment set on StopPlace (should be default)
+    stopPlace.withAccessibilityAssessment(
+      createAccessibilityAssessment(LimitationStatusEnumeration.TRUE)
+    );
 
-        Station parentStop = stations.stream().filter(s -> s.getId().getId().equals("NSR:StopPlace:1")).findFirst().get();
-        Stop childStop1 = stops.stream().filter(s -> s.getId().getId().equals("NSR:Quay:1")).findFirst().get();
-        Stop childStop2 = stops.stream().filter(s -> s.getId().getId().equals("NSR:Quay:2")).findFirst().get();
-        Stop childStop3 = stops.stream().filter(s -> s.getId().getId().equals("NSR:Quay:3")).findFirst().get();
+    // Add quay with no AccessibilityAssessment, then it should take default from stopPlace
+    stopPlace.getQuays().withQuayRefOrQuay(quay4);
 
-        assertEquals("NSR:StopPlace:1", parentStop.getId().getId());
-        assertEquals("NSR:Quay:1", childStop1.getId().getId());
-        assertEquals("NSR:Quay:2", childStop2.getId().getId());
-        assertEquals("NSR:Quay:3", childStop3.getId().getId());
+    stopAndStationMapper.mapParentAndChildStops(List.of(stopPlace));
 
-        assertEquals(59.909911, childStop1.getLat(), 0.0001);
-        assertEquals(10.753008, childStop1.getLon(), 0.0001);
-        assertEquals("A", childStop1.getCode());
-    }
+    assertEquals(4, stops.size(), "stops.size must be 4 found " + stops.size());
+    assertWheelchairAccessibility("ST:Quay:4", WheelchairAccessibility.POSSIBLE, stops);
+  }
 
-    private static StopPlace createStopPlace(
-            String id,
-            String name,
-            String version,
-            Double lat,
-            Double lon,
-            VehicleModeEnumeration transportMode
-    ) {
-        return new StopPlace()
-            .withName(createMLString(name))
-            .withVersion(version)
-            .withId(id)
-            .withCentroid(createSimplePoint(lat, lon))
-            .withTransportMode(transportMode);
-    }
+  @Test
+  public void mapStopPlaceAndQuays() {
+    Collection<StopPlace> stopPlaces = new ArrayList<>();
 
-    private static Quay createQuay(
-            String id,
-            String name,
-            String version,
-            Double lat,
-            Double lon,
-            String platformCode
-    ) {
-        return new Quay()
-                .withName(createMLString(name))
-                .withId(id)
-                .withVersion(version)
-                .withPublicCode(platformCode)
-                .withCentroid(createSimplePoint(lat, lon));
-    }
+    StopPlace stopPlaceNew = createStopPlace(
+      "NSR:StopPlace:1",
+      "Oslo S",
+      "2",
+      59.909584,
+      10.755165,
+      VehicleModeEnumeration.TRAM
+    );
 
-    private static MultilingualString createMLString(String name) {
-        return new MultilingualString().withValue(name);
-    }
+    StopPlace stopPlaceOld = createStopPlace(
+      "NSR:StopPlace:1",
+      "Oslo S",
+      "1",
+      59.909584,
+      10.755165,
+      VehicleModeEnumeration.TRAM
+    );
 
-    private static SimplePoint_VersionStructure createSimplePoint(Double lat, Double lon) {
-        return new SimplePoint_VersionStructure()
-                .withLocation(
-                        new LocationStructure()
-                                .withLatitude(new BigDecimal(lat))
-                                .withLongitude(new BigDecimal(lon))
-                );
-    }
+    stopPlaces.add(stopPlaceNew);
+    stopPlaces.add(stopPlaceOld);
+
+    Quay quay1a = createQuay("NSR:Quay:1", "", "1", 59.909323, 10.756205, "a");
+
+    Quay quay1b = createQuay("NSR:Quay:1", "", "2", 59.909911, 10.753008, "A");
+
+    Quay quay2 = createQuay("NSR:Quay:2", "", "1", 59.909911, 10.753008, "B");
+
+    Quay quay3 = createQuay("NSR:Quay:3", "", "1", 59.909911, 10.753008, "C");
+
+    stopPlaceNew.setQuays(
+      new Quays_RelStructure().withQuayRefOrQuay(quay1b).withQuayRefOrQuay(quay2)
+    );
+
+    stopPlaceOld.setQuays(
+      new Quays_RelStructure().withQuayRefOrQuay(quay1a).withQuayRefOrQuay(quay3)
+    );
+
+    HierarchicalVersionMapById<Quay> quaysById = new HierarchicalVersionMapById<>();
+    quaysById.add(quay1a);
+    quaysById.add(quay1a);
+    quaysById.add(quay2);
+    quaysById.add(quay3);
+
+    StopAndStationMapper stopMapper = new StopAndStationMapper(
+      MappingSupport.ID_FACTORY,
+      quaysById,
+      null,
+      DataImportIssueStore.noopIssueStore()
+    );
+
+    stopMapper.mapParentAndChildStops(stopPlaces);
+
+    Collection<RegularStop> stops = stopMapper.resultStops;
+    Collection<Station> stations = stopMapper.resultStations;
+
+    assertEquals(3, stops.size());
+    assertEquals(1, stations.size());
+
+    Station parentStop = stations
+      .stream()
+      .filter(s -> s.getId().getId().equals("NSR:StopPlace:1"))
+      .findFirst()
+      .get();
+    RegularStop childStop1 = stops
+      .stream()
+      .filter(s -> s.getId().getId().equals("NSR:Quay:1"))
+      .findFirst()
+      .get();
+    RegularStop childStop2 = stops
+      .stream()
+      .filter(s -> s.getId().getId().equals("NSR:Quay:2"))
+      .findFirst()
+      .get();
+    RegularStop childStop3 = stops
+      .stream()
+      .filter(s -> s.getId().getId().equals("NSR:Quay:3"))
+      .findFirst()
+      .get();
+
+    assertEquals("NSR:StopPlace:1", parentStop.getId().getId());
+    assertEquals("NSR:Quay:1", childStop1.getId().getId());
+    assertEquals("NSR:Quay:2", childStop2.getId().getId());
+    assertEquals("NSR:Quay:3", childStop3.getId().getId());
+
+    assertEquals(59.909911, childStop1.getLat(), 0.0001);
+    assertEquals(10.753008, childStop1.getLon(), 0.0001);
+    assertEquals("A", childStop1.getPlatformCode());
+  }
+
+  private static StopPlace createStopPlace(
+    String id,
+    String name,
+    String version,
+    Double lat,
+    Double lon,
+    VehicleModeEnumeration transportMode
+  ) {
+    return new StopPlace()
+      .withName(createMLString(name))
+      .withVersion(version)
+      .withId(id)
+      .withCentroid(createSimplePoint(lat, lon))
+      .withTransportMode(transportMode);
+  }
+
+  private static Quay createQuay(
+    String id,
+    String name,
+    String version,
+    Double lat,
+    Double lon,
+    String platformCode
+  ) {
+    return new Quay()
+      .withName(createMLString(name))
+      .withId(id)
+      .withVersion(version)
+      .withPublicCode(platformCode)
+      .withCentroid(createSimplePoint(lat, lon));
+  }
+
+  private static MultilingualString createMLString(String name) {
+    return new MultilingualString().withValue(name);
+  }
+
+  private static SimplePoint_VersionStructure createSimplePoint(Double lat, Double lon) {
+    return new SimplePoint_VersionStructure()
+      .withLocation(
+        new LocationStructure().withLatitude(new BigDecimal(lat)).withLongitude(new BigDecimal(lon))
+      );
+  }
+
+  /**
+   * Utility function to assert WheelChairBoarding from Stop.
+   *
+   * @param quayId   ID to find corresponding Stop
+   * @param expected Expected WheelChairBoarding value in assertion
+   * @param stops    Find correct stop from list
+   */
+  private void assertWheelchairAccessibility(
+    String quayId,
+    WheelchairAccessibility expected,
+    List<RegularStop> stops
+  ) {
+    var wheelchairAccessibility = stops
+      .stream()
+      .filter(s -> s.getId().getId().equals(quayId))
+      .findAny()
+      .map(RegularStop::getWheelchairAccessibility)
+      .orElse(null);
+
+    assertNotNull(wheelchairAccessibility, "wheelchairAccessibility must not be null");
+    assertEquals(
+      expected,
+      wheelchairAccessibility,
+      () ->
+        "wheelchairAccessibility should be " +
+        expected +
+        " found " +
+        wheelchairAccessibility +
+        " for quayId = " +
+        quayId
+    );
+  }
+
+  /**
+   * Utility function to create AccessibilityAssessment and inject correct value.
+   *
+   * @param wheelChairAccess Value to WheelChairAccess
+   * @return AccessibilityAssessment with injected value
+   */
+  private AccessibilityAssessment createAccessibilityAssessment(
+    LimitationStatusEnumeration wheelChairAccess
+  ) {
+    var accessibilityLimitation = new AccessibilityLimitation()
+      .withWheelchairAccess(wheelChairAccess);
+
+    var limitations = new AccessibilityLimitations_RelStructure()
+      .withAccessibilityLimitation(accessibilityLimitation);
+
+    return new AccessibilityAssessment().withLimitations(limitations);
+  }
 }

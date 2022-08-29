@@ -2,27 +2,27 @@ package org.opentripplanner.routing.algorithm.transferoptimization.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.opentripplanner.util.time.DurationUtils.duration;
+import static org.opentripplanner.util.time.DurationUtils.durationInSeconds;
 
 import org.junit.jupiter.api.Test;
 
 public class TransferWaitTimeCostCalculatorTest {
+
   private static final double EPSILON = 0.005;
   private static final double ANY = Double.NaN;
 
-  final int d12s = duration("12s");
-  final int d24s = duration("24s");
-  final int d1m = duration("1m");
-  final int d2m = duration("2m");
-  final int d4m = duration("4m");
-  final int d5m = duration("5m");
-  final int d10m = duration("10m");
-  final int d20m = duration("20m");
-  final int d50m = duration("50m");
-  final int d5d = 5 * duration("24h");
+  final int d12s = durationInSeconds("12s");
+  final int d24s = durationInSeconds("24s");
+  final int d1m = durationInSeconds("1m");
+  final int d2m = durationInSeconds("2m");
+  final int d4m = durationInSeconds("4m");
+  final int d5m = durationInSeconds("5m");
+  final int d10m = durationInSeconds("10m");
+  final int d20m = durationInSeconds("20m");
+  final int d50m = durationInSeconds("50m");
+  final int d5d = 5 * durationInSeconds("24h");
 
   private TransferWaitTimeCostCalculator subject;
-
 
   /**
    * verify initial condition with a few typical values:
@@ -44,11 +44,13 @@ public class TransferWaitTimeCostCalculatorTest {
         subject.setMinSafeTransferTime(t0);
         String testCase = String.format("t0=%d, n=%.1f", t0, n);
 
-        assertEquals(n * t0, subject.avoidShortWaitTimeCost(zero), EPSILON, "f(0) with " + testCase);
         assertEquals(
-                t0,
-                subject.avoidShortWaitTimeCost(t0), EPSILON, "f(t0) with " + testCase
+          n * t0,
+          subject.avoidShortWaitTimeCost(zero),
+          EPSILON,
+          "f(0) with " + testCase
         );
+        assertEquals(t0, subject.avoidShortWaitTimeCost(t0), EPSILON, "f(t0) with " + testCase);
       }
     }
   }
@@ -63,8 +65,8 @@ public class TransferWaitTimeCostCalculatorTest {
     assertEquals(185.27, subject.avoidShortWaitTimeCost(d24s), EPSILON);
     assertEquals(148.14, subject.avoidShortWaitTimeCost(d1m), EPSILON);
     assertEquals(96.39, subject.avoidShortWaitTimeCost(d4m), EPSILON);
-    assertEquals( 73.60, subject.avoidShortWaitTimeCost(d10m), EPSILON);
-    assertEquals( 24.67, subject.avoidShortWaitTimeCost(d5d), EPSILON);
+    assertEquals(73.60, subject.avoidShortWaitTimeCost(d10m), EPSILON);
+    assertEquals(24.67, subject.avoidShortWaitTimeCost(d5d), EPSILON);
   }
 
   @Test
@@ -102,10 +104,13 @@ public class TransferWaitTimeCostCalculatorTest {
 
   @Test
   public void calculateTxCostWithNoMinSafeTxTimeThrowsException() {
-    assertThrows(IllegalStateException.class, () -> {
-      var subject = new TransferWaitTimeCostCalculator(1.0, 2.0);
-      subject.calculateOptimizedWaitCost(d20m);
-    });
+    assertThrows(
+      IllegalStateException.class,
+      () -> {
+        var subject = new TransferWaitTimeCostCalculator(1.0, 2.0);
+        subject.calculateOptimizedWaitCost(d20m);
+      }
+    );
   }
 
   @Test

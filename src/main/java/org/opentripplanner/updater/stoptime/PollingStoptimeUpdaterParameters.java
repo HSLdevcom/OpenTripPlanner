@@ -4,12 +4,14 @@ import org.opentripplanner.updater.DataSourceType;
 import org.opentripplanner.updater.PollingGraphUpdaterParameters;
 
 public class PollingStoptimeUpdaterParameters implements PollingGraphUpdaterParameters {
+
   private final String configRef;
   private final int frequencySec;
   private final int logFrequency;
   private final int maxSnapshotFrequencyMs;
   private final boolean purgeExpiredData;
   private final boolean fuzzyTripMatching;
+  private final BackwardsDelayPropagationType backwardsDelayPropagationType;
 
   // Source
   private final DataSourceType sourceType;
@@ -18,16 +20,17 @@ public class PollingStoptimeUpdaterParameters implements PollingGraphUpdaterPara
   private final String fileSource;
 
   public PollingStoptimeUpdaterParameters(
-      String configRef,
-      int frequencySec,
-      int logFrequency,
-      int maxSnapshotFrequencyMs,
-      boolean purgeExpiredData,
-      boolean fuzzyTripMatching,
-      DataSourceType sourceType,
-      String feedId,
-      String httpSourceUrl,
-      String fileSource
+    String configRef,
+    int frequencySec,
+    int logFrequency,
+    int maxSnapshotFrequencyMs,
+    boolean purgeExpiredData,
+    boolean fuzzyTripMatching,
+    BackwardsDelayPropagationType backwardsDelayPropagationType,
+    DataSourceType sourceType,
+    String feedId,
+    String httpSourceUrl,
+    String fileSource
   ) {
     this.configRef = configRef;
     this.frequencySec = frequencySec;
@@ -35,6 +38,7 @@ public class PollingStoptimeUpdaterParameters implements PollingGraphUpdaterPara
     this.maxSnapshotFrequencyMs = maxSnapshotFrequencyMs;
     this.purgeExpiredData = purgeExpiredData;
     this.fuzzyTripMatching = fuzzyTripMatching;
+    this.backwardsDelayPropagationType = backwardsDelayPropagationType;
     this.sourceType = sourceType;
     this.feedId = feedId;
     this.httpSourceUrl = httpSourceUrl;
@@ -49,6 +53,10 @@ public class PollingStoptimeUpdaterParameters implements PollingGraphUpdaterPara
   @Override
   public String getConfigRef() {
     return configRef;
+  }
+
+  public DataSourceType getSourceType() {
+    return sourceType;
   }
 
   String getFeedId() {
@@ -71,21 +79,35 @@ public class PollingStoptimeUpdaterParameters implements PollingGraphUpdaterPara
     return fuzzyTripMatching;
   }
 
-  public DataSourceType getSourceType() {
-    return sourceType;
+  BackwardsDelayPropagationType getBackwardsDelayPropagationType() {
+    return backwardsDelayPropagationType;
   }
 
   GtfsRealtimeFileTripUpdateSource.Parameters fileSourceParameters() {
     return new GtfsRealtimeFileTripUpdateSource.Parameters() {
-      @Override public String getFeedId() { return feedId; }
-      @Override public String getFile() { return fileSource; }
+      @Override
+      public String getFeedId() {
+        return feedId;
+      }
+
+      @Override
+      public String getFile() {
+        return fileSource;
+      }
     };
   }
 
   GtfsRealtimeHttpTripUpdateSource.Parameters httpSourceParameters() {
     return new GtfsRealtimeHttpTripUpdateSource.Parameters() {
-      @Override public String getFeedId() { return feedId; }
-      @Override public String getUrl() { return httpSourceUrl; }
+      @Override
+      public String getFeedId() {
+        return feedId;
+      }
+
+      @Override
+      public String getUrl() {
+        return httpSourceUrl;
+      }
     };
   }
 }

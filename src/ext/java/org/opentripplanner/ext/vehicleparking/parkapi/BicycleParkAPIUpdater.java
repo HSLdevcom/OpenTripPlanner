@@ -1,6 +1,8 @@
 package org.opentripplanner.ext.vehicleparking.parkapi;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.time.ZoneId;
+import org.opentripplanner.model.calendar.openinghours.OpeningHoursCalendarService;
 import org.opentripplanner.routing.vehicle_parking.VehicleParkingSpaces;
 
 /**
@@ -9,17 +11,21 @@ import org.opentripplanner.routing.vehicle_parking.VehicleParkingSpaces;
  */
 public class BicycleParkAPIUpdater extends ParkAPIUpdater {
 
-    public BicycleParkAPIUpdater(ParkAPIUpdaterParameters parameters) {
-        super(parameters);
-    }
+  public BicycleParkAPIUpdater(
+    ParkAPIUpdaterParameters parameters,
+    OpeningHoursCalendarService openingHoursCalendarService,
+    ZoneId zoneId
+  ) {
+    super(parameters, openingHoursCalendarService, zoneId);
+  }
 
-    @Override
-    protected VehicleParkingSpaces parseCapacity(JsonNode jsonNode) {
-        return parseVehicleSpaces(jsonNode, "total", null, null);
-    }
+  @Override
+  protected VehicleParkingSpaces parseCapacity(JsonNode jsonNode) {
+    return parseVehicleSpaces(jsonNode, "total", null, null);
+  }
 
-    @Override
-    protected VehicleParkingSpaces parseAvailability(JsonNode jsonNode) {
-        return parseVehicleSpaces(jsonNode, "free", null, null);
-    }
+  @Override
+  protected VehicleParkingSpaces parseAvailability(JsonNode jsonNode) {
+    return parseVehicleSpaces(jsonNode, "free", null, null);
+  }
 }

@@ -81,7 +81,7 @@
 
 .otp-itinsAccord-header-time {
     position:absolute;
-    width: 30px;
+    width: 38px;
     height: 12px;
     top: 4px;
     color: white;
@@ -100,7 +100,24 @@
     font-weight: bold;
     text-shadow: none;
     padding-top:3px;
-    text-align: left;
+    text-align: center;
+    overflow: hidden;
+}
+
+.otp-itinsAccord-header-segment .mode-icon {
+    width: 17px;
+    height: 17px;
+    display: inline-block;
+    margin-top: -1px;
+    mask-position: center;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+}
+
+.otp-itinsAccord-header-segment span {
+    vertical-align: top;
+    padding-left: 2px;
 }
 
 .otp-itinsAccord-header-groupSize {
@@ -416,4 +433,19 @@ h3.sysNotice {
 
 .otp-itin-print-step {
     margin-top: .5em;
+}
+
+.otp-itinElevationGraph .line {
+    stroke: black;
+}
+
+.otp-itinElevationGraph .label {
+    font-size: 10px;
+}
+
+.otp-itinElevationGraph .step {
+    fill: #fcefa160;
+    stroke: #fcefa1;
+    stroke-width: 1px;
+    display: none;
 }

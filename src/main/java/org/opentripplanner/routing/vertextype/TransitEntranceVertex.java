@@ -1,46 +1,41 @@
 package org.opentripplanner.routing.vertextype;
 
-import org.opentripplanner.model.Entrance;
-import org.opentripplanner.model.StationElement;
-import org.opentripplanner.model.WheelChairBoarding;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.opentripplanner.transit.model.basic.WheelchairAccessibility;
+import org.opentripplanner.transit.model.site.Entrance;
+import org.opentripplanner.transit.model.site.StationElement;
 
 public class TransitEntranceVertex extends Vertex {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TransitEntranceVertex.class);
-
   private static final long serialVersionUID = 1L;
 
-  private boolean wheelchairEntrance;
+  private final WheelchairAccessibility wheelchairAccessibility;
 
-  private Entrance entrance;
+  private final Entrance entrance;
 
   /**
    * @param entrance The transit model entrance reference.
    */
   public TransitEntranceVertex(Graph graph, Entrance entrance) {
     super(
-        graph,
-        entrance.getId().toString(),
-        entrance.getCoordinate().longitude(),
-        entrance.getCoordinate().latitude()
+      graph,
+      entrance.getId().toString(),
+      entrance.getCoordinate().longitude(),
+      entrance.getCoordinate().latitude(),
+      entrance.getName()
     );
     this.entrance = entrance;
-    this.wheelchairEntrance = entrance.getWheelchairBoarding() != WheelChairBoarding.NOT_POSSIBLE;
+    this.wheelchairAccessibility = entrance.getWheelchairAccessibility();
     //Adds this vertex into graph envelope so that we don't need to loop over all vertices
-    graph.expandToInclude(entrance.getCoordinate().longitude(), entrance.getCoordinate().latitude());
+    graph.expandToInclude(
+      entrance.getCoordinate().longitude(),
+      entrance.getCoordinate().latitude()
+    );
   }
 
-  @Override
-  public String getName() {
-    return entrance.getName();
-  }
-
-  public boolean isWheelchairEntrance() {
-    return wheelchairEntrance;
+  public WheelchairAccessibility getWheelchairAccessibility() {
+    return wheelchairAccessibility;
   }
 
   public Entrance getEntrance() {

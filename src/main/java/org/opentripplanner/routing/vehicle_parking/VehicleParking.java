@@ -8,13 +8,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
-import org.opentripplanner.model.FeedScopedId;
+import javax.annotation.Nullable;
+import org.opentripplanner.model.calendar.openinghours.OHCalendar;
 import org.opentripplanner.routing.core.TraverseMode;
-import org.opentripplanner.util.I18NString;
+import org.opentripplanner.transit.model.basic.I18NString;
+import org.opentripplanner.transit.model.framework.FeedScopedId;
 
 /**
  * Vehicle parking locations, which may allow bicycle and/or car parking.
- *
+ * <p>
  * All fields are immutable except for the availability, capacity which may be updated by updaters.
  * If any other properties change a new VehicleParking instance should be created.
  */
@@ -52,12 +54,19 @@ public class VehicleParking implements Serializable {
   private final Set<String> tags;
 
   /**
+   * The opening hours of this vehicle parking, when it is possible to drop off / pickup a vehicle.
+   * May be {@code null}.
+   */
+  private final OHCalendar openingHoursCalendar;
+
+  /**
    * A short translatable note containing details of this vehicle parking.
    */
   private final I18NString note;
 
   /**
-   * The state of this vehicle parking. Only ones in an OPERATIONAL state may be used for Park and Ride.
+   * The state of this vehicle parking. Only ones in an OPERATIONAL state may be used for Park and
+   * Ride.
    */
   private final VehicleParkingState state;
 
@@ -80,32 +89,31 @@ public class VehicleParking implements Serializable {
    * The capacity (maximum available spaces) of this vehicle parking.
    */
   private final VehicleParkingSpaces capacity;
-
+  /**
+   * The entrances to enter and exit this vehicle parking.
+   */
+  private final List<VehicleParkingEntrance> entrances = new ArrayList<>();
   /**
    * The currently available spaces at this vehicle parking.
    */
   private VehicleParkingSpaces availability;
 
-  /**
-   * The entrances to enter and exit this vehicle parking.
-   */
-  private final List<VehicleParkingEntrance> entrances = new ArrayList<>();
-
   VehicleParking(
-          FeedScopedId id,
-          I18NString name,
-          double x,
-          double y,
-          String detailsUrl,
-          String imageUrl,
-          Set<String> tags,
-          I18NString note,
-          VehicleParkingState state,
-          boolean bicyclePlaces,
-          boolean carPlaces,
-          boolean wheelchairAccessibleCarPlaces,
-          VehicleParkingSpaces capacity,
-          VehicleParkingSpaces availability
+    FeedScopedId id,
+    I18NString name,
+    double x,
+    double y,
+    String detailsUrl,
+    String imageUrl,
+    Set<String> tags,
+    OHCalendar openingHoursCalendar,
+    I18NString note,
+    VehicleParkingState state,
+    boolean bicyclePlaces,
+    boolean carPlaces,
+    boolean wheelchairAccessibleCarPlaces,
+    VehicleParkingSpaces capacity,
+    VehicleParkingSpaces availability
   ) {
     this.id = id;
     this.name = name;
@@ -114,6 +122,7 @@ public class VehicleParking implements Serializable {
     this.detailsUrl = detailsUrl;
     this.imageUrl = imageUrl;
     this.tags = tags;
+    this.openingHoursCalendar = openingHoursCalendar;
     this.note = note;
     this.state = state;
     this.bicyclePlaces = bicyclePlaces;
@@ -123,10 +132,15 @@ public class VehicleParking implements Serializable {
     this.availability = availability;
   }
 
+  public static VehicleParkingBuilder builder() {
+    return new VehicleParkingBuilder();
+  }
+
   public FeedScopedId getId() {
     return id;
   }
 
+  @Nullable
   public I18NString getName() {
     return name;
   }
@@ -149,6 +163,10 @@ public class VehicleParking implements Serializable {
 
   public Set<String> getTags() {
     return tags;
+  }
+
+  public OHCalendar getOpeningHours() {
+    return openingHoursCalendar;
   }
 
   public I18NString getNote() {
@@ -191,7 +209,11 @@ public class VehicleParking implements Serializable {
     return availability != null;
   }
 
-  public boolean hasSpacesAvailable(TraverseMode traverseMode, boolean wheelchairAccessible, boolean useAvailability) {
+  public boolean hasSpacesAvailable(
+    TraverseMode traverseMode,
+    boolean wheelchairAccessible,
+    boolean useAvailability
+  ) {
     switch (traverseMode) {
       case BICYCLE:
         if (useAvailability && hasRealTimeDataForMode(TraverseMode.BICYCLE, false)) {
@@ -218,7 +240,10 @@ public class VehicleParking implements Serializable {
     }
   }
 
-  public boolean hasRealTimeDataForMode(TraverseMode traverseMode, boolean wheelchairAccessibleCarPlaces) {
+  public boolean hasRealTimeDataForMode(
+    TraverseMode traverseMode,
+    boolean wheelchairAccessibleCarPlaces
+  ) {
     if (availability == null) {
       return false;
     }
@@ -228,8 +253,8 @@ public class VehicleParking implements Serializable {
         return availability.getBicycleSpaces() != null;
       case CAR:
         var places = wheelchairAccessibleCarPlaces
-                ? availability.getWheelchairAccessibleCarSpaces()
-                : availability.getCarSpaces();
+          ? availability.getWheelchairAccessibleCarSpaces()
+          : availability.getCarSpaces();
         return places != null;
       default:
         return false;
@@ -240,60 +265,80 @@ public class VehicleParking implements Serializable {
     this.availability = vehicleParkingSpaces;
   }
 
-  private void addEntrance(VehicleParkingEntranceCreator creator) {
-    var entrance = creator.updateValues(VehicleParkingEntrance.builder()
-            .vehicleParking(this))
-            .build();
+  @Override
+  public int hashCode() {
+    return Objects.hash(
+      id,
+      name,
+      x,
+      y,
+      detailsUrl,
+      imageUrl,
+      tags,
+      openingHoursCalendar,
+      note,
+      state,
+      bicyclePlaces,
+      carPlaces,
+      wheelchairAccessibleCarPlaces,
+      capacity,
+      entrances
+    );
+  }
 
-    entrances.add(entrance);
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final VehicleParking that = (VehicleParking) o;
+    return (
+      Double.compare(that.x, x) == 0 &&
+      Double.compare(that.y, y) == 0 &&
+      bicyclePlaces == that.bicyclePlaces &&
+      carPlaces == that.carPlaces &&
+      wheelchairAccessibleCarPlaces == that.wheelchairAccessibleCarPlaces &&
+      state == that.state &&
+      Objects.equals(id, that.id) &&
+      Objects.equals(name, that.name) &&
+      Objects.equals(detailsUrl, that.detailsUrl) &&
+      Objects.equals(imageUrl, that.imageUrl) &&
+      Objects.equals(tags, that.tags) &&
+      Objects.equals(openingHoursCalendar, that.openingHoursCalendar) &&
+      Objects.equals(note, that.note) &&
+      Objects.equals(capacity, that.capacity) &&
+      Objects.equals(entrances, that.entrances)
+    );
   }
 
   public String toString() {
     return String.format(Locale.ROOT, "VehicleParking(%s at %.6f, %.6f)", name, y, x);
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {return true;}
-    if (o == null || getClass() != o.getClass()) {return false;}
-    final VehicleParking that = (VehicleParking) o;
-    return Double.compare(that.x, x) == 0
-            && Double.compare(that.y, y) == 0
-            && bicyclePlaces == that.bicyclePlaces
-            && carPlaces == that.carPlaces
-            && wheelchairAccessibleCarPlaces == that.wheelchairAccessibleCarPlaces
-            && state == that.state
-            && Objects.equals(id, that.id)
-            && Objects.equals(name, that.name)
-            && Objects.equals(detailsUrl, that.detailsUrl)
-            && Objects.equals(imageUrl, that.imageUrl)
-            && Objects.equals(tags, that.tags)
-            && Objects.equals(note, that.note)
-            && Objects.equals(capacity, that.capacity)
-            && Objects.equals(entrances, that.entrances);
-  }
+  private void addEntrance(VehicleParkingEntranceCreator creator) {
+    var entrance = creator
+      .updateValues(VehicleParkingEntrance.builder().vehicleParking(this))
+      .build();
 
-  @Override
-  public int hashCode() {
-    return Objects.hash(
-            id, name, x, y, detailsUrl, imageUrl, tags, note, state, bicyclePlaces,
-            carPlaces, wheelchairAccessibleCarPlaces, capacity, entrances
-    );
-  }
-
-  public static VehicleParkingBuilder builder() {
-    return new VehicleParkingBuilder();
+    entrances.add(entrance);
   }
 
   @FunctionalInterface
   public interface VehicleParkingEntranceCreator {
-    VehicleParkingEntrance.VehicleParkingEntranceBuilder updateValues(VehicleParkingEntrance.VehicleParkingEntranceBuilder builder);
+    VehicleParkingEntrance.VehicleParkingEntranceBuilder updateValues(
+      VehicleParkingEntrance.VehicleParkingEntranceBuilder builder
+    );
   }
 
   @SuppressWarnings("unused")
   public static class VehicleParkingBuilder {
-    private Set<String> tags = Set.of();
+
     private final List<VehicleParkingEntranceCreator> entranceCreators = new ArrayList<>();
+    private Set<String> tags = Set.of();
+    private OHCalendar openingHoursCalendar;
     private FeedScopedId id;
     private I18NString name;
     private double x;
@@ -316,14 +361,19 @@ public class VehicleParking implements Serializable {
       return this;
     }
 
+    public VehicleParkingBuilder openingHoursCalendar(OHCalendar openingHoursCalendar) {
+      this.openingHoursCalendar = openingHoursCalendar;
+      return this;
+    }
+
     public VehicleParkingBuilder entrances(Collection<VehicleParkingEntranceCreator> creators) {
-        this.entranceCreators.addAll(creators);
-        return this;
+      this.entranceCreators.addAll(creators);
+      return this;
     }
 
     public VehicleParkingBuilder entrance(VehicleParkingEntranceCreator creator) {
-        this.entranceCreators.add(creator);
-        return this;
+      this.entranceCreators.add(creator);
+      return this;
     }
 
     public VehicleParkingBuilder id(FeedScopedId id) {
@@ -377,7 +427,9 @@ public class VehicleParking implements Serializable {
       return this;
     }
 
-    public VehicleParkingBuilder wheelchairAccessibleCarPlaces(boolean wheelchairAccessibleCarPlaces) {
+    public VehicleParkingBuilder wheelchairAccessibleCarPlaces(
+      boolean wheelchairAccessibleCarPlaces
+    ) {
       this.wheelchairAccessibleCarPlaces = wheelchairAccessibleCarPlaces;
       return this;
     }
@@ -399,8 +451,21 @@ public class VehicleParking implements Serializable {
       }
 
       var vehicleParking = new VehicleParking(
-              id, name, x, y, detailsUrl, imageUrl, tags, note, state$value,
-              bicyclePlaces, carPlaces, wheelchairAccessibleCarPlaces, capacity, availability
+        id,
+        name,
+        x,
+        y,
+        detailsUrl,
+        imageUrl,
+        tags,
+        openingHoursCalendar,
+        note,
+        state$value,
+        bicyclePlaces,
+        carPlaces,
+        wheelchairAccessibleCarPlaces,
+        capacity,
+        availability
       );
       this.entranceCreators.forEach(vehicleParking::addEntrance);
       return vehicleParking;

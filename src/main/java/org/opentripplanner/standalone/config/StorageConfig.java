@@ -1,15 +1,11 @@
 package org.opentripplanner.standalone.config;
 
-import javax.validation.constraints.NotNull;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-
-import static org.opentripplanner.datastore.OtpDataStoreConfig.DEFAULT_DEM_PATTERN;
-import static org.opentripplanner.datastore.OtpDataStoreConfig.DEFAULT_GTFS_PATTERN;
-import static org.opentripplanner.datastore.OtpDataStoreConfig.DEFAULT_NETEX_PATTERN;
-import static org.opentripplanner.datastore.OtpDataStoreConfig.DEFAULT_OSM_PATTERN;
+import javax.annotation.Nonnull;
+import org.opentripplanner.datastore.api.OtpDataStoreConfig;
 
 /**
  * Configure paths to each individual file resource. Use URIs to specify paths. If a parameter is
@@ -45,168 +41,213 @@ import static org.opentripplanner.datastore.OtpDataStoreConfig.DEFAULT_OSM_PATTE
  * artifacts like the loaded graph, saved graph and NeTEx files are loaded and written from/to the
  * local base directory - it they exist.
  */
-public class StorageConfig {
+public class StorageConfig implements OtpDataStoreConfig {
 
-    /**
-     * Local file system path to Google Cloud Platform service accounts credentials file. The
-     * credentials is used to access GCS urls. When using GCS from outside of the bucket cluster you
-     * need to provide a path the the service credentials. Environment variables in the path is
-     * resolved.
-     * <p>
-     * Example: {@code "credentialsFile" : "${MY_GOC_SERVICE}"} or {@code "app-1-3983f9f66728.json"
-     * : "~/"}
-     * <p>
-     * This is a path to a file on the local file system, not an URI.
-     * <p>
-     * This parameter is optional. Default is {@code null}.
-     */
-    public final String gsCredentials;
+  /**
+   * Local file system path to Google Cloud Platform service accounts credentials file. The
+   * credentials is used to access GCS urls. When using GCS from outside of the bucket cluster you
+   * need to provide a path the the service credentials. Environment variables in the path is
+   * resolved.
+   * <p>
+   * Example: {@code "credentialsFile" : "${MY_GOC_SERVICE}"} or {@code "app-1-3983f9f66728.json" :
+   * "~/"}
+   * <p>
+   * This is a path to a file on the local file system, not an URI.
+   * <p>
+   * This parameter is optional. Default is {@code null}.
+   */
+  public final String gsCredentials;
 
-    /**
-     * URI to the street graph object file for reading and writing. The file is created or
-     * overwritten if OTP saves the graph to the file.
-     * <p>
-     * Example: {@code "streetGraph" : "file:///Users/kelvin/otp/streetGraph.obj" }
-     * <p>
-     * This parameter is optional. Default is {@code null}.
-     */
-    public final URI streetGraph;
+  /**
+   * URI to the street graph object file for reading and writing. The file is created or overwritten
+   * if OTP saves the graph to the file.
+   * <p>
+   * Example: {@code "streetGraph" : "file:///Users/kelvin/otp/streetGraph.obj" }
+   * <p>
+   * This parameter is optional. Default is {@code null}.
+   */
+  public final URI streetGraph;
 
-    /**
-     * URI to the graph object file for reading and writing. The file is created or overwritten if
-     * OTP saves the graph to the file.
-     * <p>
-     * Example: {@code "graph" : "gs://my-bucket/otp/graph.obj" }
-     * <p>
-     * This parameter is optional. Default is {@code null}.
-     */
-    public final URI graph;
+  /**
+   * URI to the graph object file for reading and writing. The file is created or overwritten if OTP
+   * saves the graph to the file.
+   * <p>
+   * Example: {@code "graph" : "gs://my-bucket/otp/graph.obj" }
+   * <p>
+   * This parameter is optional. Default is {@code null}.
+   */
+  public final URI graph;
 
-    /**
-     * Array of URIs to the open street map pbf files (the pbf format is the only one supported).
-     * <p>
-     * Example: {@code "osm" : [ "file:///Users/kelvin/otp/norway-osm.pbf" ] }
-     * <p>
-     * This parameter is optional.
-     */
-    public final List<URI> osm = new ArrayList<>();
+  /**
+   * Array of URIs to the open street map pbf files (the pbf format is the only one supported).
+   * <p>
+   * Example: {@code "osm" : [ "file:///Users/kelvin/otp/norway-osm.pbf" ] }
+   * <p>
+   * This parameter is optional.
+   */
+  public final List<URI> osm = new ArrayList<>();
 
-    /**
-     * Array of URIs to elevation data files.
-     * <p>
-     * Example: {@code "osm" : [ "file:///Users/kelvin/otp/norway-dem.tif" ] }
-     * <p>
-     * This parameter is optional.
-     */
-    public final List<URI> dem = new ArrayList<>();
+  /**
+   * Pattern for matching Open Street Map input files. If the filename contains the given pattern
+   * it is considered a match. Any legal Java Regular expression is allowed.
+   * <p>
+   * This parameter is optional.
+   * <p>
+   * Default: {@code (?i)(.pbf|.osm|.osm.xml)$} - Match all filenames that ends with suffix {@code
+   * .pbf}, {@code .osm} or {@code .osm.xml}. The default pattern is NOT case sensitive.
+   */
+  public final Pattern osmLocalFilePattern;
 
-    /**
-     * Array of URIs to GTFS data files .
-     * <p>
-     * Example: {@code "transit" : [ "file:///Users/kelvin/otp/gtfs.zip", "gs://my-bucket/gtfs.zip" ]" }
-     * <p>
-     * This parameter is optional.
-     */
-    @NotNull
-    public final List<URI> gtfs = new ArrayList<>();
+  /**
+   * Array of URIs to elevation data files.
+   * <p>
+   * Example: {@code "osm" : [ "file:///Users/kelvin/otp/norway-dem.tif" ] }
+   * <p>
+   * This parameter is optional.
+   */
+  public final List<URI> dem = new ArrayList<>();
 
-    /**
-     * Array of URIs to Netex data files.
-     * <p>
-     * Example: {@code "transit" : [ "file:///Users/kelvin/otp/netex.zip", "gs://my-bucket/netex.zip" ]" }
-     * <p>
-     * This parameter is optional.
-     */
-    @NotNull
-    public final List<URI> netex = new ArrayList<>();
+  /**
+   * Pattern for matching elevation DEM files. If the filename contains the given pattern it is
+   * considered a match. Any legal Java Regular expression is allowed.
+   * <p>
+   * This parameter is optional.
+   * <p>
+   * Default: {@code (?i).tiff?$} - Match all filenames that ends with suffix {@code .tif} or
+   * {@code .tiff}. The default pattern is NOT case sensitive.
+   */
+  public final Pattern demLocalFilePattern;
 
-    /**
-     * URI to the directory where the graph build report should be written to. The html report is
-     * written into this directory. If the directory exist, any existing files are deleted.
-     * If it does not exist, it is created.
-     * <p>
-     * Example: {@code "osm" : "file:///Users/kelvin/otp/buildReport" }
-     * <p>
-     * This parameter is optional. Default is {@code null} in witch case the report is skipped.
-     */
-    public final URI buildReportDir;
+  /**
+   * Array of URIs to GTFS data files .
+   * <p>
+   * Example: {@code "transit" : [ "file:///Users/kelvin/otp/gtfs.zip", "gs://my-bucket/gtfs.zip" ]"
+   * }
+   * <p>
+   * This parameter is optional.
+   */
+  @Nonnull
+  public final List<URI> gtfs = new ArrayList<>();
 
-    /**
-     * Configure patterns for auto-detection of input files in the local base directory. Resolving
-     * input files is only provided for files in the base directory not for any external
-     * resources.
-     */
-    public final LocalFilenamePatterns localFileNamePatterns;
+  /**
+   * Patterns for matching GTFS zip-files or directories. If the filename contains the given
+   * pattern it is considered a match. Any legal Java Regular expression is allowed.
+   * <p>
+   * This parameter is optional.
+   * <p>
+   * Default: {@code (?i)gtfs} - Match all filenames that contain "gtfs". The default pattern is
+   * NOT case sensitive.
+   */
+  public final Pattern gtfsLocalFilePattern;
 
+  /**
+   * Array of URIs to Netex data files.
+   * <p>
+   * Example: {@code "transit" : [ "file:///Users/kelvin/otp/netex.zip", "gs://my-bucket/netex.zip"
+   * ]" }
+   * <p>
+   * This parameter is optional.
+   */
+  @Nonnull
+  public final List<URI> netex = new ArrayList<>();
 
-    StorageConfig(NodeAdapter config) {
-       this.gsCredentials = config.asText("gsCredentials",null);
-       this.graph = config.asUri("graph", null);
-       this.streetGraph = config.asUri("streetGraph", null);
-       this.osm.addAll(config.asUris("osm"));
-       this.dem.addAll(config.asUris("dem"));
-       this.gtfs.addAll(config.asUris("gtfs"));
-       this.netex.addAll(config.asUris("netex"));
-       this.buildReportDir = config.asUri("buildReportDir", null);
-       this.localFileNamePatterns = new LocalFilenamePatterns(config.path("localFileNamePatterns"));
+  /**
+   * Patterns for matching NeTEx zip files or directories. If the filename contains the given
+   * pattern it is considered a match. Any legal Java Regular expression is allowed.
+   * <p>
+   * This parameter is optional.
+   * <p>
+   * Default: {@code (?i)netex} - Match all filenames that contain "netex". The default pattern is
+   * NOT case sensitive.
+   */
+  public final Pattern netexLocalFilePattern;
+
+  /**
+   * URI to the directory where the graph build report should be written to. The html report is
+   * written into this directory. If the directory exist, any existing files are deleted. If it does
+   * not exist, it is created.
+   * <p>
+   * Example: {@code "osm" : "file:///Users/kelvin/otp/buildReport" }
+   * <p>
+   * This parameter is optional. Default is {@code null} in which case the report is skipped.
+   */
+  public final URI buildReportDir;
+
+  StorageConfig(NodeAdapter config) {
+    this.gsCredentials = config.asText("gsCredentials", null);
+    this.graph = config.asUri("graph", null);
+    this.streetGraph = config.asUri("streetGraph", null);
+    this.osm.addAll(config.asUris("osm"));
+    this.dem.addAll(config.asUris("dem"));
+    this.gtfs.addAll(config.asUris("gtfs"));
+    this.netex.addAll(config.asUris("netex"));
+    this.buildReportDir = config.asUri("buildReportDir", null);
+    {
+      var c = config.path("localFileNamePatterns");
+      this.gtfsLocalFilePattern = c.asPattern("gtfs", DEFAULT_GTFS_PATTERN);
+      this.netexLocalFilePattern = c.asPattern("netex", DEFAULT_NETEX_PATTERN);
+      this.osmLocalFilePattern = c.asPattern("osm", DEFAULT_OSM_PATTERN);
+      this.demLocalFilePattern = c.asPattern("dem", DEFAULT_DEM_PATTERN);
     }
+  }
 
-    /**
-     * Configure patterns for auto-detection of input files in the local base directory. Resolving
-     * input files is only provided for files in the base directory not for any external
-     * resources.
-     */
-    public static class LocalFilenamePatterns {
-        /**
-         * Patterns for matching GTFS zip-files or directories. If the filename contains the
-         * given pattern it is considered a match. Any legal Java Regular expression is allowed.
-         * <p>
-         * This parameter is optional.
-         * <p>
-         * Default: {@code (?i)gtfs} - Match all filenames that contain "gtfs". The default pattern
-         * is NOT case sensitive.
-         */
-        public final Pattern gtfs;
+  @Override
+  public URI reportDirectory() {
+    return buildReportDir;
+  }
 
-        /**
-         * Patterns for matching NeTEx zip files or directories. If the filename contains the
-         * given pattern it is considered a match. Any legal Java Regular expression is allowed.
-         * <p>
-         * This parameter is optional.
-         * <p>
-         * Default: {@code (?i)netex} - Match all filenames that contain "netex". The default
-         * pattern is NOT case sensitive.
-         */
-        public final Pattern netex;
+  @Override
+  public String gsCredentials() {
+    return gsCredentials;
+  }
 
-        /**
-         * Pattern for matching Open Street Map input files. If the filename contains the
-         * given pattern it is considered a match. Any legal Java Regular expression is allowed.
-         * <p>
-         * This parameter is optional.
-         * <p>
-         * Default: {@code (?i)(.pbf|.osm|.osm.xml)$} - Match all filenames that ends with suffix
-         * {@code .pbf}, {@code .osm} or {@code .osm.xml}. The default pattern is NOT case
-         * sensitive.
-         */
-        public final Pattern osm;
+  @Override
+  public List<URI> osmFiles() {
+    return osm;
+  }
 
-        /**
-         * Pattern for matching elevation DEM files. If the filename contains the
-         * given pattern it is considered a match. Any legal Java Regular expression is allowed.
-         * <p>
-         * This parameter is optional.
-         * <p>
-         * Default: {@code (?i).tiff?$} - Match all filenames that ends with suffix
-         * {@code .tif} or {@code .tiff}. The default pattern is NOT case sensitive.
-         */
-        public final Pattern dem;
+  @Override
+  public List<URI> demFiles() {
+    return dem;
+  }
 
-        public LocalFilenamePatterns(NodeAdapter c) {
-            this.gtfs = c.asPattern("gtfs", DEFAULT_GTFS_PATTERN);
-            this.netex = c.asPattern("netex", DEFAULT_NETEX_PATTERN);
-            this.osm = c.asPattern("osm", DEFAULT_OSM_PATTERN);
-            this.dem = c.asPattern("dem", DEFAULT_DEM_PATTERN);
-        }
-    }
+  @Override
+  public List<URI> gtfsFiles() {
+    return gtfs;
+  }
+
+  @Override
+  public List<URI> netexFiles() {
+    return netex;
+  }
+
+  @Override
+  public URI graph() {
+    return graph;
+  }
+
+  @Override
+  public URI streetGraph() {
+    return streetGraph;
+  }
+
+  @Override
+  public Pattern gtfsLocalFilePattern() {
+    return gtfsLocalFilePattern;
+  }
+
+  @Override
+  public Pattern netexLocalFilePattern() {
+    return netexLocalFilePattern;
+  }
+
+  @Override
+  public Pattern osmLocalFilePattern() {
+    return osmLocalFilePattern;
+  }
+
+  @Override
+  public Pattern demLocalFilePattern() {
+    return demLocalFilePattern;
+  }
 }

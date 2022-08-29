@@ -4,10 +4,10 @@
 
     <name>OpenTripPlanner</name>
     <description>The OpenTripPlanner multimodal journey planning system</description>
-    <url>http://opentripplanner.org</url>
+    <url>https://opentripplanner.org</url>
     <groupId>org.opentripplanner</groupId>
     <artifactId>otp</artifactId>
-    <version>2.1.0-SNAPSHOT</version>
+    <version>2.2.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <licenses>
@@ -18,25 +18,31 @@
     </licenses>
 
     <scm>
-        <url>http://github.com/opentripplanner/OpenTripPlanner</url>
+        <url>https://github.com/opentripplanner/OpenTripPlanner</url>
     </scm>
 
     <properties>
-        <otp.serialization.version.id>15</otp.serialization.version.id>
+        <otp.serialization.version.id>57</otp.serialization.version.id>
         <!-- Lib versions - keep list sorted on property name -->
-        <geotools.version>25.2</geotools.version>
-        <jackson.version>2.12.5</jackson.version>
+        <geotools.version>27.0</geotools.version>
+        <google.dagger.version>2.42</google.dagger.version>
+        <jackson.version>2.13.3</jackson.version>
         <jersey.version>2.34</jersey.version>
-        <junit.version>5.7.2</junit.version>
-        <micrometer.version>1.7.4</micrometer.version>
-        <netcdf4.version>5.3.2</netcdf4.version>
+        <junit.version>5.8.2</junit.version>
+        <micrometer.version>1.8.3</micrometer.version>
+        <netcdf4.version>5.5.2</netcdf4.version>
+        <netty.version>4.1.74.Final</netty.version>
+        <lucene.version>9.1.0</lucene.version>
+        <graphql.version>18.3</graphql.version>
         <!-- Other properties -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <GITHUB_REPOSITORY>opentripplanner/OpenTripPlanner</GITHUB_REPOSITORY>
         <!-- Set argLine to an empty string so that running the tests without the coverage agent works.
              When running `mvn jacoco:prepare-agent test` argLine is replaced with the one activating the agent.
         -->
-        <argLine></argLine>
+        <argLine/>
+        <plugin.prettier.version>0.17</plugin.prettier.version>
+        <plugin.prettier.goal>write</plugin.prettier.goal>
     </properties>
 
     <distributionManagement>
@@ -84,61 +90,31 @@
                 <directory>src/ext-test/resources</directory>
             </testResource>
         </testResources>
-        <pluginManagement>
-            <plugins>
-                <!-- m2eclipse lifecycle mapping configuration. This controls which Maven build goals should
-                be performed during incremental builds within the Eclipse IDE. There are sensible defaults
-                for most plugins, but some others require manual configuration with <action><ignore /> or
-                <action><execute /> filters. This section only affects incremental builds within Eclipse,
-                not command-line Maven builds. That's why it's a pluginManagement without an accompanying plugin. -->
-                <plugin>
-                    <groupId>org.eclipse.m2e</groupId>
-                    <artifactId>lifecycle-mapping</artifactId>
-                    <version>1.0.0</version>
-                    <configuration>
-                        <lifecycleMappingMetadata>
-                            <pluginExecutions>
-                                <pluginExecution>
-                                    <pluginExecutionFilter>
-                                        <groupId>org.apache.maven.plugins</groupId>
-                                        <artifactId>maven-dependency-plugin</artifactId>
-                                        <versionRange>[1.0,)</versionRange>
-                                        <goals>
-                                            <goal>copy-dependencies</goal>
-                                        </goals>
-                                    </pluginExecutionFilter>
-                                    <action>
-                                        <ignore />
-                                    </action>
-                                </pluginExecution>
-                                <pluginExecution>
-                                    <pluginExecutionFilter>
-                                        <groupId>io.github.git-commit-id</groupId>
-                                        <artifactId>git-commit-id-maven-plugin</artifactId>
-                                        <versionRange>5.0.0</versionRange>
-                                        <goals>
-                                            <goal>revision</goal>
-                                        </goals>
-                                    </pluginExecutionFilter>
-                                    <action>
-                                        <execute />
-                                    </action>
-                                </pluginExecution>
-                            </pluginExecutions>
-                        </lifecycleMappingMetadata>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-
+        <extensions>
+            <!-- makes build variables like os.detected.classifier available.
+                 use to select the correct protoc instance for the OS.
+                 see protobuf-maven-plugin below -->
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.6.2</version>
+            </extension>
+        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <!-- Target Java versions -->
-                    <release>11</release>
+                    <!-- Target Java version -->
+                    <release>17</release>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>com.google.dagger</groupId>
+                            <artifactId>dagger-compiler</artifactId>
+                            <version>${google.dagger.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>
@@ -159,7 +135,7 @@
             <plugin>
                 <groupId>com.webcohesion.enunciate</groupId>
                 <artifactId>enunciate-maven-plugin</artifactId>
-                <version>2.12.0</version>
+                <version>2.13.3</version>
                 <executions>
                     <execution>
                         <!-- override default binding to process-sources phase (enunciate generates web services). -->
@@ -219,6 +195,13 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.11.0</version>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -233,8 +216,17 @@
                         @{argLine}
                         -Xmx2G
                         -Dfile.encoding=UTF-8
-                        --illegal-access=permit
+                        --add-opens java.base/java.io=ALL-UNNAMED
+                        --add-opens java.base/java.lang=ALL-UNNAMED
                         --add-opens java.base/java.lang.module=ALL-UNNAMED
+                        --add-opens java.base/java.math=ALL-UNNAMED
+                        --add-opens java.base/java.net=ALL-UNNAMED
+                        --add-opens java.base/java.text=ALL-UNNAMED
+                        --add-opens java.base/java.time=ALL-UNNAMED
+                        --add-opens java.base/java.time.zone=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.util.concurrent.locks=ALL-UNNAMED
+                        --add-opens java.base/java.util.regex=ALL-UNNAMED
                         --add-opens java.base/jdk.internal.reflect=ALL-UNNAMED
                         --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
                         --add-opens java.base/jdk.internal.loader=ALL-UNNAMED
@@ -242,17 +234,22 @@
                         --add-opens java.base/jdk.internal.util=ALL-UNNAMED
                         --add-opens java.base/jdk.internal.util.jar=ALL-UNNAMED
                         --add-opens java.base/jdk.internal.module=ALL-UNNAMED
-                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/sun.net.www.protocol.http=ALL-UNNAMED
+                        --add-opens java.base/sun.net.www.protocol.jar=ALL-UNNAMED
+                        --add-opens java.base/sun.util.calendar=ALL-UNNAMED
+                        --add-opens java.base/sun.util.locale=ALL-UNNAMED
+                        --add-opens java.xml/org.xml.sax.helpers=ALL-UNNAMED
                     </argLine>
                     <!-- Jenkins needs XML test reports to determine whether the build is stable. -->
-                    <disableXmlReport>false</disableXmlReport>
+                    <disableXmlReport>true</disableXmlReport>
+                    <trimStackTrace>false</trimStackTrace>
                 </configuration>
             </plugin>
             <!-- code coverage report -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.7</version>
+                <version>0.8.8</version>
             </plugin>
             <plugin>
                 <!-- Get current Git commit information for use in MavenVersion class.
@@ -356,6 +353,89 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>com.hubspot.maven.plugins</groupId>
+                <artifactId>prettier-maven-plugin</artifactId>
+                <version>${plugin.prettier.version}</version>
+                <configuration>
+                    <prettierJavaVersion>1.6.1</prettierJavaVersion>
+                    <inputGlobs>
+                        <inputGlob>src/main/java/**/*.java</inputGlob>
+                        <inputGlob>src/test/java/**/*.java</inputGlob>
+                        <inputGlob>src/ext/java/**/*.java</inputGlob>
+                        <inputGlob>src/ext-test/java/**/*.java</inputGlob>
+                    </inputGlobs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>${plugin.prettier.goal}</goal>
+                        </goals>
+                    </execution>
+                </executions>
+
+            </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.2.1</version>
+                <configuration>
+                    <container>
+                        <mainClass>org.opentripplanner.standalone.OTPMain</mainClass>
+                        <entrypoint>/docker-entrypoint.sh</entrypoint>
+                        <volumes>
+                            <volume>
+                                /var/opentripplanner/
+                            </volume>
+                        </volumes>
+                        <ports>
+                            <port>8080</port>
+                            <port>8081</port>
+                        </ports>
+                    </container>
+                    <to>
+                        <image>${env.CONTAINER_REPO}</image>
+                        <auth>
+                            <username>${env.CONTAINER_REGISTRY_USER}</username>
+                            <password>${env.CONTAINER_REGISTRY_PASSWORD}</password>
+                        </auth>
+                    </to>
+                    <extraDirectories>
+                        <permissions>
+                            <permission>
+                                <file>/docker-entrypoint.sh</file>
+                                <mode>755</mode>
+                            </permission>
+                            <permission>
+                                <file>/var/opentripplanner/</file>
+                                <mode>755</mode>
+                            </permission>
+                        </permissions>
+                    </extraDirectories>
+                </configuration>
+            </plugin>
+
+            <!-- compile the gtfs-realtime.proto file to Java code
+               To update the proto file run the following command:
+                 curl https://raw.githubusercontent.com/google/transit/master/gtfs-realtime/proto/gtfs-realtime.proto -o src/main/proto/gtfs-realtime.proto
+              -->
+            <plugin>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>0.6.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>test-compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <protocArtifact>com.google.protobuf:protoc:3.19.2:exe:${os.detected.classifier}</protocArtifact>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
@@ -375,11 +455,6 @@
             <url>https://repo.osgeo.org/repository/release/</url>
         </repository>
         <repository>
-            <id>geosolutions</id>
-            <name>GeoSolutions Repository</name>
-            <url>https://maven.geo-solutions.it/</url>
-        </repository>
-        <repository>
             <id>onebusaway-releases</id>
             <name>Onebusaway Releases Repo</name>
             <url>https://repo.camsys-apps.com/releases/</url>
@@ -392,7 +467,7 @@
                 <!-- This make sure all google libraries are using compatible versions. -->
                 <groupId>com.google.cloud</groupId>
                 <artifactId>libraries-bom</artifactId>
-                <version>14.4.1</version>
+                <version>24.1.2</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -404,40 +479,42 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.2.8</version>
+            <version>1.2.11</version>
         </dependency>
         <!-- Jersey uses java.util logging, redirect it to slf4j API (we use the Logback implementation) -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jul-to-slf4j</artifactId>
-            <version>1.7.32</version>
+            <version>1.7.36</version>
+        </dependency>
+
+        <!-- dependency injection -->
+        <dependency>
+            <groupId>com.google.dagger</groupId>
+            <artifactId>dagger</artifactId>
+            <version>${google.dagger.version}</version>
+        </dependency>
+
+        <!-- JSON AST, not used much and is a good candidate for removal -->
+        <dependency>
+            <groupId>com.googlecode.json-simple</groupId>
+            <artifactId>json-simple</artifactId>
+            <version>1.1.1</version>
+            <exclusions>
+                <!-- This includes a dependency on an ancient version of Junit which we want to exclude -->
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- GEOTOOLS AND JTS TOPOLOGY: geometry, rasters and projections. -->
         <!-- GEOTOOLS includes JTS as a transitive dependency. -->
-        <dependency>
-            <groupId>org.geotools</groupId>
-            <artifactId>gt-main</artifactId>
-            <version>${geotools.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.geotools</groupId>
-            <artifactId>gt-geojson</artifactId>
-            <version>${geotools.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.geotools</groupId>
-            <artifactId>gt-referencing</artifactId>
-            <version>${geotools.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>org.geotools</groupId>
             <artifactId>gt-coverage</artifactId>
-            <version>${geotools.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.geotools</groupId>
-            <artifactId>gt-shapefile</artifactId>
             <version>${geotools.version}</version>
         </dependency>
         <dependency>
@@ -455,11 +532,27 @@
             <artifactId>gt-wfs-ng</artifactId>
             <version>${geotools.version}</version>
         </dependency>
-        <!-- provides EPSG database for projections (shapefile loading) -->
         <dependency>
             <groupId>org.geotools</groupId>
-            <artifactId>gt-epsg-hsql</artifactId>
+            <artifactId>gt-geojson-core</artifactId>
             <version>${geotools.version}</version>
+        </dependency>
+
+        <!-- Lucene is used by the Debug Client Geocode API -->
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-core</artifactId>
+            <version>${lucene.version}</version>
+        </dependency>
+        <dependency>
+             <groupId>org.apache.lucene</groupId>
+             <artifactId>lucene-queryparser</artifactId>
+             <version>${lucene.version}</version>
+        </dependency>
+        <dependency>
+             <groupId>org.apache.lucene</groupId>
+             <artifactId>lucene-suggest</artifactId>
+             <version>${lucene.version}</version>
         </dependency>
 
         <dependency>
@@ -489,12 +582,12 @@
         <!--
             Netex XML document - JAXB generated Java model.
             This is generated using the official Netex schema(v1.0) and support the entire model,
-            not just the Nordic/Norwegian profile witch is currently supported by OTP.
+            not just the Nordic/Norwegian profile which is currently supported by OTP.
          -->
         <dependency>
             <groupId>org.entur</groupId>
             <artifactId>netex-java-model</artifactId>
-            <version>1.0.11</version>
+            <version>1.0.13</version>
         </dependency>
 
         <!-- SIRI -->
@@ -508,7 +601,7 @@
         <dependency>
             <groupId>org.entur</groupId>
             <artifactId>siri-protobuf-mapper</artifactId>
-            <version>0.6</version>
+            <version>0.8</version>
         </dependency>
 
         <dependency>
@@ -537,34 +630,41 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.junit.vintage</groupId>
-            <artifactId>junit-vintage-engine</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit</artifactId>
+            <version>0.23.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
-            <version>1.10.19</version>
+            <artifactId>mockito-core</artifactId>
+            <version>4.4.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.github.origin-energy</groupId>
             <artifactId>java-snapshot-testing-junit5</artifactId>
             <version>2.3.0</version>
+            <scope>test</scope>
         </dependency>
         <!-- Provides some shared serializers for Kryo. Introduces transitive dependencies on Trove, and Kryo. -->
         <!-- Also provides classes for testing that a round trip through serialization reproduces the same network. -->
         <dependency>
             <groupId>com.conveyal</groupId>
             <artifactId>kryo-tools</artifactId>
-            <version>1.3.0</version>
+            <version>1.4.0</version>
         </dependency>
         <!-- Direct dependency with -jre version, in order to not resolve to the limited -android version -->
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>30.1-jre</version>
+            <version>31.1-jre</version>
         </dependency>
         <!-- Jersey annontation-driven REST web services (JAX-RS implementation) -->
         <dependency>
@@ -595,18 +695,18 @@
         <dependency>
             <groupId>org.glassfish.jaxb</groupId>
             <artifactId>jaxb-runtime</artifactId>
-            <version>2.3.5</version>
+            <version>2.3.6</version>
         </dependency>
 
         <!-- Jackson modules. -->
         <dependency>
-           <groupId>com.fasterxml.jackson.core</groupId>
-           <artifactId>jackson-core</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
             <version>${jackson.version}</version>
         </dependency>
         <dependency>
-           <groupId>com.fasterxml.jackson.core</groupId>
-           <artifactId>jackson-databind</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
         </dependency>
         <dependency>
@@ -646,27 +746,9 @@
         <!-- Asynchronous Websocket-capable client, for message-driven incremental GTFS-RT -->
         <!-- AsyncHttpClient Websockets need a newer version of Grizzly than Jersey does. -->
         <dependency>
-            <groupId>com.ning</groupId>
+            <groupId>org.asynchttpclient</groupId>
             <artifactId>async-http-client</artifactId>
-            <version>1.8.12</version>
-        </dependency>
-        <!-- OTHER DEPENDENCIES -->
-        <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>servlet-api</artifactId>
-            <version>2.5</version>
-            <!-- this dependency is provided by the servlet container, but we want to ensure the expected version. -->
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>javax.annotation</groupId>
-            <artifactId>jsr250-api</artifactId>
-            <version>1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>javax.inject</groupId>
-            <artifactId>javax.inject</artifactId>
-            <version>1</version>
+            <version>2.12.3</version>
         </dependency>
         <!-- OBA GTFS loader -->
         <dependency>
@@ -678,63 +760,51 @@
         <dependency>
             <groupId>org.processing</groupId>
             <artifactId>core</artifactId>
-            <version>1.0.7</version>
+            <version>2.2.1</version>
         </dependency>
         <!-- Used in DegreeGridNEDTileSource to fetch tiles from Amazon S3 -->
         <dependency>
             <groupId>net.java.dev.jets3t</groupId>
             <artifactId>jets3t</artifactId>
-            <version>0.8.1</version>
+            <version>0.9.4</version>
         </dependency>
         <!-- OpenStreetMap protobuf (PBF) definitions and parser -->
         <dependency>
             <groupId>org.openstreetmap.osmosis</groupId>
             <artifactId>osmosis-osm-binary</artifactId>
-            <version>0.47.3</version>
+            <version>0.48.3</version>
         </dependency>
         <!-- Command line parameter parsing -->
         <dependency>
             <groupId>com.beust</groupId>
             <artifactId>jcommander</artifactId>
-            <version>1.78</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-math3</artifactId>
-            <version>3.6.1</version>
+            <version>1.82</version>
         </dependency>
         <dependency>
             <groupId>com.graphql-java</groupId>
             <artifactId>graphql-java</artifactId>
-            <version>17.2</version>
+            <version>${graphql.version}</version>
         </dependency>
         <dependency>
             <groupId>com.graphql-java</groupId>
             <artifactId>graphql-java-extended-scalars</artifactId>
-            <version>17.0</version>
+            <version>18.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <version>4.5.5</version>
+            <version>4.5.13</version>
         </dependency>
         <dependency>
             <groupId>commons-cli</groupId>
             <artifactId>commons-cli</artifactId>
-            <version>1.4</version>
+            <version>1.5.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>net.sourceforge.javacsv</groupId>
             <artifactId>javacsv</artifactId>
             <version>2.0</version>
-        </dependency>
-        <!-- Lombok -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.20</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.eclipse.paho</groupId>
@@ -751,9 +821,61 @@
             <artifactId>exp4j</artifactId>
             <version>0.4.8</version>
         </dependency>
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-core</artifactId>
+            <version>1.21.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-messaging-servicebus</artifactId>
+            <version>7.4.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.microsoft.azure</groupId>
+            <artifactId>azure-servicebus</artifactId>
+            <version>3.6.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.azure.resourcemanager</groupId>
+            <artifactId>azure-resourcemanager-servicebus</artifactId>
+            <version>2.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.poole</groupId>
+            <artifactId>OpeningHoursParser</artifactId>
+            <version>0.27.0</version>
+        </dependency>
     </dependencies>
 
     <profiles>
+        <profile>
+            <id>prettierCheck</id>
+            <properties>
+                <!-- In the CI environment we want to validate that code is formatted -->
+                <plugin.prettier.goal>check</plugin.prettier.goal>
+            </properties>
+        </profile>
+        <profile>
+            <id>prettierSkip</id>
+            <activation>
+                <os>
+                    <family>Windows</family>
+                </os>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.hubspot.maven.plugins</groupId>
+                        <artifactId>prettier-maven-plugin</artifactId>
+                        <version>${plugin.prettier.version}</version>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <profile>
             <id>clean-test-snapshots</id>
             <build>

@@ -1,42 +1,45 @@
 package org.opentripplanner.routing.impl;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.LineString;
-import org.locationtech.jts.index.SpatialIndex;
-import org.opentripplanner.common.geometry.GeometryUtils;
 import org.opentripplanner.common.geometry.HashGridSpatialIndex;
 import org.opentripplanner.common.geometry.SphericalDistanceLibrary;
+import org.opentripplanner.common.model.P2;
+import org.opentripplanner.graph_builder.linking.DisposableEdgeCollection;
 import org.opentripplanner.graph_builder.linking.LinkingDirection;
 import org.opentripplanner.graph_builder.linking.VertexLinker;
 import org.opentripplanner.model.GenericLocation;
-import org.opentripplanner.common.model.P2;
 import org.opentripplanner.routing.api.request.RoutingRequest;
 import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.core.TraverseModeSet;
 import org.opentripplanner.routing.edgetype.StreetEdge;
 import org.opentripplanner.routing.edgetype.TemporaryFreeEdge;
 import org.opentripplanner.routing.edgetype.TemporaryPartialStreetEdge;
-import org.opentripplanner.graph_builder.linking.DisposableEdgeCollection;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.location.TemporaryStreetLocation;
 import org.opentripplanner.routing.vertextype.StreetVertex;
 import org.opentripplanner.routing.vertextype.TransitStopVertex;
-import org.opentripplanner.util.I18NString;
-import org.opentripplanner.util.NonLocalizedString;
-import org.opentripplanner.util.ProgressTracker;
+import org.opentripplanner.transit.model.basic.I18NString;
+import org.opentripplanner.transit.model.basic.LocalizedString;
+import org.opentripplanner.transit.model.basic.NonLocalizedString;
+import org.opentripplanner.transit.model.framework.FeedScopedId;
+import org.opentripplanner.transit.model.site.RegularStop;
+import org.opentripplanner.transit.service.StopModel;
+import org.opentripplanner.util.geometry.GeometryUtils;
+import org.opentripplanner.util.logging.ProgressTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
 /**
  * Indexes all edges and transit vertices of the graph spatially. Has a variety of query methods
@@ -48,34 +51,229 @@ import java.util.UUID;
  */
 public class StreetVertexIndex {
 
-  private final Graph graph;
+  private static final Logger LOG = LoggerFactory.getLogger(StreetVertexIndex.class);
+
+  private final StopModel stopModel;
 
   private final VertexLinker vertexLinker;
+
+  private final Map<FeedScopedId, TransitStopVertex> transitStopVertices;
 
   /**
    * Contains only instances of {@link StreetEdge}
    */
-  private final SpatialIndex edgeTree;
-  private final SpatialIndex transitStopTree;
-  private final SpatialIndex verticesTree;
-
-  private static final Logger LOG = LoggerFactory.getLogger(StreetVertexIndex.class);
+  private final HashGridSpatialIndex<Edge> edgeTree;
+  private final HashGridSpatialIndex<Vertex> verticesTree;
 
   /**
    * Should only be called by the graph.
    */
-  public StreetVertexIndex(Graph graph) {
-    this.graph = graph;
-    edgeTree = new HashGridSpatialIndex<>();
-    transitStopTree = new HashGridSpatialIndex<>();
-    verticesTree = new HashGridSpatialIndex<>();
-    vertexLinker = new VertexLinker(this.graph);
-    postSetup();
+  public StreetVertexIndex(Graph graph, StopModel stopModel) {
+    this.stopModel = stopModel;
+    this.edgeTree = new HashGridSpatialIndex<>();
+    this.verticesTree = new HashGridSpatialIndex<>();
+    this.vertexLinker = new VertexLinker(graph, stopModel);
+    this.transitStopVertices = toImmutableMap(graph.getVerticesOfType(TransitStopVertex.class));
+    postSetup(graph.getVertices());
+  }
+
+  /**
+   * Creates a TemporaryStreetLocation on the given street (set of PlainStreetEdges). How far along
+   * is controlled by the location parameter, which represents a distance along the edge between 0
+   * (the from vertex) and 1 (the to vertex).
+   *
+   * @param edges A collection of nearby edges, which represent one street.
+   * @return the new TemporaryStreetLocation
+   */
+  public static TemporaryStreetLocation createTemporaryStreetLocationForTest(
+    String label,
+    I18NString name,
+    Iterable<StreetEdge> edges,
+    Coordinate nearestPoint,
+    boolean endVertex,
+    DisposableEdgeCollection tempEdges
+  ) {
+    boolean wheelchairAccessible = false;
+
+    TemporaryStreetLocation location = new TemporaryStreetLocation(
+      label,
+      nearestPoint,
+      name,
+      endVertex
+    );
+
+    for (StreetEdge street : edges) {
+      Vertex fromv = street.getFromVertex();
+      Vertex tov = street.getToVertex();
+      wheelchairAccessible |= street.isWheelchairAccessible();
+
+      /* forward edges and vertices */
+      Vertex edgeLocation;
+      if (SphericalDistanceLibrary.distance(nearestPoint, fromv.getCoordinate()) < 1) {
+        // no need to link to area edges caught on-end
+        edgeLocation = fromv;
+
+        if (endVertex) {
+          tempEdges.addEdge(new TemporaryFreeEdge(edgeLocation, location));
+        } else {
+          tempEdges.addEdge(new TemporaryFreeEdge(location, edgeLocation));
+        }
+      } else if (SphericalDistanceLibrary.distance(nearestPoint, tov.getCoordinate()) < 1) {
+        // no need to link to area edges caught on-end
+        edgeLocation = tov;
+
+        if (endVertex) {
+          tempEdges.addEdge(new TemporaryFreeEdge(edgeLocation, location));
+        } else {
+          tempEdges.addEdge(new TemporaryFreeEdge(location, edgeLocation));
+        }
+      } else {
+        // creates links from street head -> location -> street tail.
+        createHalfLocationForTest(location, name, nearestPoint, street, endVertex, tempEdges);
+      }
+    }
+    location.setWheelchairAccessible(wheelchairAccessible);
+    return location;
+  }
+
+  public VertexLinker getVertexLinker() {
+    return vertexLinker;
+  }
+
+  public TransitStopVertex findTransitStopVertices(FeedScopedId stopId) {
+    return transitStopVertices.get(stopId);
+  }
+
+  /**
+   * Returns the vertices intersecting with the specified envelope.
+   */
+  public List<Vertex> getVerticesForEnvelope(Envelope envelope) {
+    List<Vertex> vertices = verticesTree.query(envelope);
+    // Here we assume vertices list modifiable
+    vertices.removeIf(v -> !envelope.contains(new Coordinate(v.getLon(), v.getLat())));
+    return vertices;
+  }
+
+  /**
+   * Return the edges whose geometry intersect with the specified envelope. Warning: edges w/o
+   * geometry will not be indexed.
+   */
+  public Collection<Edge> getEdgesForEnvelope(Envelope envelope) {
+    List<Edge> edges = edgeTree.query(envelope);
+    for (Iterator<Edge> ie = edges.iterator(); ie.hasNext();) {
+      Edge e = ie.next();
+      if (e.getToVertex() == null || e.getFromVertex() == null) {
+        ie.remove();
+      } else {
+        Envelope eenv = edgeGeometryOrStraightLine(e).getEnvelopeInternal();
+        if (!envelope.intersects(eenv)) {
+          ie.remove();
+        }
+      }
+    }
+    return edges;
+  }
+
+  /**
+   * Gets a set of vertices corresponding to the location provided. It first tries to match one of
+   * the stop or station types by id, and if not successful it uses the coordinates if provided.
+   *
+   * @param endVertex: whether this is a start vertex (if it's false) or end vertex (if it's true)
+   */
+  public Set<Vertex> getVerticesForLocation(
+    GenericLocation location,
+    RoutingRequest options,
+    boolean endVertex,
+    Set<DisposableEdgeCollection> tempEdges
+  ) {
+    // Differentiate between driving and non-driving, as driving is not available from transit stops
+    TraverseMode nonTransitMode = getTraverseModeForLinker(options, endVertex);
+
+    if (nonTransitMode.isDriving()) {
+      // Fetch coordinate from stop, if not given in request
+      if (location.stopId != null && location.getCoordinate() == null) {
+        var coordinate = stopModel.getCoordinateById(location.stopId);
+        if (coordinate != null) {
+          location =
+            new GenericLocation(
+              location.label,
+              location.stopId,
+              coordinate.latitude(),
+              coordinate.longitude()
+            );
+        }
+      }
+    } else {
+      // Check if Stop/StopCollection is found by FeedScopeId
+      if (location.stopId != null) {
+        Set<Vertex> transitStopVertices = getStopVerticesById(location.stopId);
+        if (transitStopVertices != null && !transitStopVertices.isEmpty()) {
+          return transitStopVertices;
+        }
+      }
+    }
+
+    // Check if coordinate is provided and connect it to graph
+    if (location.getCoordinate() != null) {
+      return Set.of(createVertexFromLocation(location, options, endVertex, tempEdges));
+    }
+
+    return null;
+  }
+
+  @Override
+  public String toString() {
+    return (
+      getClass().getName() +
+      " -- edgeTree: " +
+      edgeTree.toString() +
+      " -- verticesTree: " +
+      verticesTree.toString()
+    );
+  }
+
+  /**
+   * Finds the appropriate vertex for this location.
+   *
+   * @param endVertex: whether this is a start vertex (if it's false) or end vertex (if it's true)
+   */
+  public Vertex getVertexForLocationForTest(
+    GenericLocation location,
+    RoutingRequest options,
+    boolean endVertex,
+    Set<DisposableEdgeCollection> tempEdges
+  ) {
+    // Check if coordinate is provided and connect it to graph
+    Coordinate coordinate = location.getCoordinate();
+    if (coordinate != null) {
+      //return getClosestVertex(loc, options, endVertex);
+      return createVertexFromLocation(location, options, endVertex, tempEdges);
+    }
+
+    return null;
+  }
+
+  /**
+   * @param id Id of Stop, Station, MultiModalStation or GroupOfStations
+   * @return The associated TransitStopVertex or all underlying TransitStopVertices
+   */
+  private Set<Vertex> getStopVerticesById(FeedScopedId id) {
+    return stopModel
+      .findStopOrChildStops(id)
+      .stream()
+      .filter(RegularStop.class::isInstance)
+      .map(RegularStop.class::cast)
+      .map(it -> transitStopVertices.get(it.getId()))
+      .collect(Collectors.toSet());
   }
 
   private static void createHalfLocationForTest(
-      TemporaryStreetLocation base, I18NString name, Coordinate nearestPoint, StreetEdge street,
-      boolean endVertex, DisposableEdgeCollection tempEdges
+    TemporaryStreetLocation base,
+    I18NString name,
+    Coordinate nearestPoint,
+    StreetEdge street,
+    boolean endVertex,
+    DisposableEdgeCollection tempEdges
   ) {
     StreetVertex tov = (StreetVertex) street.getToVertex();
     StreetVertex fromv = (StreetVertex) street.getFromVertex();
@@ -91,12 +289,12 @@ public class StreetVertexIndex {
 
     if (endVertex) {
       TemporaryPartialStreetEdge temporaryPartialStreetEdge = new TemporaryPartialStreetEdge(
-          street,
-          fromv,
-          base,
-          geometries.first,
-          name,
-          lengthIn
+        street,
+        fromv,
+        base,
+        geometries.first,
+        name,
+        lengthIn
       );
 
       temporaryPartialStreetEdge.setMotorVehicleNoThruTraffic(street.isMotorVehicleNoThruTraffic());
@@ -104,15 +302,14 @@ public class StreetVertexIndex {
       temporaryPartialStreetEdge.setWalkNoThruTraffic(street.isWalkNoThruTraffic());
       temporaryPartialStreetEdge.setStreetClass(street.getStreetClass());
       tempEdges.addEdge(temporaryPartialStreetEdge);
-    }
-    else {
+    } else {
       TemporaryPartialStreetEdge temporaryPartialStreetEdge = new TemporaryPartialStreetEdge(
-          street,
-          base,
-          tov,
-          geometries.second,
-          name,
-          lengthOut
+        street,
+        base,
+        tov,
+        geometries.second,
+        name,
+        lengthOut
       );
 
       temporaryPartialStreetEdge.setStreetClass(street.getStreetClass());
@@ -128,141 +325,67 @@ public class StreetVertexIndex {
     return GeometryUtils.splitGeometryAtPoint(geometry, nearestPoint);
   }
 
-  public VertexLinker getVertexLinker() {
-    return vertexLinker;
-  }
-
-  /**
-   * Get all transit stops within a given distance of a coordinate
-   *
-   * @return The transit stops within a certain radius of the given location.
-   */
-  public List<TransitStopVertex> getNearbyTransitStops(Coordinate coordinate, double radius) {
-    Envelope env = new Envelope(coordinate);
-    env.expandBy(SphericalDistanceLibrary.metersToLonDegrees(radius, coordinate.y),
-        SphericalDistanceLibrary.metersToDegrees(radius)
-    );
-    List<TransitStopVertex> nearby = getTransitStopForEnvelope(env);
-    List<TransitStopVertex> results = new ArrayList<>();
-    for (TransitStopVertex v : nearby) {
-      if (SphericalDistanceLibrary.distance(v.getCoordinate(), coordinate) <= radius) {
-        results.add(v);
-      }
+  private static LineString edgeGeometryOrStraightLine(Edge e) {
+    LineString geometry = e.getGeometry();
+    if (geometry == null) {
+      Coordinate[] coordinates = new Coordinate[] {
+        e.getFromVertex().getCoordinate(),
+        e.getToVertex().getCoordinate(),
+      };
+      geometry = GeometryUtils.getGeometryFactory().createLineString(coordinates);
     }
-    return results;
-  }
-
-  /**
-   * Returns the vertices intersecting with the specified envelope.
-   */
-  @SuppressWarnings("unchecked")
-  public List<Vertex> getVerticesForEnvelope(Envelope envelope) {
-    List<Vertex> vertices = verticesTree.query(envelope);
-    // Here we assume vertices list modifiable
-    vertices.removeIf(v -> !envelope.contains(new Coordinate(v.getLon(), v.getLat())));
-    return vertices;
-  }
-
-  /**
-   * Return the edges whose geometry intersect with the specified envelope. Warning: edges w/o
-   * geometry will not be indexed.
-   */
-  @SuppressWarnings("unchecked")
-  public Collection<Edge> getEdgesForEnvelope(Envelope envelope) {
-    List<Edge> edges = edgeTree.query(envelope);
-    for (Iterator<Edge> ie = edges.iterator(); ie.hasNext(); ) {
-      Edge e = ie.next();
-      Envelope eenv = edgeGeometryOrStraightLine(e).getEnvelopeInternal();
-      //Envelope eenv = e.getEnvelope();
-        if (!envelope.intersects(eenv)) { ie.remove(); }
-    }
-    return edges;
-  }
-
-  /**
-   * @return The transit stops within an envelope.
-   */
-  @SuppressWarnings("unchecked")
-  public List<TransitStopVertex> getTransitStopForEnvelope(Envelope envelope) {
-    List<TransitStopVertex> stopVertices = transitStopTree.query(envelope);
-    stopVertices.removeIf(ts -> !envelope.intersects(new Coordinate(ts.getLon(), ts.getLat())));
-    return stopVertices;
-  }
-
-  /**
-   * Gets a set of vertices corresponding to the location provided. It first tries to match a
-   * Stop/StopCollection by id, and if not successful it uses the coordinates if provided.
-   *
-   * @param endVertex: whether this is a start vertex (if it's false) or end vertex (if it's true)
-   */
-  public Set<Vertex> getVerticesForLocation(
-      GenericLocation location, RoutingRequest options, boolean endVertex, Set<DisposableEdgeCollection> tempEdges
-  ) {
-    // Check if Stop/StopCollection is found by FeedScopeId
-    if (location.stopId != null) {
-      Set<Vertex> transitStopVertices = graph.getStopVerticesById(location.stopId);
-      if (transitStopVertices != null) {
-        return transitStopVertices;
-      }
-    }
-
-    // Check if coordinate is provided and connect it to graph
-    Coordinate coordinate = location.getCoordinate();
-    if (coordinate != null) {
-      //return getClosestVertex(loc, options, endVertex);
-      return Collections.singleton(createVertexFromLocation(location, options, endVertex, tempEdges));
-    }
-
-    return null;
+    return geometry;
   }
 
   private Vertex createVertexFromLocation(
-      GenericLocation location, RoutingRequest options, boolean endVertex, Set<DisposableEdgeCollection> tempEdges
+    GenericLocation location,
+    RoutingRequest options,
+    boolean endVertex,
+    Set<DisposableEdgeCollection> tempEdges
   ) {
     if (endVertex) {
       LOG.debug("Finding end vertex for {}", location);
-    }
-    else {
+    } else {
       LOG.debug("Finding start vertex for {}", location);
     }
 
-    String name;
+    I18NString name;
     if (location.label == null || location.label.isEmpty()) {
       if (endVertex) {
-        name = "Destination";
+        name = new LocalizedString("destination");
+      } else {
+        name = new LocalizedString("origin");
       }
-      else {
-        name = "Origin";
-      }
-    }
-    else {
-      name = location.label;
+    } else {
+      name = new NonLocalizedString(location.label);
     }
 
     TemporaryStreetLocation temporaryStreetLocation = new TemporaryStreetLocation(
-        UUID.randomUUID().toString(),
-        location.getCoordinate(),
-        new NonLocalizedString(name),
-        endVertex
+      UUID.randomUUID().toString(),
+      location.getCoordinate(),
+      name,
+      endVertex
     );
 
     TraverseMode nonTransitMode = getTraverseModeForLinker(options, endVertex);
 
-    tempEdges.add(vertexLinker.linkVertexForRequest(
+    tempEdges.add(
+      vertexLinker.linkVertexForRequest(
         temporaryStreetLocation,
         new TraverseModeSet(nonTransitMode),
         endVertex ? LinkingDirection.OUTGOING : LinkingDirection.INCOMING,
         endVertex
-            ? (vertex, streetVertex) -> List.of(
-                new TemporaryFreeEdge(streetVertex, (TemporaryStreetLocation)vertex)
-              )
-            : (vertex, streetVertex) -> List.of(
-                new TemporaryFreeEdge((TemporaryStreetLocation)vertex, streetVertex)
-              )
-    ));
+          ? (vertex, streetVertex) ->
+            List.of(new TemporaryFreeEdge(streetVertex, (TemporaryStreetLocation) vertex))
+          : (vertex, streetVertex) ->
+            List.of(new TemporaryFreeEdge((TemporaryStreetLocation) vertex, streetVertex))
+      )
+    );
 
-    if (temporaryStreetLocation.getIncoming().isEmpty()
-        && temporaryStreetLocation.getOutgoing().isEmpty()) {
+    if (
+      temporaryStreetLocation.getIncoming().isEmpty() &&
+      temporaryStreetLocation.getOutgoing().isEmpty()
+    ) {
       LOG.warn("Couldn't link {}", location);
     }
 
@@ -286,12 +409,11 @@ public class StreetVertexIndex {
     return nonTransitMode;
   }
 
-  @SuppressWarnings("rawtypes")
-  private void postSetup() {
-    var progress = ProgressTracker.track("Index steet graph", 1000, graph.getVertices().size());
+  private void postSetup(Collection<Vertex> vertices) {
+    var progress = ProgressTracker.track("Index street vertex", 1000, vertices.size());
     LOG.info(progress.startMessage());
 
-    for (Vertex gv : graph.getVertices()) {
+    for (Vertex gv : vertices) {
       /*
        * We add all edges with geometry, skipping transit, filtering them out after. We do not
        * index transit edges as we do not need them and some GTFS do not have shape data, so
@@ -303,15 +425,7 @@ public class StreetVertexIndex {
        */
       for (Edge e : gv.getOutgoing()) {
         LineString geometry = edgeGeometryOrStraightLine(e);
-        Envelope env = geometry.getEnvelopeInternal();
-          if (edgeTree instanceof HashGridSpatialIndex) {
-              ((HashGridSpatialIndex) edgeTree).insert(geometry, e);
-          }
-          else { edgeTree.insert(env, e); }
-      }
-      if (gv instanceof TransitStopVertex) {
-        Envelope env = new Envelope(gv.getCoordinate());
-        transitStopTree.insert(env, gv);
+        edgeTree.insert(geometry, e);
       }
       Envelope env = new Envelope(gv.getCoordinate());
       verticesTree.insert(env, gv);
@@ -322,95 +436,13 @@ public class StreetVertexIndex {
     LOG.info(progress.completeMessage());
   }
 
-  @Override
-  public String toString() {
-    return getClass().getName() + " -- edgeTree: " + edgeTree.toString() + " -- verticesTree: "
-        + verticesTree.toString();
-  }
-
-  /**
-   * Finds the appropriate vertex for this location.
-   *
-   * @param endVertex: whether this is a start vertex (if it's false) or end vertex (if it's true)
-   */
-  public Vertex getVertexForLocationForTest(
-      GenericLocation location, RoutingRequest options, boolean endVertex, Set<DisposableEdgeCollection> tempEdges
+  private static Map<FeedScopedId, TransitStopVertex> toImmutableMap(
+    Collection<TransitStopVertex> vertices
   ) {
-    // Check if coordinate is provided and connect it to graph
-    Coordinate coordinate = location.getCoordinate();
-    if (coordinate != null) {
-      //return getClosestVertex(loc, options, endVertex);
-      return createVertexFromLocation(location, options, endVertex, tempEdges);
+    var map = new HashMap<FeedScopedId, TransitStopVertex>();
+    for (TransitStopVertex it : vertices) {
+      map.put(it.getStop().getId(), it);
     }
-
-    return null;
-  }
-
-  /**
-   * Creates a TemporaryStreetLocation on the given street (set of PlainStreetEdges). How far along
-   * is controlled by the location parameter, which represents a distance along the edge between 0
-   * (the from vertex) and 1 (the to vertex).
-   *
-   * @param edges A collection of nearby edges, which represent one street.
-   * @return the new TemporaryStreetLocation
-   */
-  public static TemporaryStreetLocation createTemporaryStreetLocationForTest(
-      String label, I18NString name, Iterable<StreetEdge> edges, Coordinate nearestPoint,
-      boolean endVertex, DisposableEdgeCollection tempEdges
-  ) {
-    boolean wheelchairAccessible = false;
-
-    TemporaryStreetLocation location = new TemporaryStreetLocation(
-        label,
-        nearestPoint,
-        name,
-        endVertex
-    );
-
-    for (StreetEdge street : edges) {
-      Vertex fromv = street.getFromVertex();
-      Vertex tov = street.getToVertex();
-      wheelchairAccessible |= street.isWheelchairAccessible();
-
-      /* forward edges and vertices */
-      Vertex edgeLocation;
-      if (SphericalDistanceLibrary.distance(nearestPoint, fromv.getCoordinate()) < 1) {
-        // no need to link to area edges caught on-end
-        edgeLocation = fromv;
-
-        if (endVertex) {
-          tempEdges.addEdge(new TemporaryFreeEdge(edgeLocation, location));
-        }
-        else {
-          tempEdges.addEdge(new TemporaryFreeEdge(location, edgeLocation));
-        }
-      }
-      else if (SphericalDistanceLibrary.distance(nearestPoint, tov.getCoordinate()) < 1) {
-        // no need to link to area edges caught on-end
-        edgeLocation = tov;
-
-        if (endVertex) {
-          tempEdges.addEdge(new TemporaryFreeEdge(edgeLocation, location));
-        }
-        else {
-          tempEdges.addEdge(new TemporaryFreeEdge(location, edgeLocation));
-        }
-      }
-      else {
-        // creates links from street head -> location -> street tail.
-        createHalfLocationForTest(location, name, nearestPoint, street, endVertex, tempEdges);
-      }
-    }
-    location.setWheelchairAccessible(wheelchairAccessible);
-    return location;
-  }
-
-  private static LineString edgeGeometryOrStraightLine(Edge e) {
-    LineString geometry = e.getGeometry();
-    if (geometry == null) {
-      Coordinate[] coordinates = new Coordinate[]{e.getFromVertex().getCoordinate(), e.getToVertex().getCoordinate()};
-      geometry = GeometryUtils.getGeometryFactory().createLineString(coordinates);
-    }
-    return geometry;
+    return Map.copyOf(map);
   }
 }
