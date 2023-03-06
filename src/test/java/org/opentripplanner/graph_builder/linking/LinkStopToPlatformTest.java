@@ -91,7 +91,7 @@ public class LinkStopToPlatformTest {
       );
     }
 
-    RegularStop transitStops[] = new RegularStop[stops.length];
+    RegularStop[] transitStops = new RegularStop[stops.length];
     for (int i = 0; i < stops.length; i++) {
       Coordinate stop = stops[i];
       transitStops[i] =
@@ -114,17 +114,17 @@ public class LinkStopToPlatformTest {
   @Test
   public void testLinkStopOutsideArea() {
     // test platform is a simple rectangle. It creates a graph of 8 edges.
-    Coordinate platform[] = {
-      new Coordinate(60.0001, 10),
-      new Coordinate(60.0001, 10.0002),
-      new Coordinate(60, 10.0002),
-      new Coordinate(60, 10),
+    Coordinate[] platform = {
+      new Coordinate(10, 60.001),
+      new Coordinate(10.002, 60.001),
+      new Coordinate(10.002, 60),
+      new Coordinate(10, 60),
     };
     // add entrance to every corner of the platform (this array defines indices)
-    int visibilityPoints[] = { 0, 1, 2, 3 };
+    int[] visibilityPoints = { 0, 1, 2, 3 };
 
     // place one stop outside the platform, halway under the bottom edge
-    Coordinate stops[] = { new Coordinate(10.001, 59.9999) };
+    Coordinate[] stops = { new Coordinate(10.001, 59.9999) };
 
     Graph graph = prepareTest(platform, visibilityPoints, stops);
     linkStops(graph);
@@ -137,7 +137,7 @@ public class LinkStopToPlatformTest {
     // both split points are linked to the stop bidirectonally (+4 edges).
     // both split points also link to 2 visibility points at opposite side (+8 edges)
     // 14 new edges in total
-    assertEquals(8, graph.getEdges().size());
+    assertEquals(22, graph.getEdges().size());
   }
 
   /**
@@ -146,17 +146,17 @@ public class LinkStopToPlatformTest {
   @Test
   public void testLinkStopInsideArea() {
     // test platform is a simple rectangle. It creates a graph of 8 edges.
-    Coordinate platform[] = {
+    Coordinate[] platform = {
       new Coordinate(10, 60.002),
       new Coordinate(10.004, 60.002),
       new Coordinate(10.004, 60),
       new Coordinate(10, 60),
     };
     // add entrance to every corner of the platform (this array defines indices)
-    int visibilityPoints[] = { 0, 1, 2, 3 };
+    int[] visibilityPoints = { 0, 1, 2, 3 };
 
     // place one stop inside the platform, near bottom left corner
-    Coordinate stops[] = { new Coordinate(10.001, 60.001) };
+    Coordinate[] stops = { new Coordinate(10.001, 60.001) };
 
     Graph graph = prepareTest(platform, visibilityPoints, stops);
     linkStops(graph);
@@ -172,17 +172,17 @@ public class LinkStopToPlatformTest {
    */
   @Test
   public void testLinkStopNearPlatformVertex() {
-    Coordinate platform[] = {
+    Coordinate[] platform = {
       new Coordinate(10, 60.002),
       new Coordinate(10.004, 60.002),
       new Coordinate(10.004, 60),
       new Coordinate(10, 60),
     };
     // add entrance to every corner of the platform
-    int visibilityPoints[] = { 0, 1, 2, 3 };
+    int[] visibilityPoints = { 0, 1, 2, 3 };
 
     // place one stop inside the platform, very near of the bottom left corner
-    Coordinate stops[] = { new Coordinate(10.00000001, 60.00000001) };
+    Coordinate[] stops = { new Coordinate(10.00000001, 60.00000001) };
 
     Graph graph = prepareTest(platform, visibilityPoints, stops);
     linkStops(graph);
@@ -198,17 +198,17 @@ public class LinkStopToPlatformTest {
    */
   @Test
   public void testLinkTwoStopsInsideArea() {
-    Coordinate platform[] = {
+    Coordinate[] platform = {
       new Coordinate(10, 60.002),
       new Coordinate(10.004, 60.002),
       new Coordinate(10.004, 60),
       new Coordinate(10, 60),
     };
     // entrance to every corner of the platform
-    int visibilityPoints[] = { 0, 1, 2, 3 };
+    int[] visibilityPoints = { 0, 1, 2, 3 };
 
     // place two stops inside the platform
-    Coordinate stops[] = { new Coordinate(10.001, 60.001), new Coordinate(10.003, 60.001) };
+    Coordinate[] stops = { new Coordinate(10.001, 60.001), new Coordinate(10.003, 60.001) };
 
     Graph graph = prepareTest(platform, visibilityPoints, stops);
     linkStops(graph);
