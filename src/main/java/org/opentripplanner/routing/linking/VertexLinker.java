@@ -566,6 +566,9 @@ public class VertexLinker {
     int added = 0;
 
     for (IntersectionVertex v : visibilityVertices) {
+      if (!v.checkEdges()) {
+        continue;
+      }
       LineString newGeometry = GEOMETRY_FACTORY.createLineString(
         new Coordinate[] { nearestPoints[0], v.getCoordinate() }
       );
@@ -585,6 +588,9 @@ public class VertexLinker {
     // area calculation to be done after stop linking
     if (added == 0) {
       for (IntersectionVertex v : visibilityVertices) {
+        if (!v.checkEdges()) {
+          continue;
+        }
         createSegments(newVertex, v, edgeList, areas, scope, tempEdges);
       }
     }
