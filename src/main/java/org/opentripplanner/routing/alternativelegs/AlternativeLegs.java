@@ -53,6 +53,7 @@ public class AlternativeLegs {
       searchBackward,
       filter,
       false,
+      false,
       false
     );
   }
@@ -83,7 +84,8 @@ public class AlternativeLegs {
     boolean searchBackward,
     AlternativeLegsFilter filter,
     boolean exactOriginStop,
-    boolean exactDestinationStop
+    boolean exactDestinationStop,
+    boolean onlyFirstDestinationStop
   ) {
     StopLocation fromStop = leg.getFrom().stop;
     StopLocation toStop = leg.getTo().stop;
@@ -114,6 +116,7 @@ public class AlternativeLegs {
       .flatMap(stop -> transitService.getPatternsForStop(stop, true).stream())
       .filter(tripPattern -> tripPattern.getStops().stream().anyMatch(destinations::contains))
       .filter(tripPatternPredicate)
+      .distinct()
       .flatMap(tripPattern -> withBoardingAlightingPositions(origins, destinations, tripPattern))
       .flatMap(t ->
         generateLegs(transitService, t, leg.getStartTime(), leg.getServiceDate(), searchBackward)
@@ -269,9 +272,22 @@ public class AlternativeLegs {
           .stream(alightingPositions)
           // Filter out the impossible combinations
           .filter(alightingPosition -> boardingPosition < alightingPosition)
+          .min()
+          .stream()
           .mapToObj(alightingPosition ->
             new BoardingAlightingPositions(boardingPosition, alightingPosition)
           )
+      )
+      // Group by alighting position
+      .collect(Collectors.groupingBy(pair -> pair.alightingPosition))
+      .values()
+      .stream()
+      // Find the shortest leg in each group
+      .flatMap(legGroup ->
+        legGroup
+          .stream()
+          .min(Comparator.comparing(ba -> ba.alightingPosition - ba.boardingPosition))
+          .stream()
       )
       .map(pair -> new TripPatternBetweenStops(tripPattern, pair));
   }

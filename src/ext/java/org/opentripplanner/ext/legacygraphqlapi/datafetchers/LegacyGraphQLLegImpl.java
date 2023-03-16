@@ -269,7 +269,8 @@ public class LegacyGraphQLLegImpl implements LegacyGraphQLDataFetchers.LegacyGra
             false,
             AlternativeLegsFilter.NO_FILTER,
             limitToExactOriginStop,
-            limitToExactDestinationStop
+            limitToExactDestinationStop,
+            true
           )
           .stream()
           .map(Leg.class::cast)
