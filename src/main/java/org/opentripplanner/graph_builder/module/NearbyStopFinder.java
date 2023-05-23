@@ -43,6 +43,8 @@ import org.opentripplanner.transit.model.site.AreaStop;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.service.TransitService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * These library functions are used by the streetless and streetful stop linkers, and in profile
@@ -56,6 +58,7 @@ import org.opentripplanner.transit.service.TransitService;
  */
 public class NearbyStopFinder {
 
+  private static final Logger LOG = LoggerFactory.getLogger(NearbyStopFinder.class);
   public final boolean useStreets;
 
   private final TransitService transitService;
@@ -147,6 +150,7 @@ public class NearbyStopFinder {
     Set<NearbyStop> uniqueStops = new HashSet<>();
     uniqueStops.addAll(closestStopForFlexTrip.values());
     uniqueStops.addAll(closestStopForPattern.values());
+
     return uniqueStops;
   }
 
@@ -260,6 +264,7 @@ public class NearbyStopFinder {
         stopsFound.add(NearbyStop.nearbyStopForState(min, areaStop));
       }
     }
+    LOG.debug("findNearbyStopsViaStreets found {} stops", stopsFound.size());
 
     return stopsFound;
   }
@@ -285,7 +290,7 @@ public class NearbyStopFinder {
     // what are "good" stops for those accesses. if we have reached a threshold of "good" stops
     // we stop the access search.
     if (
-      !reverseDirection &&
+      // !reverseDirection &&
       OTPFeature.VehicleToStopHeuristics.isOn() &&
       VehicleToStopSkipEdgeStrategy.applicableModes.contains(
         routingRequest.journey().access().mode()
