@@ -36,7 +36,7 @@ public class RemoveTransitIfStreetOnlyIsBetterFilter implements ItineraryDeletio
       return List.of();
     }
 
-    final double limit = 120 + 1.2 * minStreetCost.getAsDouble();
+    final double limit = 60 + 1.3 * minStreetCost.getAsDouble();
 
     // Filter away itineraries that have higher cost than limit cost computed above
     return itineraries
