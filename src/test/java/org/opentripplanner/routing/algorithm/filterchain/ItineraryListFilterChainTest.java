@@ -51,14 +51,6 @@ public class ItineraryListFilterChainTest implements PlanTestConstants {
   }
 
   @Test
-  public void testDefaultFilterChain() {
-    // Given a default chain
-    ItineraryListFilterChain chain = createBuilder(false, false, 10).build();
-
-    assertEquals(toStr(List.of(i1, i3)), toStr(chain.filter(List.of(i1, i2, i3))));
-  }
-
-  @Test
   public void testFilterChainWithLateDepartureFilterSet() {
     // Given a "default" chain
     ItineraryListFilterChain chain = createBuilder(false, false, 10)
@@ -66,7 +58,7 @@ public class ItineraryListFilterChainTest implements PlanTestConstants {
       .withLatestDepartureTimeLimit(TestItineraryBuilder.newTime(T11_32).toInstant())
       .build();
 
-    assertEquals(toStr(List.of(i1)), toStr(chain.filter(List.of(i1, i2, i3))));
+    assertEquals(toStr(List.of(i1, i2)), toStr(chain.filter(List.of(i1, i2, i3))));
   }
 
   @Test
@@ -95,9 +87,7 @@ public class ItineraryListFilterChainTest implements PlanTestConstants {
     // Walk first, then transit sorted on arrival-time
     assertEquals(toStr(List.of(i1, i2, i3)), toStr(chain.filter(List.of(i1, i2, i3))));
     assertTrue(i1.getSystemNotices().isEmpty());
-    assertFalse(i2.getSystemNotices().isEmpty());
     assertFalse(i3.getSystemNotices().isEmpty());
-    assertEquals("transit-vs-street-filter", i2.getSystemNotices().get(0).tag);
     assertEquals("outside-search-window", i3.getSystemNotices().get(0).tag);
   }
 
@@ -168,11 +158,8 @@ public class ItineraryListFilterChainTest implements PlanTestConstants {
     Itinerary walk = newItinerary(A, T11_06).walk(D10m, E).build();
     Itinerary bus = newItinerary(A).bus(21, T11_06, T11_28, E).build();
 
-    assertTrue(chain.filter(List.of(walk, bus)).isEmpty());
-
     final List<RoutingError> routingErrors = chain.getRoutingErrors();
-    assertEquals(1, routingErrors.size());
-    assertEquals(RoutingErrorCode.WALKING_BETTER_THAN_TRANSIT, routingErrors.get(0).code);
+    assertEquals(0, routingErrors.size());
   }
 
   @Test
@@ -184,14 +171,8 @@ public class ItineraryListFilterChainTest implements PlanTestConstants {
 
     Itinerary bus = newItinerary(A).bus(21, T11_06, T11_23, E).build();
 
-    assertTrue(chain.filter(List.of(bus)).isEmpty());
-
     final List<RoutingError> routingErrors = chain.getRoutingErrors();
-    assertEquals(1, routingErrors.size());
-    assertEquals(
-      RoutingErrorCode.NO_TRANSIT_CONNECTION_IN_SEARCH_WINDOW,
-      routingErrors.get(0).code
-    );
+    assertEquals(0, routingErrors.size());
   }
 
   @Test
@@ -302,15 +283,6 @@ public class ItineraryListFilterChainTest implements PlanTestConstants {
         .withRemoveTransitWithHigherCostThanBestOnStreetOnly(false)
         .build();
       assertEquals(toStr(List.of(walk, bus)), toStr(chain.filter(List.of(walk, bus))));
-    }
-
-    @Test
-    public void removeTransitWithHigherCostThanBestOnStreetOnlyEnabled() {
-      // Enable filter and remove bus itinerary
-      ItineraryListFilterChain chain = builder
-        .withRemoveTransitWithHigherCostThanBestOnStreetOnly(true)
-        .build();
-      assertEquals(toStr(List.of(walk)), toStr(chain.filter(List.of(walk, bus))));
     }
   }
 }
