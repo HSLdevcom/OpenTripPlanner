@@ -41,7 +41,7 @@ public class RemoveTransitIfStreetOnlyIsBetterFilterTest implements PlanTestCons
     i1.setGeneralizedCost(199);
 
     Itinerary i2 = newItinerary(A).bus(31, 6, 8, E).build();
-    i2.setGeneralizedCost(200);
+    i2.setGeneralizedCost(400);
 
     // When:
     List<Itinerary> result = DeletionFlaggerTestHelper.process(
