@@ -986,6 +986,9 @@ enum FilterPlaceType {
 
     """Parking lots that contain spaces for cars"""
     CAR_PARK
+
+    """Stops or stations"""
+    STOP_OR_STATION
 }
 
 type Geometry {
