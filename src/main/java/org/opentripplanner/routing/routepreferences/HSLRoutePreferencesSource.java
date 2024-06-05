@@ -25,6 +25,7 @@ public class HSLRoutePreferencesSource implements RoutePreferencesSource {
     // that include character 'A' within 2 characters after the 4 digits
     private static final String ESPOO_FAST_ROUTES_REGEX 
             = "^HSL:21(4[3-9]|5[0-9]|6[0-5])(A|[B-Z]A).*$";
+    private static final String SINGLE_ROUTES_REGEX = "^HSL:1008X$";
 
     private static final Logger LOG = LoggerFactory.getLogger(HSLRoutePreferencesSource.class);
 
@@ -35,7 +36,7 @@ public class HSLRoutePreferencesSource implements RoutePreferencesSource {
     public void setRoutePreferences(RoutingRequest routingRequest, Graph graph) {
         // Either U_ROUTE_REGEX or ESPOO_FAST_ROUTES_REGEX
         Pattern patternsCombined = Pattern.compile(String.format(
-                "(%s|%s)", U_ROUTE_REGEX, ESPOO_FAST_ROUTES_REGEX));
+                "(%s|%s)", U_ROUTE_REGEX, ESPOO_FAST_ROUTES_REGEX, SINGLE_ROUTES_REGEX));
         for (Route route : graph.index.routeForId.values()) {
             FeedScopedId routeId = route.getId();
             Matcher matcher = patternsCombined.matcher(routeId.toString());
