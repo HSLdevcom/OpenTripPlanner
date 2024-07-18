@@ -25,7 +25,7 @@ public class GeneralizedCostParametersMapper {
       .transferCost(preferences.transfer().cost())
       .waitReluctanceFactor(preferences.transfer().waitReluctance());
 
-    if (request.journey().transfer().mode() == StreetMode.BIKE) {
+    if (request.journey().transfer().searchMode() == StreetMode.BIKE) {
       builder.boardCost(preferences.bike().boardCost());
     } else {
       builder.boardCost(preferences.walk().boardCost());

@@ -160,9 +160,9 @@ public class ModePreferencesMapper {
    */
   private static void validateStreetModes(JourneyRequest journey) {
     Set<StreetMode> modes = new HashSet();
-    modes.add(journey.access().mode());
-    modes.add(journey.egress().mode());
-    modes.add(journey.transfer().mode());
+    modes.add(journey.access().searchMode());
+    modes.add(journey.egress().searchMode());
+    modes.add(journey.transfer().searchMode());
     if (modes.contains(StreetMode.BIKE) && modes.size() != 1) {
       throw new IllegalArgumentException(
         "If BICYCLE is used for access, egress or transfer, then it should be used for all."

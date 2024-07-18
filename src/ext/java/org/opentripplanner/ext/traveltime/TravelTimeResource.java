@@ -99,8 +99,8 @@ public class TravelTimeResource {
     traveltimeRequest =
       new TravelTimeRequest(
         cutoffs.stream().map(DurationUtils::duration).toList(),
-        durationForMode.valueOf(getAccessRequest(routingRequest).mode()),
-        durationForMode.valueOf(getEgressRequest(routingRequest).mode())
+        durationForMode.valueOf(getAccessRequest(routingRequest).searchMode()),
+        durationForMode.valueOf(getEgressRequest(routingRequest).searchMode())
       );
 
     var parsedLocation = LocationStringParser.fromOldStyleString(location);
@@ -167,7 +167,7 @@ public class TravelTimeResource {
       var temporaryVertices = new TemporaryVerticesContainer(
         graph,
         routingRequest,
-        getAccessRequest(routingRequest).mode(),
+        getAccessRequest(routingRequest).searchMode(),
         StreetMode.NOT_SET
       )
     ) {
@@ -221,7 +221,7 @@ public class TravelTimeResource {
 
     StreetSearchRequest directStreetSearchRequest = StreetSearchRequestMapper
       .map(routingRequest)
-      .withMode(routingRequest.journey().direct().mode())
+      .withMode(routingRequest.journey().direct().searchMode())
       .withArriveBy(routingRequest.arriveBy())
       .build();
 
@@ -238,7 +238,7 @@ public class TravelTimeResource {
 
     StreetSearchRequest egressStreetSearchRequest = StreetSearchRequestMapper
       .map(routingRequest)
-      .withMode(getEgressRequest(routingRequest).mode())
+      .withMode(getEgressRequest(routingRequest).searchMode())
       .withArriveBy(routingRequest.arriveBy())
       .build();
 

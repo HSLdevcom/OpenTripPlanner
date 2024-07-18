@@ -21,7 +21,7 @@ public class DirectFlexRouter {
     RouteRequest request,
     AdditionalSearchDays additionalSearchDays
   ) {
-    if (!StreetMode.FLEXIBLE.equals(request.journey().direct().mode())) {
+    if (!StreetMode.FLEXIBLE.equals(request.journey().direct().searchMode())) {
       return Collections.emptyList();
     }
     OTPRequestTimeoutException.checkForTimeout();
@@ -29,8 +29,8 @@ public class DirectFlexRouter {
       var temporaryVertices = new TemporaryVerticesContainer(
         serverContext.graph(),
         request,
-        request.journey().direct().mode(),
-        request.journey().direct().mode()
+        request.journey().direct().searchMode(),
+        request.journey().direct().searchMode()
       )
     ) {
       // Prepare access/egress transfers

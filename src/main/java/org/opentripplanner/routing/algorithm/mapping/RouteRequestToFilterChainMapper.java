@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 import org.opentripplanner.ext.emissions.DecorateWithEmission;
 import org.opentripplanner.ext.fares.DecorateWithFare;
 import org.opentripplanner.ext.ridehailing.DecorateWithRideHailing;
@@ -120,9 +121,9 @@ public class RouteRequestToFilterChainMapper {
 
   private static double minBikeParkingDistance(RouteRequest request) {
     var modes = request.journey().modes();
-    boolean hasBikePark = List
-      .of(modes.accessMode, modes.egressMode)
-      .contains(StreetMode.BIKE_TO_PARK);
+    boolean hasBikePark = Stream
+      .concat(modes.accessModes.stream(), modes.egressModes.stream())
+      .anyMatch(mode -> mode == StreetMode.BIKE_TO_PARK);
 
     double minBikeParkingDistance = 0;
     if (hasBikePark) {

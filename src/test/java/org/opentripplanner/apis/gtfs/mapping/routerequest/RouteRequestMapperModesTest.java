@@ -32,7 +32,7 @@ class RouteRequestMapperModesTest {
     modesArgs.put("modes", Map.ofEntries(entry("transitOnly", true)));
     var env = executionContext(modesArgs, Locale.ENGLISH, RouteRequestMapperTest.CONTEXT);
     var routeRequest = RouteRequestMapper.toRouteRequest(env, RouteRequestMapperTest.CONTEXT);
-    assertEquals(StreetMode.NOT_SET, routeRequest.journey().direct().mode());
+    assertEquals(StreetMode.NOT_SET, routeRequest.journey().direct().searchMode());
   }
 
   @Test
@@ -55,10 +55,10 @@ class RouteRequestMapperModesTest {
     );
     var env = executionContext(modesArgs, Locale.ENGLISH, RouteRequestMapperTest.CONTEXT);
     var routeRequest = RouteRequestMapper.toRouteRequest(env, RouteRequestMapperTest.CONTEXT);
-    assertEquals(StreetMode.CAR, routeRequest.journey().direct().mode());
-    assertEquals(StreetMode.BIKE, routeRequest.journey().access().mode());
-    assertEquals(StreetMode.BIKE, routeRequest.journey().egress().mode());
-    assertEquals(StreetMode.BIKE, routeRequest.journey().transfer().mode());
+    assertEquals(StreetMode.CAR, routeRequest.journey().direct().searchMode());
+    assertEquals(StreetMode.BIKE, routeRequest.journey().access().searchMode());
+    assertEquals(StreetMode.BIKE, routeRequest.journey().egress().searchMode());
+    assertEquals(StreetMode.BIKE, routeRequest.journey().transfer().searchMode());
   }
 
   @Test
@@ -89,10 +89,10 @@ class RouteRequestMapperModesTest {
     );
     var env = executionContext(modesArgs, Locale.ENGLISH, RouteRequestMapperTest.CONTEXT);
     var routeRequest = RouteRequestMapper.toRouteRequest(env, RouteRequestMapperTest.CONTEXT);
-    assertEquals(StreetMode.BIKE_RENTAL, routeRequest.journey().direct().mode());
-    assertEquals(StreetMode.BIKE_RENTAL, routeRequest.journey().access().mode());
-    assertEquals(StreetMode.BIKE_RENTAL, routeRequest.journey().egress().mode());
-    assertEquals(StreetMode.WALK, routeRequest.journey().transfer().mode());
+    assertEquals(StreetMode.BIKE_RENTAL, routeRequest.journey().direct().searchMode());
+    assertEquals(StreetMode.BIKE_RENTAL, routeRequest.journey().access().searchMode());
+    assertEquals(StreetMode.BIKE_RENTAL, routeRequest.journey().egress().searchMode());
+    assertEquals(StreetMode.WALK, routeRequest.journey().transfer().searchMode());
   }
 
   @Test

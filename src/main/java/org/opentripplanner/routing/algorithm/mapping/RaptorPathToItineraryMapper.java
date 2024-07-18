@@ -78,7 +78,7 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
   ) {
     this.transitLayer = transitLayer;
     this.transitSearchTimeZero = transitSearchTimeZero;
-    this.transferMode = request.journey().transfer().mode();
+    this.transferMode = request.journey().transfer().searchMode();
     this.request = request;
     this.transferStreetRequest = StreetSearchRequestMapper.mapToTransferRequest(request).build();
     this.graphPathToItineraryMapper =

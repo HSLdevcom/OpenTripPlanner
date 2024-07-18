@@ -75,7 +75,7 @@ public class StreetSearchBuilder extends AStarBuilder<State, Edge, Vertex, Stree
   protected Collection<State> createInitialStates(Set<Vertex> originVertices) {
     StreetSearchRequest streetSearchRequest = StreetSearchRequestMapper
       .map(routeRequest)
-      .withMode(streetRequest.mode())
+      .withMode(streetRequest.searchMode())
       .withArriveBy(arriveBy())
       .build();
 
@@ -110,7 +110,7 @@ public class StreetSearchBuilder extends AStarBuilder<State, Edge, Vertex, Stree
       // No initialization needed
     } else if (heuristic instanceof EuclideanRemainingWeightHeuristic euclideanHeuristic) {
       euclideanHeuristic.initialize(
-        streetRequest.mode(),
+        streetRequest.searchMode(),
         destination,
         arriveBy,
         routeRequest.preferences()

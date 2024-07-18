@@ -515,8 +515,8 @@ public class GraphVisualizer extends JFrame implements VertexSelectionListener {
       var temporaryVertices = new TemporaryVerticesContainer(
         graph,
         options,
-        options.journey().direct().mode(),
-        options.journey().direct().mode()
+        options.journey().direct().searchMode(),
+        options.journey().direct().searchMode()
       )
     ) {
       List<GraphPath<State, Edge, Vertex>> paths = finder.graphPathFinderEntryPoint(

@@ -107,7 +107,7 @@ public class RideHailingAccessShifter {
 
   private static boolean shouldShift(RouteRequest req, Instant now) {
     return (
-      req.journey().modes().accessMode == StreetMode.CAR_HAILING &&
+      req.journey().modes().accessSearchMode() == StreetMode.CAR_HAILING &&
       req.dateTime().isBefore(now.plus(MAX_DURATION_FROM_NOW)) &&
       !req.arriveBy()
     );

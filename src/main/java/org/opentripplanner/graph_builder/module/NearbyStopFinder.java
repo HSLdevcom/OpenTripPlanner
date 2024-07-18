@@ -197,7 +197,7 @@ public class NearbyStopFinder {
     );
 
     // Return only the origin vertices if there are no valid street modes
-    if (streetRequest.mode() == StreetMode.NOT_SET) {
+    if (streetRequest.searchMode() == StreetMode.NOT_SET) {
       return stopsFound;
     }
 
@@ -290,7 +290,7 @@ public class NearbyStopFinder {
     StreetSearchRequest streetSearchRequest = StreetSearchRequestMapper
       .mapToTransferRequest(request)
       .withArriveBy(reverseDirection)
-      .withMode(streetRequest.mode())
+      .withMode(streetRequest.searchMode())
       .build();
 
     /* Add the origin vertices if they are stops */

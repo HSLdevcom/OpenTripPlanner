@@ -89,7 +89,7 @@ public class GraphPathFinder {
       .setHeuristic(new EuclideanRemainingWeightHeuristic(maxCarSpeed))
       .setSkipEdgeStrategy(
         new DurationSkipEdgeStrategy(
-          preferences.maxDirectDuration().valueOf(request.journey().direct().mode())
+          preferences.maxDirectDuration().valueOf(request.journey().direct().searchMode())
         )
       )
       // FORCING the dominance function to weight only

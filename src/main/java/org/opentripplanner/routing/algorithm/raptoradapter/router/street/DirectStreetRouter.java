@@ -21,7 +21,7 @@ import org.opentripplanner.street.search.state.State;
 public class DirectStreetRouter {
 
   public static List<Itinerary> route(OtpServerRequestContext serverContext, RouteRequest request) {
-    if (request.journey().direct().mode() == StreetMode.NOT_SET) {
+    if (request.journey().direct().searchMode() == StreetMode.NOT_SET) {
       return Collections.emptyList();
     }
     OTPRequestTimeoutException.checkForTimeout();
@@ -31,8 +31,8 @@ public class DirectStreetRouter {
       var temporaryVertices = new TemporaryVerticesContainer(
         serverContext.graph(),
         directRequest,
-        request.journey().direct().mode(),
-        request.journey().direct().mode()
+        request.journey().direct().searchMode(),
+        request.journey().direct().searchMode()
       )
     ) {
       var maxCarSpeed = serverContext.streetLimitationParametersService().getMaxCarSpeed();
@@ -91,7 +91,7 @@ public class DirectStreetRouter {
   private static double calculateDistanceMaxLimit(RouteRequest request, float maxCarSpeed) {
     var preferences = request.preferences();
     double distanceLimit;
-    StreetMode mode = request.journey().direct().mode();
+    StreetMode mode = request.journey().direct().searchMode();
 
     double durationLimit = preferences.street().maxDirectDuration().valueOf(mode).toSeconds();
 

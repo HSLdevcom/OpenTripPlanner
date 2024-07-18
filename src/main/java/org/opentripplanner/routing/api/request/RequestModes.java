@@ -2,6 +2,7 @@ package org.opentripplanner.routing.api.request;
 
 import static org.opentripplanner.routing.api.request.StreetMode.NOT_SET;
 
+import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.opentripplanner.framework.tostring.ToStringBuilder;
@@ -19,16 +20,16 @@ public class RequestModes {
   );
 
   @Nonnull
-  public final StreetMode accessMode;
+  public final List<StreetMode> accessModes;
 
   @Nonnull
-  public final StreetMode egressMode;
+  public final List<StreetMode> egressModes;
 
   @Nonnull
-  public final StreetMode directMode;
+  public final List<StreetMode> directModes;
 
   @Nonnull
-  public final StreetMode transferMode;
+  public final List<StreetMode> transferModes;
 
   private RequestModes(
     StreetMode accessMode,
@@ -36,15 +37,44 @@ public class RequestModes {
     StreetMode directMode,
     StreetMode transferMode
   ) {
-    this.accessMode = (accessMode != null && accessMode.accessAllowed()) ? accessMode : NOT_SET;
-    this.egressMode = (egressMode != null && egressMode.egressAllowed()) ? egressMode : NOT_SET;
-    this.directMode = directMode != null ? directMode : NOT_SET;
-    this.transferMode =
-      (transferMode != null && transferMode.transferAllowed()) ? transferMode : NOT_SET;
+    this.accessModes =
+      List.of((accessMode != null && accessMode.accessAllowed()) ? accessMode : NOT_SET);
+    this.egressModes =
+      List.of((egressMode != null && egressMode.egressAllowed()) ? egressMode : NOT_SET);
+    this.directModes = List.of(directMode != null ? directMode : NOT_SET);
+    this.transferModes =
+      List.of((transferMode != null && transferMode.transferAllowed()) ? transferMode : NOT_SET);
+  }
+
+  private RequestModes(
+    List<StreetMode> accessModes,
+    List<StreetMode> egressModes,
+    List<StreetMode> directModes,
+    List<StreetMode> transferModes
+  ) {
+    this.accessModes =
+      accessModes != null && accessModes.stream().anyMatch(access -> access.accessAllowed())
+        ? accessModes
+        : List.of(NOT_SET);
+    this.egressModes =
+      egressModes != null && egressModes.stream().anyMatch(egress -> egress.egressAllowed())
+        ? egressModes
+        : List.of(NOT_SET);
+    this.directModes = directModes != null ? directModes : List.of(NOT_SET);
+    this.transferModes =
+      transferModes != null &&
+        transferModes.stream().anyMatch(transfer -> transfer.transferAllowed())
+        ? transferModes
+        : List.of(NOT_SET);
   }
 
   public RequestModes(RequestModesBuilder builder) {
-    this(builder.accessMode(), builder.egressMode(), builder.directMode(), builder.transferMode());
+    this(
+      builder.accessModes(),
+      builder.egressModes(),
+      builder.directModes(),
+      builder.transferModes()
+    );
   }
 
   /**
@@ -68,10 +98,18 @@ public class RequestModes {
 
   public boolean contains(StreetMode streetMode) {
     return (
-      streetMode.equals(accessMode) ||
-      streetMode.equals(egressMode) ||
-      streetMode.equals(directMode)
+      accessModes.contains(streetMode) ||
+      egressModes.contains(streetMode) ||
+      directModes.contains(streetMode)
     );
+  }
+
+  public StreetMode accessSearchMode() {
+    return searchMode(accessModes);
+  }
+
+  public StreetMode directSearchMode() {
+    return searchMode(directModes);
   }
 
   @Override
@@ -81,32 +119,40 @@ public class RequestModes {
 
     RequestModes that = (RequestModes) o;
 
-    if (accessMode != that.accessMode) {
+    if (!accessModes.equals(that.accessModes)) {
       return false;
     }
-    if (egressMode != that.egressMode) {
+    if (!egressModes.equals(that.egressModes)) {
       return false;
     }
-    if (directMode != that.directMode) {
+    if (!directModes.equals(that.directModes)) {
       return false;
     }
 
-    return transferMode == that.transferMode;
+    return transferModes.equals(that.transferModes);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(accessMode, egressMode, directMode, transferMode);
+    return Objects.hash(accessModes, egressModes, directModes, transferModes);
   }
 
   @Override
   public String toString() {
     return ToStringBuilder
       .of(RequestModes.class)
-      .addEnum("accessMode", accessMode)
-      .addEnum("egressMode", egressMode)
-      .addEnum("directMode", directMode)
-      .addEnum("transferMode", transferMode)
+      .addCol("accessMode", accessModes)
+      .addCol("egressMode", egressModes)
+      .addCol("directMode", directModes)
+      .addCol("transferMode", transferModes)
       .toString();
+  }
+
+  private StreetMode searchMode(List<StreetMode> modes) {
+    if (modes.size() == 1) {
+      return modes.getFirst();
+    }
+    // TODO support for more than two modes within a search might be implemented here
+    return modes.stream().filter(mode -> mode != StreetMode.WALK).findFirst().get();
   }
 }

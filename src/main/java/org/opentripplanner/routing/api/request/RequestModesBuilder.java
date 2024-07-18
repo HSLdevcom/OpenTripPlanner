@@ -1,59 +1,74 @@
 package org.opentripplanner.routing.api.request;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import org.opentripplanner.transit.model.basic.MainAndSubMode;
-import org.opentripplanner.transit.model.basic.SubMode;
-import org.opentripplanner.transit.model.basic.TransitMode;
 
 public class RequestModesBuilder {
 
-  private StreetMode accessMode;
-  private StreetMode egressMode;
-  private StreetMode directMode;
-  private StreetMode transferMode;
+  private List<StreetMode> accessModes;
+  private List<StreetMode> egressModes;
+  private List<StreetMode> directModes;
+  private List<StreetMode> transferModes;
 
   RequestModesBuilder(RequestModes origin) {
-    this.accessMode = origin.accessMode;
-    this.egressMode = origin.egressMode;
-    this.directMode = origin.directMode;
-    this.transferMode = origin.transferMode;
+    this.accessModes = origin.accessModes;
+    this.egressModes = origin.egressModes;
+    this.directModes = origin.directModes;
+    this.transferModes = origin.transferModes;
   }
 
-  public StreetMode accessMode() {
-    return accessMode;
+  public List<StreetMode> accessModes() {
+    return accessModes;
   }
 
   public RequestModesBuilder withAccessMode(StreetMode accessMode) {
-    this.accessMode = accessMode;
+    this.accessModes = List.of(accessMode);
     return this;
   }
 
-  public StreetMode egressMode() {
-    return egressMode;
+  public RequestModesBuilder withAccessModes(List<StreetMode> accessModes) {
+    this.accessModes = accessModes;
+    return this;
+  }
+
+  public List<StreetMode> egressModes() {
+    return egressModes;
   }
 
   public RequestModesBuilder withEgressMode(StreetMode egressMode) {
-    this.egressMode = egressMode;
+    this.egressModes = List.of(egressMode);
     return this;
   }
 
-  public StreetMode directMode() {
-    return directMode;
+  public RequestModesBuilder withEgressModes(List<StreetMode> egressModes) {
+    this.egressModes = egressModes;
+    return this;
+  }
+
+  public List<StreetMode> directModes() {
+    return directModes;
   }
 
   public RequestModesBuilder withDirectMode(StreetMode directMode) {
-    this.directMode = directMode;
+    this.directModes = List.of(directMode);
     return this;
   }
 
-  public StreetMode transferMode() {
-    return transferMode;
+  public RequestModesBuilder withDirectModes(List<StreetMode> directModes) {
+    this.directModes = directModes;
+    return this;
+  }
+
+  public List<StreetMode> transferModes() {
+    return transferModes;
   }
 
   public RequestModesBuilder withTransferMode(StreetMode transferMode) {
-    this.transferMode = transferMode;
+    this.transferModes = List.of(transferMode);
+    return this;
+  }
+
+  public RequestModesBuilder withTransferModes(List<StreetMode> transferModes) {
+    this.transferModes = transferModes;
     return this;
   }
 

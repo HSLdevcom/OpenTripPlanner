@@ -196,8 +196,8 @@ public class TransitRouter {
 
     // Decorate access/egress with a penalty to make it less favourable than transit
     var penaltyDecorator = new AccessEgressPenaltyDecorator(
-      request.journey().access().mode(),
-      request.journey().egress().mode(),
+      request.journey().access().searchMode(),
+      request.journey().egress().searchMode(),
       request.preferences().street().accessEgress().penalty()
     );
 
@@ -241,7 +241,7 @@ public class TransitRouter {
       .street()
       .accessEgress()
       .maxDuration()
-      .valueOf(streetRequest.mode());
+      .valueOf(streetRequest.searchMode());
     int stopCountLimit = accessRequest.preferences().street().accessEgress().maxStopCount();
 
     var nearbyStops = AccessEgressRouter.streetSearch(
@@ -261,7 +261,7 @@ public class TransitRouter {
     results = timeshiftRideHailing(streetRequest, type, results);
 
     // Special handling of flex accesses
-    if (OTPFeature.FlexRouting.isOn() && streetRequest.mode() == StreetMode.FLEXIBLE) {
+    if (OTPFeature.FlexRouting.isOn() && streetRequest.searchMode() == StreetMode.FLEXIBLE) {
       var flexAccessList = FlexAccessEgressRouter.routeAccessEgress(
         accessRequest,
         temporaryVerticesContainer,
@@ -293,7 +293,7 @@ public class TransitRouter {
     AccessEgressType type,
     List<DefaultAccessEgress> accessEgressList
   ) {
-    if (streetRequest.mode() != StreetMode.CAR_HAILING) {
+    if (streetRequest.searchMode() != StreetMode.CAR_HAILING) {
       return accessEgressList;
     }
     return RideHailingAccessShifter.shiftAccesses(
@@ -358,8 +358,8 @@ public class TransitRouter {
     return new TemporaryVerticesContainer(
       serverContext.graph(),
       request,
-      request.journey().access().mode(),
-      request.journey().egress().mode()
+      request.journey().access().searchMode(),
+      request.journey().egress().searchMode()
     );
   }
 }

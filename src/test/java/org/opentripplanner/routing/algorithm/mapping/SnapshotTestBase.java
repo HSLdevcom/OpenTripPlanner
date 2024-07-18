@@ -291,9 +291,9 @@ public abstract class SnapshotTestBase {
       .concat(
         Stream
           .of(
-            asQualifiedMode(request.journey().direct().mode(), false),
-            asQualifiedMode(request.journey().access().mode(), false),
-            asQualifiedMode(request.journey().egress().mode(), true)
+            asQualifiedMode(request.journey().direct().searchMode(), false),
+            asQualifiedMode(request.journey().access().searchMode(), false),
+            asQualifiedMode(request.journey().egress().searchMode(), true)
           )
           .filter(Objects::nonNull)
           .map(QualifiedMode::toString),

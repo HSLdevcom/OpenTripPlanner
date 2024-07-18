@@ -55,7 +55,7 @@ public class FilterTransitWhenDirectModeIsEmpty {
   private final StreetMode originalDirectMode;
 
   public FilterTransitWhenDirectModeIsEmpty(RequestModes modes) {
-    this.originalDirectMode = modes.directMode;
+    this.originalDirectMode = modes.directSearchMode();
   }
 
   public FilterTransitWhenDirectModeIsEmpty(StreetMode originalDirectMode) {

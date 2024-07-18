@@ -83,8 +83,8 @@ public class BicycleRoutingTest {
     var temporaryVertices = new TemporaryVerticesContainer(
       graph,
       request,
-      request.journey().direct().mode(),
-      request.journey().direct().mode()
+      request.journey().direct().searchMode(),
+      request.journey().direct().searchMode()
     );
     var gpf = new GraphPathFinder(null);
     var paths = gpf.graphPathFinderEntryPoint(request, temporaryVertices);

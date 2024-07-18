@@ -24,6 +24,7 @@ import static org.opentripplanner.transit.model.basic.TransitMode.TRAM;
 import static org.opentripplanner.transit.model.basic.TransitMode.TROLLEYBUS;
 
 import jakarta.ws.rs.BadRequestException;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.api.parameter.QualifiedMode;
@@ -223,9 +224,9 @@ public class QualifiedModeSetTest {
     var modeSet = new QualifiedModeSet("CAR_HAIL");
     assertTrue(modeSet.getTransitModes().isEmpty());
 
-    assertEquals(WALK, modeSet.getRequestModes().directMode);
-    assertEquals(CAR_HAILING, modeSet.getRequestModes().accessMode);
-    assertEquals(CAR_HAILING, modeSet.getRequestModes().egressMode);
+    assertEquals(List.of(WALK), modeSet.getRequestModes().directModes);
+    assertEquals(List.of(CAR_HAILING), modeSet.getRequestModes().accessModes);
+    assertEquals(List.of(CAR_HAILING), modeSet.getRequestModes().egressModes);
   }
 
   @Test
@@ -233,8 +234,8 @@ public class QualifiedModeSetTest {
     var modeSet = new QualifiedModeSet("CAR_HAIL,BUS,RAIL");
     assertEquals(Set.of(COACH, BUS, RAIL), Set.copyOf(modeSet.getTransitModes()));
 
-    assertEquals(WALK, modeSet.getRequestModes().directMode);
-    assertEquals(CAR_HAILING, modeSet.getRequestModes().accessMode);
-    assertEquals(CAR_HAILING, modeSet.getRequestModes().egressMode);
+    assertEquals(List.of(WALK), modeSet.getRequestModes().directModes);
+    assertEquals(List.of(CAR_HAILING), modeSet.getRequestModes().accessModes);
+    assertEquals(List.of(CAR_HAILING), modeSet.getRequestModes().egressModes);
   }
 }

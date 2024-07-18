@@ -33,19 +33,19 @@ public class JourneyRequest implements Cloneable, Serializable {
   }
 
   public void setModes(RequestModes modes) {
-    transfer().setMode(modes.transferMode);
-    access().setMode(modes.accessMode);
-    egress().setMode(modes.egressMode);
-    direct().setMode(modes.directMode);
+    transfer().setModes(modes.transferModes);
+    access().setModes(modes.accessModes);
+    egress().setModes(modes.egressModes);
+    direct().setModes(modes.directModes);
   }
 
   public RequestModes modes() {
     return RequestModes
       .of()
-      .withAccessMode(access.mode())
-      .withTransferMode(transfer.mode())
-      .withEgressMode(egress.mode())
-      .withDirectMode(direct.mode())
+      .withAccessModes(access.modes())
+      .withTransferModes(transfer.modes())
+      .withEgressModes(egress.modes())
+      .withDirectModes(direct.modes())
       .build();
   }
 

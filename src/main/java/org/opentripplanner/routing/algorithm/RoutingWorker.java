@@ -87,7 +87,7 @@ public class RoutingWorker {
     // If no direct mode is set, then we set one.
     // See {@link FilterTransitWhenDirectModeIsEmpty}
     var emptyDirectModeHandler = new FilterTransitWhenDirectModeIsEmpty(
-      request.journey().direct().mode()
+      request.journey().direct().searchMode()
     );
 
     request.journey().direct().setMode(emptyDirectModeHandler.resolveDirectMode());
@@ -128,7 +128,7 @@ public class RoutingWorker {
     List<Itinerary> filteredItineraries;
     {
       boolean removeWalkAllTheWayResultsFromDirectFlex =
-        request.journey().direct().mode() == StreetMode.FLEXIBLE;
+        request.journey().direct().searchMode() == StreetMode.FLEXIBLE;
 
       ItineraryListFilterChain filterChain = RouteRequestToFilterChainMapper.createFilterChain(
         request,
