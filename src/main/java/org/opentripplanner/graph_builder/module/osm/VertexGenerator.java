@@ -73,6 +73,15 @@ class VertexGenerator {
         }
       }
 
+      if (node.isSubwayEntrance()) {
+        String ref = node.getTag("ref");
+        if (ref != null) {
+          iv = vertexFactory.subwayEntrance(nid, coordinate, ref);
+        } else {
+          iv = vertexFactory.subwayEntrance(nid, coordinate, "MISSING_FROM_OSM");
+        }
+      }
+
       /* If the OSM node represents a transit stop and has a ref=(stop_code) tag, make a special vertex for it. */
       if (node.isBoardingLocation()) {
         String label = String.format(nodeLabelFormat, node.getId());

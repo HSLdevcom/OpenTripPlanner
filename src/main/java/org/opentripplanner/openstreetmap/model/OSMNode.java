@@ -38,8 +38,11 @@ public class OSMNode extends OSMWithTags {
     return hasTag("crossing") && "traffic_signals".equals(getTag("crossing"));
   }
 
-  /**
-   * Checks if this node is a barrier which prevents motor vehicle traffic.
+  public boolean isSubwayEntrance() {
+    return hasTag("railway") && "subway_entrance".equals(getTag("railway"));
+  }
+
+  /* Checks if this node is a barrier which prevents motor vehicle traffic
    *
    * @return true if it is
    */

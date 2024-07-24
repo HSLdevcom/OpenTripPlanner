@@ -2611,6 +2611,8 @@ type step {
   elevationProfile: [elevationProfileComponent]
   "When exiting a highway or traffic circle, the exit name/number."
   exit: String
+  "When entering or exiting a subway station, the entrance name."
+  entrance: String
   "The latitude of the start of the step."
   lat: Float
   "The longitude of the start of the step."

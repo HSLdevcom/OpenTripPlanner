@@ -26,6 +26,7 @@ import org.opentripplanner.street.model.edge.PathwayEdge;
 import org.opentripplanner.street.model.edge.StreetEdge;
 import org.opentripplanner.street.model.edge.StreetTransitEntranceLink;
 import org.opentripplanner.street.model.vertex.ExitVertex;
+import org.opentripplanner.street.model.vertex.StationEntranceVertex;
 import org.opentripplanner.street.model.vertex.Vertex;
 import org.opentripplanner.street.search.TraverseMode;
 import org.opentripplanner.street.search.state.State;
@@ -257,6 +258,7 @@ public class StatesToWalkStepsMapper {
     }
 
     setMotorwayExit(backState);
+    setSubwayEntrance(backState);
 
     if (createdNewStep && !modeTransition) {
       // check last three steps for zag
@@ -379,7 +381,17 @@ public class StatesToWalkStepsMapper {
       current.withExit(((ExitVertex) exitState.getVertex()).getExitName());
     }
   }
-
+  private void setSubwayEntrance(State backState) {
+    State entranceState = backState;
+    Edge entranceEdge = entranceState.getBackEdge();
+    while (entranceEdge instanceof FreeEdge) {
+      entranceState = entranceState.getBackState();
+      entranceEdge = entranceState.getBackEdge();
+    }
+    if (entranceState.getVertex() instanceof StationEntranceVertex) {
+      current.withEntrance(((StationEntranceVertex) entranceState.getVertex()).getEntranceName());
+    }
+  }
   /**
    * Is it possible to turn to another street from this previous state
    */
