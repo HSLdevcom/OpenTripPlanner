@@ -1452,6 +1452,12 @@ public class IndexGraphQLSchema {
                                 .type(Scalars.GraphQLBoolean)
                                 .defaultValue(false)
                                 .build())
+                        .argument(GraphQLArgument.newArgument()
+                                .name("omitDeviated")
+                                .description("If false, returns also trips that have been deviated to this stop")
+                                .type(Scalars.GraphQLBoolean)
+                                .defaultValue(true)
+                                .build())
                         .dataFetcher(environment -> {
                             ServiceDate date;
                             try {  // TODO: Add our own scalar types for at least serviceDate and AgencyAndId
@@ -1462,15 +1468,16 @@ public class IndexGraphQLSchema {
                             Stop stop = environment.getSource();
                             boolean omitNonPickups = environment.getArgument("omitNonPickups");
                             boolean omitCanceled = environment.getArgument("omitCanceled");
+                            boolean omitDeviated = environment.getArgument("omitDeviated");
                             if (stop.getLocationType() == 1) {
                                 // Merge all stops if this is a station
                                 return index.stopsForParentStation
                                         .get(stop.getId())
                                         .stream()
-                                        .flatMap(singleStop -> index.getStopTimesForStop(singleStop, date, omitNonPickups, omitCanceled).stream())
+                                        .flatMap(singleStop -> index.getStopTimesForStop(singleStop, date, omitNonPickups, omitCanceled, omitDeviated).stream())
                                         .collect(Collectors.toList());
                             }
-                            return index.getStopTimesForStop(stop, date, omitNonPickups, omitCanceled);
+                            return index.getStopTimesForStop(stop, date, omitNonPickups, omitCanceled, omitDeviated);
                         })
                         .build())
                 .field(GraphQLFieldDefinition.newFieldDefinition()
@@ -1506,6 +1513,12 @@ public class IndexGraphQLSchema {
                                 .type(Scalars.GraphQLBoolean)
                                 .defaultValue(true)
                                 .build())
+                        .argument(GraphQLArgument.newArgument()
+                                .name("omitDeviated")
+                                .description("If false, returns also trips that have been deviated to this stop")
+                                .type(Scalars.GraphQLBoolean)
+                                .defaultValue(true)
+                                .build())
                         .dataFetcher(environment -> {
                             Stop stop = environment.getSource();
                             if (stop.getLocationType() == 1) {
@@ -1519,7 +1532,8 @@ public class IndexGraphQLSchema {
                                                         environment.getArgument("timeRange"),
                                                         environment.getArgument("numberOfDepartures"),
                                                         environment.getArgument("omitNonPickups"),
-                                                        environment.getArgument("omitCanceled"))
+                                                        environment.getArgument("omitCanceled"),
+                                                        environment.getArgument("omitDeviated"))
                                                         .stream()
                                         )
                                         .collect(Collectors.toList());
@@ -1529,7 +1543,8 @@ public class IndexGraphQLSchema {
                                     environment.getArgument("timeRange"),
                                     environment.getArgument("numberOfDepartures"),
                                     environment.getArgument("omitNonPickups"),
-                                    environment.getArgument("omitCanceled"));
+                                    environment.getArgument("omitCanceled"),
+                                    environment.getArgument("omitDeviated"));
 
                         })
                         .build())
@@ -1566,6 +1581,12 @@ public class IndexGraphQLSchema {
                                 .type(Scalars.GraphQLBoolean)
                                 .defaultValue(true)
                                 .build())
+                        .argument(GraphQLArgument.newArgument()
+                                .name("omitDeviated")
+                                .description("If false, returns also trips that have been deviated to this stop")
+                                .type(Scalars.GraphQLBoolean)
+                                .defaultValue(true)
+                                .build())
                         .dataFetcher(environment -> {
                             Stop stop = environment.getSource();
                             Stream<StopTimesInPattern> stream;
@@ -1579,7 +1600,8 @@ public class IndexGraphQLSchema {
                                                         environment.getArgument("timeRange"),
                                                         environment.getArgument("numberOfDepartures"),
                                                         environment.getArgument("omitNonPickups"),
-                                                        environment.getArgument("omitCanceled"))
+                                                        environment.getArgument("omitCanceled"),
+                                                        environment.getArgument("omitDeviated"))
                                                         .stream()
                                         );
                             } else {
@@ -1589,7 +1611,8 @@ public class IndexGraphQLSchema {
                                         environment.getArgument("timeRange"),
                                         environment.getArgument("numberOfDepartures"),
                                         environment.getArgument("omitNonPickups"),
-                                        environment.getArgument("omitCanceled")
+                                        environment.getArgument("omitCanceled"),
+                                        environment.getArgument("omitDeviated")
                                 ).stream();
                             }
                             return stream.flatMap(stoptimesWithPattern -> stoptimesWithPattern.times.stream())
@@ -1723,6 +1746,12 @@ public class IndexGraphQLSchema {
                         .type(Scalars.GraphQLInt)
                         .dataFetcher(
                                 environment -> ((TripTimeShort) environment.getSource()).stopSequence)
+                        .build())
+                .field(GraphQLFieldDefinition.newFieldDefinition()
+                        .name("deviationStop")
+                        .description("The stop where this stop time has been deviated to.  \n`null` if the trip has not been deviated to another stop.")
+                        .type(stopType)
+                        .dataFetcher(environment -> index.stopForId.get(((TripTimeShort)environment.getSource()).deviationStop))
                         .build())
                 .build();
 

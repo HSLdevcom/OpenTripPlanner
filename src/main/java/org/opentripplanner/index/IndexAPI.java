@@ -266,7 +266,7 @@ public class IndexAPI {
                                          @QueryParam("omitCanceled") boolean omitCanceled) {
         Stop stop = index.stopForId.get(GtfsLibrary.convertIdFromString(stopIdString));
         if (stop == null) return Response.status(Status.NOT_FOUND).entity(MSG_404).build();
-        return Response.status(Status.OK).entity(index.stopTimesForStop(stop, startTime, timeRange, numberOfDepartures, omitNonPickups, omitCanceled )).build();
+        return Response.status(Status.OK).entity(index.stopTimesForStop(stop, startTime, timeRange, numberOfDepartures, omitNonPickups, omitCanceled, true)).build();
     }
 
     /**
@@ -288,7 +288,7 @@ public class IndexAPI {
             return Response.status(Status.BAD_REQUEST).entity(MSG_400).build();
         }
 
-        List<StopTimesInPattern> ret = index.getStopTimesForStop(stop, sd, omitNonPickups, false);
+        List<StopTimesInPattern> ret = index.getStopTimesForStop(stop, sd, omitNonPickups, false, true);
         return Response.status(Status.OK).entity(ret).build();
     }
 

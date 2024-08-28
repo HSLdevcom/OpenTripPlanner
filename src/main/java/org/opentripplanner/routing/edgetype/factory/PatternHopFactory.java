@@ -6,6 +6,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
+import org.apache.commons.math3.util.Pair;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.CoordinateSequence;
 import org.locationtech.jts.geom.Geometry;
@@ -82,16 +83,9 @@ import org.opentripplanner.routing.vertextype.TransitStopDepart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 // Filtering out (removing) stoptimes from a trip forces us to either have two copies of that list,
 // or do all the steps within one loop over trips. It would be clearer if there were multiple loops over the trips.
@@ -377,8 +371,11 @@ public class PatternHopFactory {
 
             boolean hasFlexService = stopTimes.stream().anyMatch(this::stopTimeHasFlex);
 
+            Map<FeedScopedId, List<Stop>> alternateStops = transitService.getAllStops().stream()
+                    .filter(stop -> stop.getLocationType() == 1)
+                    .collect(Collectors.toMap(Stop::getId, transitService::getStopsForStation));
             /* Get the existing TripPattern for this filtered StopPattern, or create one. */
-            StopPattern stopPattern = new StopPattern(stopTimes, graph.deduplicator);
+            StopPattern stopPattern = new StopPattern(stopTimes, alternateStops, graph.deduplicator);
             if (hasFlexService) {
                 stopPattern.setFlexFields(new StopPatternFlexFields(stopTimes, flexAreasById, graph.deduplicator));
             }
