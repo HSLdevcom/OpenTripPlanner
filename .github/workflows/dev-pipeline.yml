@@ -1,19 +1,19 @@
-name: Process dev-2.x push or pr
+name: Process hotfix push or pr
 on:
   push:
     branches:
-      - dev-2.x
+      - hotfix
   pull_request:
     branches:
-      - dev-2.x
+      - hotfix
 jobs:
   docker-push:
-    if: github.ref == 'refs/heads/dev-2.x'
+    if: github.ref == 'refs/heads/hotfix'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Build docker image from dev-2.x and push it
+      - name: Build docker image from hotfix and push it
         run: ./.github/workflows/scripts/build_and_push_dev.sh
         env:
           DOCKER_USER: ${{ secrets.DOCKER_USER }}
