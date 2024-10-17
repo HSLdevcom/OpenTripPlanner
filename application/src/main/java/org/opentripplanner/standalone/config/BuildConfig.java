@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
+import org.opentripplanner.api.parameter.ApiRequestMode;
 import org.opentripplanner.datastore.api.OtpDataStoreConfig;
 import org.opentripplanner.ext.dataoverlay.configuration.DataOverlayConfig;
 import org.opentripplanner.ext.emissions.EmissionsConfig;
@@ -33,7 +34,10 @@ import org.opentripplanner.gtfs.graphbuilder.GtfsFeedParameters;
 import org.opentripplanner.model.calendar.ServiceDateInterval;
 import org.opentripplanner.netex.config.NetexFeedParameters;
 import org.opentripplanner.routing.api.request.RouteRequest;
+import org.opentripplanner.routing.api.request.StreetMode;
+import org.opentripplanner.routing.api.request.framework.DurationForEnum;
 import org.opentripplanner.routing.fares.FareServiceFactory;
+import org.opentripplanner.standalone.config.buildconfig.CarsAllowedStopMaxTransferDurationsForMode;
 import org.opentripplanner.standalone.config.buildconfig.DemConfig;
 import org.opentripplanner.standalone.config.buildconfig.GtfsConfig;
 import org.opentripplanner.standalone.config.buildconfig.IslandPruningConfig;
@@ -151,6 +155,7 @@ public class BuildConfig implements OtpDataStoreConfig {
   public final IslandPruningConfig islandPruning;
 
   public final Duration maxTransferDuration;
+  public final DurationForEnum<ApiRequestMode> maxTransferDurationsForModes;
   public final NetexFeedParameters netexDefaults;
   public final GtfsFeedParameters gtfsDefaults;
 
@@ -287,6 +292,12 @@ all of the elevation values in the street edges.
           "Transfers up to this duration with the default walk speed value will be pre-calculated and included in the Graph."
         )
         .asDuration(Duration.ofMinutes(30));
+    maxTransferDurationsForModes =
+      CarsAllowedStopMaxTransferDurationsForMode.map(
+        root,
+        "carsAllowedStopMaxTransferDurationsForMode",
+        maxTransferDuration
+      );
     maxStopToShapeSnapDistance =
       root
         .of("maxStopToShapeSnapDistance")
