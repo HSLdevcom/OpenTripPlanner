@@ -4,6 +4,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,8 @@ import org.opentripplanner.graph_builder.module.nearbystops.StraightLineNearbySt
 import org.opentripplanner.graph_builder.module.nearbystops.StreetNearbyStopFinder;
 import org.opentripplanner.model.PathTransfer;
 import org.opentripplanner.routing.api.request.RouteRequest;
+import org.opentripplanner.routing.api.request.StreetMode;
+import org.opentripplanner.routing.api.request.framework.DurationForEnum;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graphfinder.NearbyStop;
 import org.opentripplanner.street.model.edge.Edge;
@@ -45,6 +48,7 @@ public class DirectTransferGenerator implements GraphBuilderModule {
   private final Duration radiusByDuration;
 
   private final List<RouteRequest> transferRequests;
+  private final DurationForEnum<StreetMode> carsAllowedStopMaxTransferDurationsForMode;
   private final Graph graph;
   private final TimetableRepository timetableRepository;
   private final DataImportIssueStore issueStore;
@@ -54,13 +58,15 @@ public class DirectTransferGenerator implements GraphBuilderModule {
     TimetableRepository timetableRepository,
     DataImportIssueStore issueStore,
     Duration radiusByDuration,
-    List<RouteRequest> transferRequests
+    List<RouteRequest> transferRequests,
+    DurationForEnum<StreetMode> carsAllowedStopMaxTransferDurationsForMode
   ) {
     this.graph = graph;
     this.timetableRepository = timetableRepository;
     this.issueStore = issueStore;
     this.radiusByDuration = radiusByDuration;
     this.transferRequests = transferRequests;
+    this.carsAllowedStopMaxTransferDurationsForMode = carsAllowedStopMaxTransferDurationsForMode;
   }
 
   @Override
@@ -81,14 +87,41 @@ public class DirectTransferGenerator implements GraphBuilderModule {
       HashMultimap.create()
     );
 
+    List<RouteRequest> carsAllowedStopTransferRequests = new ArrayList<RouteRequest>();
+    List<RouteRequest> filteredTransferRequests = new ArrayList<RouteRequest>();
+
+    for (RouteRequest transferProfile : transferRequests) {
+      StreetMode mode = transferProfile.journey().transfer().mode();
+      if (carsAllowedStopMaxTransferDurationsForMode.containsKey(mode)) {
+        carsAllowedStopTransferRequests.add(transferProfile);
+        // For bikes, also normal transfer requests are wanted.
+        if (mode == StreetMode.BIKE) {
+          filteredTransferRequests.add(transferProfile);
+        }
+      } else {
+        filteredTransferRequests.add(transferProfile);
+      }
+    }
+
+    // Generate normal transfers.
     generateTransfersForStops(
       stops,
       nearbyStopFinder,
-      transferRequests,
+      filteredTransferRequests,
       transfersByStop,
       nTransfersTotal,
       nLinkedStops
     );
+
+    // Generate carsAllowedStop transfers.
+    /* generateTransfersForStops(
+      stops,
+      nearbyStopFinder,
+      carsAllowedStopTransferRequests,
+      transfersByStop,
+      nTransfersTotal,
+      nLinkedStops
+    ); */
 
     timetableRepository.addAllTransfersByStops(transfersByStop);
 

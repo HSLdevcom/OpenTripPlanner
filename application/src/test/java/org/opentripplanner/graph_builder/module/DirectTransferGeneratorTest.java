@@ -22,6 +22,7 @@ import org.opentripplanner.model.PathTransfer;
 import org.opentripplanner.routing.algorithm.GraphRoutingTest;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.StreetMode;
+import org.opentripplanner.routing.api.request.framework.DurationForEnum;
 import org.opentripplanner.street.model.StreetTraversalPermission;
 import org.opentripplanner.street.model.edge.Edge;
 import org.opentripplanner.street.model.vertex.StreetVertex;
@@ -65,7 +66,8 @@ class DirectTransferGeneratorTest extends GraphRoutingTest {
       timetableRepository,
       DataImportIssueStore.NOOP,
       MAX_TRANSFER_DURATION,
-      transferRequests
+      transferRequests,
+      DurationForEnum.of(StreetMode.class).build()
     )
       .buildGraph();
 
@@ -87,7 +89,8 @@ class DirectTransferGeneratorTest extends GraphRoutingTest {
       timetableRepository,
       DataImportIssueStore.NOOP,
       MAX_TRANSFER_DURATION,
-      transferRequests
+      transferRequests,
+      DurationForEnum.of(StreetMode.class).build()
     )
       .buildGraph();
 
@@ -119,7 +122,8 @@ class DirectTransferGeneratorTest extends GraphRoutingTest {
       timetableRepository,
       DataImportIssueStore.NOOP,
       MAX_TRANSFER_DURATION,
-      transferRequests
+      transferRequests,
+      DurationForEnum.of(StreetMode.class).build()
     )
       .buildGraph();
 
@@ -155,7 +159,8 @@ class DirectTransferGeneratorTest extends GraphRoutingTest {
       timetableRepository,
       DataImportIssueStore.NOOP,
       MAX_TRANSFER_DURATION,
-      transferRequests
+      transferRequests,
+      DurationForEnum.of(StreetMode.class).build()
     )
       .buildGraph();
 
@@ -178,7 +183,8 @@ class DirectTransferGeneratorTest extends GraphRoutingTest {
       timetableRepository,
       DataImportIssueStore.NOOP,
       MAX_TRANSFER_DURATION,
-      transferRequests
+      transferRequests,
+      DurationForEnum.of(StreetMode.class).build()
     )
       .buildGraph();
 
@@ -210,7 +216,8 @@ class DirectTransferGeneratorTest extends GraphRoutingTest {
       timetableRepository,
       DataImportIssueStore.NOOP,
       MAX_TRANSFER_DURATION,
-      transferRequests
+      transferRequests,
+      DurationForEnum.of(StreetMode.class).build()
     )
       .buildGraph();
 
@@ -237,7 +244,8 @@ class DirectTransferGeneratorTest extends GraphRoutingTest {
       timetableRepository,
       DataImportIssueStore.NOOP,
       MAX_TRANSFER_DURATION,
-      transferRequests
+      transferRequests,
+      DurationForEnum.of(StreetMode.class).build()
     )
       .buildGraph();
 
@@ -266,7 +274,8 @@ class DirectTransferGeneratorTest extends GraphRoutingTest {
       timetableRepository,
       DataImportIssueStore.NOOP,
       MAX_TRANSFER_DURATION,
-      transferRequests
+      transferRequests,
+      DurationForEnum.of(StreetMode.class).build()
     )
       .buildGraph();
 

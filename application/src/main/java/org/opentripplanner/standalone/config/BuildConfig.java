@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
-import org.opentripplanner.api.parameter.ApiRequestMode;
 import org.opentripplanner.datastore.api.OtpDataStoreConfig;
 import org.opentripplanner.ext.dataoverlay.configuration.DataOverlayConfig;
 import org.opentripplanner.ext.emissions.EmissionsConfig;
@@ -155,7 +154,7 @@ public class BuildConfig implements OtpDataStoreConfig {
   public final IslandPruningConfig islandPruning;
 
   public final Duration maxTransferDuration;
-  public final DurationForEnum<ApiRequestMode> maxTransferDurationsForModes;
+  public final DurationForEnum<StreetMode> carsAllowedStopMaxTransferDurationsForMode;
   public final NetexFeedParameters netexDefaults;
   public final GtfsFeedParameters gtfsDefaults;
 
@@ -292,7 +291,7 @@ all of the elevation values in the street edges.
           "Transfers up to this duration with the default walk speed value will be pre-calculated and included in the Graph."
         )
         .asDuration(Duration.ofMinutes(30));
-    maxTransferDurationsForModes =
+    carsAllowedStopMaxTransferDurationsForMode =
       CarsAllowedStopMaxTransferDurationsForMode.map(
         root,
         "carsAllowedStopMaxTransferDurationsForMode",
