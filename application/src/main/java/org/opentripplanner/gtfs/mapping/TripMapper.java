@@ -71,7 +71,6 @@ class TripMapper {
     lhs.withShapeId(AgencyAndIdMapper.mapAgencyAndId(rhs.getShapeId()));
     lhs.withWheelchairBoarding(WheelchairAccessibilityMapper.map(rhs.getWheelchairAccessible()));
     lhs.withBikesAllowed(BikeAccessMapper.mapForTrip(rhs));
-    lhs.withCarsAllowed(CarAccessMapper.mapForTrip(rhs));
 
     var trip = lhs.build();
     mapSafeTimePenalty(rhs).ifPresent(f -> flexSafeTimePenalties.put(trip, f));

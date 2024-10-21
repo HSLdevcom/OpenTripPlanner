@@ -11,7 +11,6 @@ import java.util.stream.Stream;
 import org.opentripplanner.apis.vectortiles.model.ZoomDependentNumber.ZoomStop;
 import org.opentripplanner.framework.collection.ListUtils;
 import org.opentripplanner.framework.json.ObjectMappers;
-import org.opentripplanner.street.model.StreetTraversalPermission;
 import org.opentripplanner.street.model.edge.Edge;
 import org.opentripplanner.street.model.vertex.Vertex;
 
@@ -27,7 +26,6 @@ public class StyleBuilder {
   private final Map<String, Object> props = new LinkedHashMap<>();
   private final Map<String, Object> paint = new LinkedHashMap<>();
   private final Map<String, Object> layout = new LinkedHashMap<>();
-  private final Map<String, Object> metadata = new LinkedHashMap<>();
   private final Map<String, Object> line = new LinkedHashMap<>();
   private List<String> filter = List.of();
 
@@ -50,7 +48,6 @@ public class StyleBuilder {
 
   private StyleBuilder(String id) {
     props.put("id", id);
-    metadata.put("group", "Other");
   }
 
   public StyleBuilder minZoom(int i) {
@@ -110,37 +107,22 @@ public class StyleBuilder {
     return this;
   }
 
-  /**
-   * Puts the layer into an arbitrarily defined group in the layer selector. This allows you
-   * to switch the entire group on and off.
-   */
-  public StyleBuilder group(String group) {
-    metadata.put("group", group);
-    return this;
-  }
-
   public StyleBuilder lineText(String name) {
-    layout.put("symbol-placement", "line-center");
-    layout.put("symbol-spacing", 1000);
+    layout.put("symbol-placement", "line");
+    layout.put("symbol-spacing", 500);
     layout.put("text-field", "{%s}".formatted(name));
     layout.put("text-font", List.of("KlokanTech Noto Sans Regular"));
     layout.put(
       "text-size",
-      new ZoomDependentNumber(List.of(new ZoomStop(10, 6), new ZoomStop(24, 12))).toJson()
+      new ZoomDependentNumber(14, List.of(new ZoomStop(14, 12), new ZoomStop(20, 14))).toJson()
     );
-    layout.put("text-max-width", 100);
+    layout.put("text-max-width", 5);
     layout.put("text-keep-upright", true);
     layout.put("text-rotation-alignment", "map");
-    layout.put("text-overlap", "never");
     paint.put("text-color", "#000");
     paint.put("text-halo-color", "#fff");
     paint.put("text-halo-blur", 4);
     paint.put("text-halo-width", 3);
-    return this;
-  }
-
-  public StyleBuilder textOffset(float offset) {
-    layout.put("text-offset", List.of(0, offset));
     return this;
   }
 
@@ -220,14 +202,6 @@ public class StyleBuilder {
   }
 
   /**
-   * Filter the entities by their "permission" property.
-   */
-  public final StyleBuilder permissionsFilter(StreetTraversalPermission p) {
-    filter = List.of("==", "permission", p.name());
-    return this;
-  }
-
-  /**
    * Only apply the style to the given vertices.
    */
   @SafeVarargs
@@ -251,7 +225,6 @@ public class StyleBuilder {
     if (!line.isEmpty()) {
       copy.put("line", line);
     }
-    copy.put("metadata", metadata);
     return OBJECT_MAPPER.valueToTree(copy);
   }
 

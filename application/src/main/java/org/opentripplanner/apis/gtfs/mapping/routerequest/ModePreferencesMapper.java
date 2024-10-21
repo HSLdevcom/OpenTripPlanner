@@ -168,10 +168,5 @@ public class ModePreferencesMapper {
         "If BICYCLE is used for access, egress or transfer, then it should be used for all."
       );
     }
-    if (modes.contains(StreetMode.CAR) && modes.size() != 1) {
-      throw new IllegalArgumentException(
-        "If CAR is used for access, egress or transfer, then it should be used for all."
-      );
-    }
   }
 }

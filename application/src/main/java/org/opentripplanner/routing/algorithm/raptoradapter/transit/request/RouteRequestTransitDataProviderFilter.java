@@ -12,7 +12,6 @@ import org.opentripplanner.routing.api.request.request.filter.TransitFilter;
 import org.opentripplanner.transit.model.basic.Accessibility;
 import org.opentripplanner.transit.model.framework.FeedScopedId;
 import org.opentripplanner.transit.model.network.BikeAccess;
-import org.opentripplanner.transit.model.network.CarAccess;
 import org.opentripplanner.transit.model.network.RoutingTripPattern;
 import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.model.timetable.TripTimes;
@@ -20,8 +19,6 @@ import org.opentripplanner.transit.model.timetable.TripTimes;
 public class RouteRequestTransitDataProviderFilter implements TransitDataProviderFilter {
 
   private final boolean requireBikesAllowed;
-
-  private final boolean requireCarsAllowed;
 
   private final boolean wheelchairEnabled;
 
@@ -44,7 +41,6 @@ public class RouteRequestTransitDataProviderFilter implements TransitDataProvide
   public RouteRequestTransitDataProviderFilter(RouteRequest request) {
     this(
       request.journey().transfer().mode() == StreetMode.BIKE,
-      request.journey().transfer().mode() == StreetMode.CAR,
       request.wheelchair(),
       request.preferences().wheelchair(),
       request.preferences().transit().includePlannedCancellations(),
@@ -57,7 +53,6 @@ public class RouteRequestTransitDataProviderFilter implements TransitDataProvide
   // This constructor is used only for testing
   public RouteRequestTransitDataProviderFilter(
     boolean requireBikesAllowed,
-    boolean requireCarsAllowed,
     boolean wheelchairEnabled,
     WheelchairPreferences wheelchairPreferences,
     boolean includePlannedCancellations,
@@ -66,7 +61,6 @@ public class RouteRequestTransitDataProviderFilter implements TransitDataProvide
     List<TransitFilter> filters
   ) {
     this.requireBikesAllowed = requireBikesAllowed;
-    this.requireCarsAllowed = requireCarsAllowed;
     this.wheelchairEnabled = wheelchairEnabled;
     this.wheelchairPreferences = wheelchairPreferences;
     this.includePlannedCancellations = includePlannedCancellations;
@@ -103,12 +97,10 @@ public class RouteRequestTransitDataProviderFilter implements TransitDataProvide
   public boolean tripTimesPredicate(TripTimes tripTimes, boolean withFilters) {
     final Trip trip = tripTimes.getTrip();
 
-    if (requireBikesAllowed && bikeAccessForTrip(trip) != BikeAccess.ALLOWED) {
-      return false;
-    }
-
-    if (requireCarsAllowed && trip.getCarsAllowed() != CarAccess.ALLOWED) {
-      return false;
+    if (requireBikesAllowed) {
+      if (bikeAccessForTrip(trip) != BikeAccess.ALLOWED) {
+        return false;
+      }
     }
 
     if (wheelchairEnabled) {

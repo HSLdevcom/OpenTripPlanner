@@ -10,7 +10,6 @@ public class TransferModeMapper {
 
   public static StreetMode map(GraphQLTypes.GraphQLPlanTransferMode mode) {
     return switch (mode) {
-      case CAR -> StreetMode.CAR;
       case BICYCLE -> StreetMode.BIKE;
       case WALK -> StreetMode.WALK;
     };
