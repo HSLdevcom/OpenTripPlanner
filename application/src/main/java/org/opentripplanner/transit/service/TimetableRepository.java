@@ -35,6 +35,7 @@ import org.opentripplanner.model.calendar.impl.CalendarServiceImpl;
 import org.opentripplanner.model.transfer.DefaultTransferService;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.TransitLayer;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.mappers.TransitLayerUpdater;
+import org.opentripplanner.routing.api.request.StreetMode;
 import org.opentripplanner.routing.impl.DelegatingTransitAlertServiceImpl;
 import org.opentripplanner.routing.services.TransitAlertService;
 import org.opentripplanner.routing.util.ConcurrentPublished;
@@ -98,7 +99,7 @@ public class TimetableRepository implements Serializable {
 
   private final Map<FeedScopedId, Integer> serviceCodes = new HashMap<>();
 
-  private final Multimap<StopLocation, PathTransfer> transfersByStop = HashMultimap.create();
+  private final Map<StreetMode, Multimap<StopLocation, PathTransfer>> transfersByStopForMode = new HashMap<>();
 
   private SiteRepository siteRepository;
   private ZonedDateTime transitServiceStarts = LocalDate.MAX.atStartOfDay(ZoneId.systemDefault());
@@ -430,8 +431,11 @@ public class TimetableRepository implements Serializable {
   }
 
   /** Pre-generated transfers between all stops. */
-  public Collection<PathTransfer> getTransfersByStop(StopLocation stop) {
-    return transfersByStop.get(stop);
+  public Collection<PathTransfer> getTransfersByStop(StreetMode mode, StopLocation stop) {
+    if (transfersByStopForMode.containsKey(mode)) {
+      return transfersByStopForMode.get(mode).get(stop);
+    }
+    return Collections.<PathTransfer>emptyList();
   }
 
   public SiteRepository getSiteRepository() {
@@ -519,9 +523,12 @@ public class TimetableRepository implements Serializable {
     this.updaterManager = updaterManager;
   }
 
-  public void addAllTransfersByStops(Multimap<StopLocation, PathTransfer> transfersByStop) {
+  public void addAllTransfersByStops(Map<StreetMode, Multimap<StopLocation, PathTransfer>> transfersByStopForMode) {
     invalidateIndex();
-    this.transfersByStop.putAll(transfersByStop);
+    transfersByStopForMode
+      .forEach((mode, transfersByStop) -> {
+        this.transfersByStopForMode.put(mode, HashMultimap.create(transfersByStop));
+      });
   }
 
   /**

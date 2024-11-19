@@ -1,12 +1,14 @@
 package org.opentripplanner.graph_builder.module;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentHashMap;
 import org.opentripplanner.framework.application.OTPFeature;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issues.StopNotLinkedForTransfers;
@@ -17,6 +19,7 @@ import org.opentripplanner.graph_builder.module.nearbystops.StraightLineNearbySt
 import org.opentripplanner.graph_builder.module.nearbystops.StreetNearbyStopFinder;
 import org.opentripplanner.model.PathTransfer;
 import org.opentripplanner.routing.api.request.RouteRequest;
+import org.opentripplanner.routing.api.request.StreetMode;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graphfinder.NearbyStop;
 import org.opentripplanner.street.model.edge.Edge;
@@ -81,27 +84,35 @@ public class DirectTransferGenerator implements GraphBuilderModule {
     AtomicInteger nTransfersTotal = new AtomicInteger();
     AtomicInteger nLinkedStops = new AtomicInteger();
 
-    // This is a synchronizedMultimap so that a parallel stream may be used to insert elements.
-    var transfersByStop = Multimaps.<StopLocation, PathTransfer>synchronizedMultimap(
-      HashMultimap.create()
-    );
+    Map<StreetMode, Multimap<StopLocation, PathTransfer>> transfersByStopForMode =
+      new ConcurrentHashMap<>();
+    for (RouteRequest transferProfile : transferRequests) {
+      StreetMode mode = transferProfile.journey().transfer().mode();
+      // This is a synchronizedMultimap so that a parallel stream may be used to insert elements.
+      transfersByStopForMode.put(mode, Multimaps.<StopLocation, PathTransfer>synchronizedMultimap(
+        HashMultimap.create()
+      ));
+    }
 
     stops
       .stream()
       .parallel()
       .forEach(ts0 -> {
-        /* Make transfers to each nearby stop that has lowest weight on some trip pattern.
-         * Use map based on the list of edges, so that only distinct transfers are stored. */
-        Map<TransferKey, PathTransfer> distinctTransfers = new HashMap<>();
         RegularStop stop = ts0.getStop();
 
         if (stop.transfersNotAllowed()) {
           return;
         }
 
-        LOG.debug("Linking stop '{}' {}", stop, ts0);
-
         for (RouteRequest transferProfile : transferRequests) {
+          StreetMode mode = transferProfile.journey().transfer().mode();
+
+          /* Make transfers to each nearby stop that has lowest weight on some trip pattern.
+          * Use map based on the list of edges, so that only distinct transfers are stored. */
+          Map<TransferKey, PathTransfer> distinctTransfers = new HashMap<>();
+
+          LOG.debug("Linking stop '{}' {} for mode {}.", stop, ts0, mode);
+          
           for (NearbyStop sd : nearbyStopFinder.findNearbyStops(
             ts0,
             transferProfile,
@@ -142,29 +153,30 @@ public class DirectTransferGenerator implements GraphBuilderModule {
               );
             }
           }
-        }
 
-        LOG.debug(
-          "Linked stop {} with {} transfers to stops with different patterns.",
-          stop,
-          distinctTransfers.size()
-        );
-        if (distinctTransfers.isEmpty()) {
-          issueStore.add(new StopNotLinkedForTransfers(ts0));
-        } else {
-          distinctTransfers
-            .values()
-            .forEach(transfer -> transfersByStop.put(transfer.from, transfer));
-          nLinkedStops.incrementAndGet();
-          nTransfersTotal.addAndGet(distinctTransfers.size());
-        }
+          LOG.debug(
+            "Linked stop {} with {} transfers to stops with different patterns for mode {}.",
+            stop,
+            distinctTransfers.size(),
+            mode
+          );
+          if (distinctTransfers.isEmpty()) {
+            issueStore.add(new StopNotLinkedForTransfers(ts0));
+          } else {
+            distinctTransfers
+              .values()
+              .forEach(transfer -> transfersByStopForMode.get(mode).put(transfer.from, transfer));
+            nLinkedStops.incrementAndGet();
+            nTransfersTotal.addAndGet(distinctTransfers.size());
+          }
 
-        //Keep lambda! A method-ref would causes incorrect class and line number to be logged
-        //noinspection Convert2MethodRef
-        progress.step(m -> LOG.info(m));
+          //Keep lambda! A method-ref would causes incorrect class and line number to be logged
+          //noinspection Convert2MethodRef
+          progress.step(m -> LOG.info(m));
+        }
       });
 
-    timetableRepository.addAllTransfersByStops(transfersByStop);
+    timetableRepository.addAllTransfersByStops(transfersByStopForMode);
 
     LOG.info(progress.completeMessage());
     LOG.info(
