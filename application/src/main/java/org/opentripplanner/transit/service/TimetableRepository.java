@@ -430,12 +430,21 @@ public class TimetableRepository implements Serializable {
     return serviceCodes;
   }
 
-  /** Pre-generated transfers between all stops. */
-  public Collection<PathTransfer> getTransfersByStop(StreetMode mode, StopLocation stop) {
-    if (transfersByStopForMode.containsKey(mode)) {
-      return transfersByStopForMode.get(mode).get(stop);
+  /** Pre-generated transfers between all stops.
+   * @deprecated Use the {@link #getTransfersByStopForMode() getTransfersByStopForMode} method instead.
+   */
+  @Deprecated
+  public Collection<PathTransfer> getTransfersByStop(StopLocation stop) {
+    Set<PathTransfer> pathTransfers = new HashSet<>();
+    for (Multimap<StopLocation, PathTransfer> transfersByStop : transfersByStopForMode.values()) {
+      pathTransfers.addAll(transfersByStop.get(stop));
     }
-    return Collections.<PathTransfer>emptyList();
+    return pathTransfers;
+  }
+
+  /** Pre-generated transfers between all stops mapped to the relevant StreetMode.*/
+  public Map<StreetMode, Multimap<StopLocation, PathTransfer>> getTransfersByStopForMode() {
+    return transfersByStopForMode;
   }
 
   public SiteRepository getSiteRepository() {
@@ -481,8 +490,23 @@ public class TimetableRepository implements Serializable {
     return deduplicator;
   }
 
+  /**
+   * @deprecated Use the {@link #getAllPathTransfersForMode(StreetMode) getAllPathTransfersForMode} method instead.
+   */
+  @Deprecated
   public Collection<PathTransfer> getAllPathTransfers() {
-    return transfersByStop.values();
+    Set<PathTransfer> allPathTransfers = new HashSet<>();
+    for (Multimap<StopLocation, PathTransfer> transfersByStop : transfersByStopForMode.values()) {
+      allPathTransfers.addAll(transfersByStop.values());
+    }
+    return allPathTransfers;
+  }
+
+  public Collection<PathTransfer> getAllPathTransfersForMode(StreetMode mode) {
+    if (transfersByStopForMode.containsKey(mode)) {
+      return transfersByStopForMode.get(mode).values();
+    }
+    return Collections.<PathTransfer>emptyList();
   }
 
   public Collection<FlexTrip<?, ?>> getAllFlexTrips() {

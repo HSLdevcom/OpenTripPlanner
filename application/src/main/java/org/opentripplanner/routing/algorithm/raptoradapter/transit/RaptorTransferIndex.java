@@ -4,8 +4,10 @@ import static java.util.stream.Collectors.toMap;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import org.opentripplanner.raptor.api.model.RaptorTransfer;
+import org.opentripplanner.routing.api.request.StreetMode;
 import org.opentripplanner.street.search.request.StreetSearchRequest;
 
 public class RaptorTransferIndex {
@@ -24,22 +26,25 @@ public class RaptorTransferIndex {
   }
 
   public static RaptorTransferIndex create(
-    List<List<Transfer>> transfersByStopIndex,
+    List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex,
     StreetSearchRequest request
   ) {
-    var forwardTransfers = new ArrayList<List<RaptorTransfer>>(transfersByStopIndex.size());
-    var reversedTransfers = new ArrayList<List<RaptorTransfer>>(transfersByStopIndex.size());
+    var forwardTransfers = new ArrayList<List<RaptorTransfer>>(transfersForModeByStopIndex.size());
+    var reversedTransfers = new ArrayList<List<RaptorTransfer>>(transfersForModeByStopIndex.size());
 
-    for (int i = 0; i < transfersByStopIndex.size(); i++) {
+    StreetMode mode = request.mode();
+
+    for (int i = 0; i < transfersForModeByStopIndex.size(); i++) {
       forwardTransfers.add(new ArrayList<>());
       reversedTransfers.add(new ArrayList<>());
     }
 
-    for (int fromStop = 0; fromStop < transfersByStopIndex.size(); fromStop++) {
+    for (int fromStop = 0; fromStop < transfersForModeByStopIndex.size(); fromStop++) {
       // The transfers are filtered so that there is only one possible directional transfer
       // for a stop pair.
-      var transfers = transfersByStopIndex
+      var transfers = transfersForModeByStopIndex
         .get(fromStop)
+        .get(mode)
         .stream()
         .flatMap(s -> s.asRaptorTransfer(request).stream())
         .collect(

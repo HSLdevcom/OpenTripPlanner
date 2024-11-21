@@ -21,6 +21,7 @@ import org.opentripplanner.routing.algorithm.raptoradapter.transit.TripPatternFo
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.constrainedtransfer.ConstrainedTransfersForPatterns;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.constrainedtransfer.TransferIndexGenerator;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.request.RaptorRequestTransferCache;
+import org.opentripplanner.routing.api.request.StreetMode;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.site.StopTransferPriority;
 import org.opentripplanner.transit.service.DefaultTransitService;
@@ -62,7 +63,7 @@ public class TransitLayerMapper {
 
   private TransitLayer map(TransitTuningParameters tuningParameters) {
     HashMap<LocalDate, List<TripPatternForDate>> tripPatternsByStopByDate;
-    List<List<Transfer>> transfersByStopIndex;
+    List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex;
     ConstrainedTransfersForPatterns constrainedTransfers = null;
 
     LOG.info("Mapping transitLayer from TimetableRepository...");
@@ -71,7 +72,7 @@ public class TransitLayerMapper {
 
     tripPatternsByStopByDate = mapTripPatterns(allTripPatterns);
 
-    transfersByStopIndex = mapTransfers(siteRepository, transitService);
+    transfersForModeByStopIndex = mapTransfers(siteRepository, transitService);
 
     TransferIndexGenerator transferIndexGenerator = null;
     if (OTPFeature.TransferConstraints.isOn()) {
@@ -86,7 +87,7 @@ public class TransitLayerMapper {
 
     return new TransitLayer(
       tripPatternsByStopByDate,
-      transfersByStopIndex,
+      transfersForModeByStopIndex,
       transitService.getTransferService(),
       siteRepository,
       transferCache,

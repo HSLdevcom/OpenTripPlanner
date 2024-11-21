@@ -4,6 +4,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.RaptorTransferIndex;
@@ -34,10 +35,10 @@ public class RaptorRequestTransferCache {
     return transferCache;
   }
 
-  public void put(List<List<Transfer>> transfersByStopIndex, RouteRequest request) {
-    final CacheKey cacheKey = new CacheKey(transfersByStopIndex, request);
+  public void put(List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex, RouteRequest request) {
+    final CacheKey cacheKey = new CacheKey(transfersForModeByStopIndex, request);
     final RaptorTransferIndex raptorTransferIndex = RaptorTransferIndex.create(
-      transfersByStopIndex,
+      transfersForModeByStopIndex,
       cacheKey.request
     );
 
@@ -45,9 +46,9 @@ public class RaptorRequestTransferCache {
     transferCache.put(cacheKey, raptorTransferIndex);
   }
 
-  public RaptorTransferIndex get(List<List<Transfer>> transfersByStopIndex, RouteRequest request) {
+  public RaptorTransferIndex get(List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex, RouteRequest request) {
     try {
-      return transferCache.get(new CacheKey(transfersByStopIndex, request));
+      return transferCache.get(new CacheKey(transfersForModeByStopIndex, request));
     } catch (ExecutionException e) {
       throw new RuntimeException("Failed to get item from transfer cache", e);
     }
@@ -58,26 +59,26 @@ public class RaptorRequestTransferCache {
       @Override
       public RaptorTransferIndex load(CacheKey cacheKey) {
         LOG.info("Adding runtime request to cache: {}", cacheKey.options);
-        return RaptorTransferIndex.create(cacheKey.transfersByStopIndex, cacheKey.request);
+        return RaptorTransferIndex.create(cacheKey.transfersForModeByStopIndex, cacheKey.request);
       }
     };
   }
 
   private static class CacheKey {
 
-    private final List<List<Transfer>> transfersByStopIndex;
+    private final List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex;
     private final StreetSearchRequest request;
     private final StreetRelevantOptions options;
 
-    private CacheKey(List<List<Transfer>> transfersByStopIndex, RouteRequest request) {
-      this.transfersByStopIndex = transfersByStopIndex;
+    private CacheKey(List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex, RouteRequest request) {
+      this.transfersForModeByStopIndex = transfersForModeByStopIndex;
       this.request = StreetSearchRequestMapper.mapToTransferRequest(request).build();
       this.options = new StreetRelevantOptions(this.request);
     }
 
     @Override
     public int hashCode() {
-      // transfersByStopIndex is ignored on purpose since it should not change (there is only
+      // transfersForModeByStopIndex is ignored on purpose since it should not change (there is only
       // one instance per graph) and calculating the hashCode() would be expensive
       return options.hashCode();
     }
@@ -91,10 +92,10 @@ public class RaptorRequestTransferCache {
         return false;
       }
       CacheKey cacheKey = (CacheKey) o;
-      // transfersByStopIndex is checked using == on purpose since the instance should not change
+      // transfersForModeByStopIndex is checked using == on purpose since the instance should not change
       // (there is only one instance per graph)
       return (
-        transfersByStopIndex == cacheKey.transfersByStopIndex && options.equals(cacheKey.options)
+        transfersForModeByStopIndex == cacheKey.transfersForModeByStopIndex && options.equals(cacheKey.options)
       );
     }
   }

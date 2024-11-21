@@ -13,6 +13,7 @@ import org.opentripplanner.routing.algorithm.raptoradapter.transit.constrainedtr
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.constrainedtransfer.TransferIndexGenerator;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.request.RaptorRequestTransferCache;
 import org.opentripplanner.routing.api.request.RouteRequest;
+import org.opentripplanner.routing.api.request.StreetMode;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.service.SiteRepository;
 
@@ -38,10 +39,10 @@ public class TransitLayer {
   private final HashMap<LocalDate, List<TripPatternForDate>> tripPatternsRunningOnDate;
 
   /**
-   * Index of outer list is from stop index, inner list index has no specific meaning. To stop index
+   * Index of outer list is from stop index, mode specific list index has no specific meaning. To stop index
    * is a field of the Transfer object.
    */
-  private final List<List<Transfer>> transfersByStopIndex;
+  private final List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex;
 
   /**
    * Trip to trip transfers like with properties like guaranteedTransfer, staySeated and priority.
@@ -67,7 +68,7 @@ public class TransitLayer {
   public TransitLayer(TransitLayer transitLayer) {
     this(
       transitLayer.tripPatternsRunningOnDate,
-      transitLayer.transfersByStopIndex,
+      transitLayer.transfersForModeByStopIndex,
       transitLayer.transferService,
       transitLayer.siteRepository,
       transitLayer.transferCache,
@@ -79,7 +80,7 @@ public class TransitLayer {
 
   public TransitLayer(
     Map<LocalDate, List<TripPatternForDate>> tripPatternsRunningOnDate,
-    List<List<Transfer>> transfersByStopIndex,
+    List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex,
     TransferService transferService,
     SiteRepository siteRepository,
     RaptorRequestTransferCache transferCache,
@@ -88,7 +89,7 @@ public class TransitLayer {
     @Nullable int[] stopBoardAlightTransferCosts
   ) {
     this.tripPatternsRunningOnDate = new HashMap<>(tripPatternsRunningOnDate);
-    this.transfersByStopIndex = transfersByStopIndex;
+    this.transfersForModeByStopIndex = transfersForModeByStopIndex;
     this.transferService = transferService;
     this.siteRepository = siteRepository;
     this.transferCache = transferCache;
@@ -146,11 +147,11 @@ public class TransitLayer {
   }
 
   public RaptorTransferIndex getRaptorTransfersForRequest(RouteRequest request) {
-    return transferCache.get(transfersByStopIndex, request);
+    return transferCache.get(transfersForModeByStopIndex, request);
   }
 
   public void initTransferCacheForRequest(RouteRequest request) {
-    transferCache.put(transfersByStopIndex, request);
+    transferCache.put(transfersForModeByStopIndex, request);
   }
 
   public RaptorRequestTransferCache getTransferCache() {

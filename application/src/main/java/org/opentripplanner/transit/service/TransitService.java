@@ -22,6 +22,7 @@ import org.opentripplanner.model.TripTimeOnDate;
 import org.opentripplanner.model.calendar.CalendarService;
 import org.opentripplanner.model.transfer.TransferService;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.TransitLayer;
+import org.opentripplanner.routing.api.request.StreetMode;
 import org.opentripplanner.routing.services.TransitAlertService;
 import org.opentripplanner.routing.stoptimes.ArrivalDeparture;
 import org.opentripplanner.transit.api.request.TripOnServiceDateRequest;
@@ -46,6 +47,8 @@ import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.model.timetable.TripIdAndServiceDate;
 import org.opentripplanner.transit.model.timetable.TripOnServiceDate;
 import org.opentripplanner.updater.GraphUpdaterStatus;
+
+import com.google.common.collect.Multimap;
 
 /**
  * TransitService is a read-only interface for retrieving public transport data. It provides a
@@ -256,7 +259,13 @@ public interface TransitService {
 
   Set<TransitMode> getTransitModes();
 
+  /**
+   * @deprecated Use the {@link #getTransfersByStopForMode() getTransfersByStopForMode} method instead.
+   */
+  @Deprecated
   Collection<PathTransfer> getTransfersByStop(StopLocation stop);
+
+  Map<StreetMode, Multimap<StopLocation, PathTransfer>> getTransfersByStopForMode();
 
   TransitLayer getTransitLayer();
 

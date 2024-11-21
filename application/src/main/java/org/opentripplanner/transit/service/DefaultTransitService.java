@@ -31,6 +31,7 @@ import org.opentripplanner.model.TripTimeOnDate;
 import org.opentripplanner.model.calendar.CalendarService;
 import org.opentripplanner.model.transfer.TransferService;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.TransitLayer;
+import org.opentripplanner.routing.api.request.StreetMode;
 import org.opentripplanner.routing.services.TransitAlertService;
 import org.opentripplanner.routing.stoptimes.ArrivalDeparture;
 import org.opentripplanner.routing.stoptimes.StopTimesHelper;
@@ -59,6 +60,8 @@ import org.opentripplanner.transit.model.timetable.TripIdAndServiceDate;
 import org.opentripplanner.transit.model.timetable.TripOnServiceDate;
 import org.opentripplanner.updater.GraphUpdaterStatus;
 import org.opentripplanner.utils.collection.CollectionsView;
+
+import com.google.common.collect.Multimap;
 
 /**
  * Default implementation of the Transit Service and Transit Editor Service.
@@ -618,9 +621,18 @@ public class DefaultTransitService implements TransitEditorService {
     return this.timetableRepository.getTransitModes();
   }
 
+  /**
+   * @deprecated Use the {@link #getTransfersByStopForMode() getTransfersByStopForMode} method instead.
+   */
+  @Deprecated
   @Override
   public Collection<PathTransfer> getTransfersByStop(StopLocation stop) {
     return this.timetableRepository.getTransfersByStop(stop);
+  }
+
+  @Override
+  public Map<StreetMode, Multimap<StopLocation, PathTransfer>> getTransfersByStopForMode() {
+    return this.timetableRepository.getTransfersByStopForMode();
   }
 
   @Override
