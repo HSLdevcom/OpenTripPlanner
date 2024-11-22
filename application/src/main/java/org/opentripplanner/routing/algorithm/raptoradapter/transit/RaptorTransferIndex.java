@@ -44,7 +44,8 @@ public class RaptorTransferIndex {
       // for a stop pair.
       var transfers = transfersForModeByStopIndex
         .get(fromStop)
-        .get(mode)
+        // this is getOrDefault because of tests failing, should the tests instead be changed to allow for get?
+        .getOrDefault(mode, List.of())
         .stream()
         .flatMap(s -> s.asRaptorTransfer(request).stream())
         .collect(
