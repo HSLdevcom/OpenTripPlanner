@@ -7,8 +7,8 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.opentripplanner.framework.application.OTPFeature;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issues.StopNotLinkedForTransfers;
@@ -84,14 +84,14 @@ public class DirectTransferGenerator implements GraphBuilderModule {
     AtomicInteger nTransfersTotal = new AtomicInteger();
     AtomicInteger nLinkedStops = new AtomicInteger();
 
-    Map<StreetMode, Multimap<StopLocation, PathTransfer>> transfersByStopForMode =
-      new ConcurrentHashMap<>();
+    Map<StreetMode, Multimap<StopLocation, PathTransfer>> transfersByStopForMode = new ConcurrentHashMap<>();
     for (RouteRequest transferProfile : transferRequests) {
       StreetMode mode = transferProfile.journey().transfer().mode();
       // This is a synchronizedMultimap so that a parallel stream may be used to insert elements.
-      transfersByStopForMode.put(mode, Multimaps.<StopLocation, PathTransfer>synchronizedMultimap(
-        HashMultimap.create()
-      ));
+      transfersByStopForMode.put(
+        mode,
+        Multimaps.<StopLocation, PathTransfer>synchronizedMultimap(HashMultimap.create())
+      );
     }
 
     stops
@@ -108,11 +108,11 @@ public class DirectTransferGenerator implements GraphBuilderModule {
           StreetMode mode = transferProfile.journey().transfer().mode();
 
           /* Make transfers to each nearby stop that has lowest weight on some trip pattern.
-          * Use map based on the list of edges, so that only distinct transfers are stored. */
+           * Use map based on the list of edges, so that only distinct transfers are stored. */
           Map<TransferKey, PathTransfer> distinctTransfers = new HashMap<>();
 
           LOG.debug("Linking stop '{}' {} for mode {}.", stop, ts0, mode);
-          
+
           for (NearbyStop sd : nearbyStopFinder.findNearbyStops(
             ts0,
             transferProfile,

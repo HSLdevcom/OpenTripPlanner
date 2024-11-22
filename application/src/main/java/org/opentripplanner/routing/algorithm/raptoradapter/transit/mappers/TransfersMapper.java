@@ -1,11 +1,11 @@
 package org.opentripplanner.routing.algorithm.raptoradapter.transit.mappers;
 
+import com.google.common.collect.Multimap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.opentripplanner.model.PathTransfer;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.Transfer;
 import org.opentripplanner.routing.api.request.StreetMode;
@@ -13,8 +13,6 @@ import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.service.SiteRepository;
 import org.opentripplanner.transit.service.TransitService;
-
-import com.google.common.collect.Multimap;
 
 class TransfersMapper {
 
@@ -38,7 +36,9 @@ class TransfersMapper {
       // This contains transfers for a certain stop mapped to the relevant mode.
       Map<StreetMode, List<Transfer>> stopTransfersForMode = new HashMap<>();
 
-      for (Map.Entry<StreetMode, Multimap<StopLocation, PathTransfer>> entry : transitService.getTransfersByStopForMode().entrySet()) {
+      for (Map.Entry<StreetMode, Multimap<StopLocation, PathTransfer>> entry : transitService
+        .getTransfersByStopForMode()
+        .entrySet()) {
         ArrayList<Transfer> list = new ArrayList<>();
         StreetMode mode = entry.getKey();
         Collection<PathTransfer> transfersByStop = entry.getValue().get(stop);
@@ -52,7 +52,7 @@ class TransfersMapper {
               newTransfer =
                 new Transfer(toStopIndex, (int) Math.ceil(pathTransfer.getDistanceMeters()));
             }
-  
+
             list.add(newTransfer);
           }
         }

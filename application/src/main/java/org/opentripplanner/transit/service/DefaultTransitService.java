@@ -1,5 +1,6 @@
 package org.opentripplanner.transit.service;
 
+import com.google.common.collect.Multimap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 import jakarta.inject.Inject;
@@ -60,8 +61,6 @@ import org.opentripplanner.transit.model.timetable.TripIdAndServiceDate;
 import org.opentripplanner.transit.model.timetable.TripOnServiceDate;
 import org.opentripplanner.updater.GraphUpdaterStatus;
 import org.opentripplanner.utils.collection.CollectionsView;
-
-import com.google.common.collect.Multimap;
 
 /**
  * Default implementation of the Transit Service and Transit Editor Service.

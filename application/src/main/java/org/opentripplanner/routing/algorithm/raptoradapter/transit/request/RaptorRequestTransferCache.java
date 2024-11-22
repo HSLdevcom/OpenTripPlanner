@@ -35,7 +35,10 @@ public class RaptorRequestTransferCache {
     return transferCache;
   }
 
-  public void put(List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex, RouteRequest request) {
+  public void put(
+    List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex,
+    RouteRequest request
+  ) {
     final CacheKey cacheKey = new CacheKey(transfersForModeByStopIndex, request);
     final RaptorTransferIndex raptorTransferIndex = RaptorTransferIndex.create(
       transfersForModeByStopIndex,
@@ -46,7 +49,10 @@ public class RaptorRequestTransferCache {
     transferCache.put(cacheKey, raptorTransferIndex);
   }
 
-  public RaptorTransferIndex get(List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex, RouteRequest request) {
+  public RaptorTransferIndex get(
+    List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex,
+    RouteRequest request
+  ) {
     try {
       return transferCache.get(new CacheKey(transfersForModeByStopIndex, request));
     } catch (ExecutionException e) {
@@ -70,7 +76,10 @@ public class RaptorRequestTransferCache {
     private final StreetSearchRequest request;
     private final StreetRelevantOptions options;
 
-    private CacheKey(List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex, RouteRequest request) {
+    private CacheKey(
+      List<Map<StreetMode, List<Transfer>>> transfersForModeByStopIndex,
+      RouteRequest request
+    ) {
       this.transfersForModeByStopIndex = transfersForModeByStopIndex;
       this.request = StreetSearchRequestMapper.mapToTransferRequest(request).build();
       this.options = new StreetRelevantOptions(this.request);
@@ -95,7 +104,8 @@ public class RaptorRequestTransferCache {
       // transfersForModeByStopIndex is checked using == on purpose since the instance should not change
       // (there is only one instance per graph)
       return (
-        transfersForModeByStopIndex == cacheKey.transfersForModeByStopIndex && options.equals(cacheKey.options)
+        transfersForModeByStopIndex == cacheKey.transfersForModeByStopIndex &&
+        options.equals(cacheKey.options)
       );
     }
   }

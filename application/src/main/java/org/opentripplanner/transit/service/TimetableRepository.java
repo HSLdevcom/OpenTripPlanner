@@ -497,8 +497,10 @@ public class TimetableRepository implements Serializable {
   public Collection<PathTransfer> getAllPathTransfers() {
     Set<PathTransfer> allPathTransfers = new HashSet<>();
     for (Multimap<StopLocation, PathTransfer> transfersByStop : transfersByStopForMode.values()) {
+      System.out.println("transfersByStop.values() " + transfersByStop.values());
       allPathTransfers.addAll(transfersByStop.values());
     }
+    System.out.println("allPathTransfers " + allPathTransfers);
     return allPathTransfers;
   }
 
@@ -547,12 +549,13 @@ public class TimetableRepository implements Serializable {
     this.updaterManager = updaterManager;
   }
 
-  public void addAllTransfersByStops(Map<StreetMode, Multimap<StopLocation, PathTransfer>> transfersByStopForMode) {
+  public void addAllTransfersByStops(
+    Map<StreetMode, Multimap<StopLocation, PathTransfer>> transfersByStopForMode
+  ) {
     invalidateIndex();
-    transfersByStopForMode
-      .forEach((mode, transfersByStop) -> {
-        this.transfersByStopForMode.put(mode, HashMultimap.create(transfersByStop));
-      });
+    transfersByStopForMode.forEach((mode, transfersByStop) -> {
+      this.transfersByStopForMode.put(mode, HashMultimap.create(transfersByStop));
+    });
   }
 
   /**

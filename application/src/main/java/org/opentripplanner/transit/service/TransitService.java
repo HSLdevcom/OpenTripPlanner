@@ -1,5 +1,6 @@
 package org.opentripplanner.transit.service;
 
+import com.google.common.collect.Multimap;
 import gnu.trove.set.TIntSet;
 import java.time.Duration;
 import java.time.Instant;
@@ -47,8 +48,6 @@ import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.model.timetable.TripIdAndServiceDate;
 import org.opentripplanner.transit.model.timetable.TripOnServiceDate;
 import org.opentripplanner.updater.GraphUpdaterStatus;
-
-import com.google.common.collect.Multimap;
 
 /**
  * TransitService is a read-only interface for retrieving public transport data. It provides a
