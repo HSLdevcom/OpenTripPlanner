@@ -2,6 +2,7 @@ package org.opentripplanner.model;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 import org.opentripplanner.model.transfer.ConstrainedTransfer;
 import org.opentripplanner.street.model.edge.Edge;
 import org.opentripplanner.transit.model.site.StopLocation;
@@ -55,5 +56,27 @@ public class PathTransfer implements Serializable {
       .addNum("distance", distanceMeters)
       .addColSize("edges", edges)
       .toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final PathTransfer that = (PathTransfer) o;
+    return (
+      from.equals(that.from) &&
+      to.equals(that.to) &&
+      Objects.equals(edges, that.edges) &&
+      Double.compare(distanceMeters, that.distanceMeters) == 0
+    );
+  }
+
+  @Override
+  public final int hashCode() {
+    return Objects.hash(from, to, edges, distanceMeters);
   }
 }
