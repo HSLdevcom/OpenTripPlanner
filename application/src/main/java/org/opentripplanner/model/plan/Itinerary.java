@@ -38,6 +38,8 @@ public class Itinerary implements ItinerarySortKey {
   private final Duration waitingDuration;
   private final double nonTransitDistanceMeters;
   private final boolean walkOnly;
+  private final boolean bicycleOnly;
+  private final boolean carOnly;
   private final boolean streetOnly;
   private final Duration nonTransitDuration;
   private final Duration walkDuration;
@@ -67,11 +69,14 @@ public class Itinerary implements ItinerarySortKey {
   private final boolean searchWindowAware;
   private List<Leg> legs;
 
+  private final RouteRequest request;
+
   private ItineraryFares fare = ItineraryFares.empty();
 
-  private Itinerary(List<Leg> legs, boolean searchWindowAware) {
+  private Itinerary(List<Leg> legs, boolean searchWindowAware, RouteRequest request) {
     setLegs(legs);
     this.searchWindowAware = searchWindowAware;
+    this.request = request;
 
     // Set aggregated data
     ItinerariesCalculateLegTotals totals = new ItinerariesCalculateLegTotals(legs);
@@ -84,6 +89,8 @@ public class Itinerary implements ItinerarySortKey {
     this.walkDistanceMeters = totals.walkDistanceMeters;
     this.waitingDuration = totals.waitingDuration;
     this.walkOnly = totals.walkOnly;
+    this.bicycleOnly = totals.bicycleOnly;
+    this.carOnly = totals.carOnly;
     this.streetOnly = totals.streetOnly;
     this.setElevationGained(totals.totalElevationGained);
     this.setElevationLost(totals.totalElevationLost);
@@ -92,8 +99,8 @@ public class Itinerary implements ItinerarySortKey {
   /**
    * Creates an itinerary that contains scheduled transit which is aware of the search window.
    */
-  public static Itinerary createScheduledTransitItinerary(List<Leg> legs) {
-    return new Itinerary(legs, true);
+  public static Itinerary createScheduledTransitItinerary(List<Leg> legs, RouteRequest request) {
+    return new Itinerary(legs, true, request);
   }
 
   /**
@@ -101,7 +108,7 @@ public class Itinerary implements ItinerarySortKey {
    * time window.
    */
   public static Itinerary createDirectItinerary(List<Leg> legs) {
-    return new Itinerary(legs, false);
+    return new Itinerary(legs, false, null);
   }
 
   /**
@@ -173,7 +180,21 @@ public class Itinerary implements ItinerarySortKey {
   }
 
   /**
-   * Return {@code true} if all legs are WALKING.
+   * Return {@code true} if all legs are CYCLING.
+   */
+  public boolean isCyclingAllTheWay() {
+    return isBicycleOnly();
+  }
+
+  /**
+   * Return {@code true} if all legs are DRIVING.
+   */
+  public boolean isDrivingAllTheWay() {
+    return isCarOnly();
+  }
+
+  /**
+   * Return {@code true} if all legs are non-transit.
    */
   public boolean isOnStreetAllTheWay() {
     return isStreetOnly();
@@ -249,7 +270,7 @@ public class Itinerary implements ItinerarySortKey {
       .stream()
       .map(leg -> leg.withTimeShift(duration))
       .collect(Collectors.toList());
-    var newItin = new Itinerary(timeShiftedLegs, searchWindowAware);
+    var newItin = new Itinerary(timeShiftedLegs, searchWindowAware, request);
     newItin.setGeneralizedCost(getGeneralizedCost());
     return newItin;
   }
@@ -287,9 +308,19 @@ public class Itinerary implements ItinerarySortKey {
     return nonTransitDistanceMeters;
   }
 
-  /** TRUE if mode is WALK from start ot end (all legs are walking). */
+  /** TRUE if mode is WALK from start to end (all legs are walking). */
   public boolean isWalkOnly() {
     return walkOnly;
+  }
+
+  /** TRUE if mode is BICYCLE from start to end (all legs are cycling). */
+  public boolean isBicycleOnly() {
+    return bicycleOnly;
+  }
+
+  /** TRUE if mode is CAR from start to end (all legs are driving). */
+  public boolean isCarOnly() {
+    return carOnly;
   }
 
   /** TRUE if mode is a non transit move from start ot end (all legs are non-transit). */
@@ -315,6 +346,14 @@ public class Itinerary implements ItinerarySortKey {
    */
   public List<Leg> getLegs() {
     return legs;
+  }
+
+  /**
+   * 
+   * @return RouteRequest relevant to the itinerary, may be null if there is no RouteRequest associated with the itinerary
+   */
+  public RouteRequest getRequest() {
+    return request;
   }
 
   /**

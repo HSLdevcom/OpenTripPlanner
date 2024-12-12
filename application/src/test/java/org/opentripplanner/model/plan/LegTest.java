@@ -20,11 +20,13 @@ public class LegTest implements PlanTestConstants {
     .walk(D2m, B)
     .bus(21, T11_05, T11_15, C)
     .bicycle(T11_16, T11_20, E)
+    .drive(T11_23, T11_25, F)
     .build();
 
   private final Leg WALK_LEG = ITINERARY.firstLeg();
   private final Leg BUS_LEG = ITINERARY.getLegs().get(1);
-  private final Leg BICYCLE_LEG = ITINERARY.lastLeg();
+  private final Leg BICYCLE_LEG = ITINERARY.getLegs().get(2);
+  private final Leg CAR_LEG = ITINERARY.lastLeg();
 
   @Test
   public void isTransitLeg() {
@@ -38,6 +40,20 @@ public class LegTest implements PlanTestConstants {
     assertTrue(WALK_LEG.isWalkingLeg());
     assertFalse(BUS_LEG.isWalkingLeg());
     assertFalse(BICYCLE_LEG.isWalkingLeg());
+  }
+
+  @Test
+  public void isCyclingLeg() {
+    assertFalse(WALK_LEG.isCyclingLeg());
+    assertFalse(BUS_LEG.isCyclingLeg());
+    assertTrue(BICYCLE_LEG.isCyclingLeg());
+  }
+
+  @Test
+  public void isDrivingLeg() {
+    assertTrue(CAR_LEG.isDrivingLeg());
+    assertFalse(BUS_LEG.isDrivingLeg());
+    assertFalse(BICYCLE_LEG.isDrivingLeg());
   }
 
   @Test

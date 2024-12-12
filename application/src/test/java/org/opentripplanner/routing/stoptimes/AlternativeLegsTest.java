@@ -13,6 +13,7 @@ import org.opentripplanner.model.plan.legreference.ScheduledTransitLegReference;
 import org.opentripplanner.routing.alternativelegs.AlternativeLegs;
 import org.opentripplanner.routing.alternativelegs.AlternativeLegsFilter;
 import org.opentripplanner.routing.alternativelegs.NavigationDirection;
+import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.transit.model.framework.FeedScopedId;
 import org.opentripplanner.transit.service.DefaultTransitService;
 
@@ -163,7 +164,7 @@ class AlternativeLegsTest extends GtfsTest {
         .stream()
         .map(Leg.class::cast)
         .map(List::of)
-        .map(Itinerary::createScheduledTransitItinerary)
+        .map(legs -> Itinerary.createScheduledTransitItinerary(legs, new RouteRequest()))
         .toList()
     );
   }

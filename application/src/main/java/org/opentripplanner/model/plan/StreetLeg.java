@@ -69,6 +69,16 @@ public class StreetLeg implements Leg {
   }
 
   @Override
+  public boolean isCyclingLeg() {
+    return mode == TraverseMode.BICYCLE;
+  }
+
+  @Override
+  public boolean isDrivingLeg() {
+    return mode == TraverseMode.CAR;
+  }
+
+  @Override
   public boolean isStreetLeg() {
     return true;
   }

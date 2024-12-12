@@ -25,6 +25,7 @@ import org.opentripplanner.framework.i18n.I18NString;
 import org.opentripplanner.model.StopTime;
 import org.opentripplanner.model.transfer.ConstrainedTransfer;
 import org.opentripplanner.model.transfer.TransferConstraint;
+import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.street.model._data.StreetModelForTest;
 import org.opentripplanner.street.search.TraverseMode;
 import org.opentripplanner.transit.model._data.TimetableRepositoryForTest;
@@ -425,7 +426,8 @@ public class TestItineraryBuilder implements PlanTestConstants {
   public Itinerary build() {
     Itinerary itinerary;
     if (isSearchWindowAware) {
-      itinerary = Itinerary.createScheduledTransitItinerary(legs);
+      RouteRequest request = new RouteRequest();
+      itinerary = Itinerary.createScheduledTransitItinerary(legs, request);
     } else {
       itinerary = Itinerary.createDirectItinerary(legs);
     }

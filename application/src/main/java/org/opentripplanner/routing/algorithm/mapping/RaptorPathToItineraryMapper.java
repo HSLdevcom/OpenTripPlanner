@@ -94,7 +94,7 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
 
   public Itinerary createItinerary(RaptorPath<T> path) {
     if (path.isUnknownPath()) {
-      return mapDirectPath(path);
+      return mapDirectPath(path, request);
     }
 
     var optimizedPath = path instanceof OptimizedPath ? (OptimizedPath<TripSchedule>) path : null;
@@ -141,7 +141,7 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
     Itinerary mapped = mapEgressLeg(egressPathLeg);
     legs.addAll(mapped == null ? List.of() : mapped.getLegs());
 
-    Itinerary itinerary = Itinerary.createScheduledTransitItinerary(legs);
+    Itinerary itinerary = Itinerary.createScheduledTransitItinerary(legs, request);
 
     // Map general itinerary fields
     itinerary.setArrivedAtDestinationWithRentedVehicle(
@@ -381,7 +381,7 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
     }
   }
 
-  private Itinerary mapDirectPath(RaptorPath<T> path) {
+  private Itinerary mapDirectPath(RaptorPath<T> path, RouteRequest request) {
     return Itinerary.createScheduledTransitItinerary(
       List.of(
         new UnknownTransitPathLeg(
@@ -391,7 +391,8 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
           createZonedDateTime(path.endTime()),
           path.numberOfTransfers()
         )
-      )
+      ),
+      request
     );
   }
 

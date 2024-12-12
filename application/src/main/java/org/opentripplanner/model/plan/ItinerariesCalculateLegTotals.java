@@ -17,6 +17,8 @@ class ItinerariesCalculateLegTotals {
   double walkDistanceMeters = 0.0;
   Duration waitingDuration = Duration.ZERO;
   boolean walkOnly = true;
+  boolean carOnly = true;
+  boolean bicycleOnly = true;
   boolean streetOnly = true;
   double totalElevationGained = 0.0;
   double totalElevationLost = 0.0;
@@ -57,6 +59,14 @@ class ItinerariesCalculateLegTotals {
 
       if (!leg.isWalkingLeg()) {
         walkOnly = false;
+      }
+
+      if (!leg.isCyclingLeg()) {
+        bicycleOnly = false;
+      }
+
+      if (!leg.isDrivingLeg()) {
+        carOnly = false;
       }
 
       if (!leg.isStreetLeg()) {

@@ -20,6 +20,7 @@ import org.opentripplanner.model.plan.Itinerary;
 import org.opentripplanner.model.plan.ScheduledTransitLeg;
 import org.opentripplanner.model.plan.ScheduledTransitLegBuilder;
 import org.opentripplanner.model.plan.StreetLeg;
+import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.street.search.TraverseMode;
 import org.opentripplanner.transit.model._data.TimetableRepositoryForTest;
 import org.opentripplanner.transit.model.basic.TransitMode;
@@ -68,22 +69,26 @@ class EmissionsTest {
 
   @Test
   void testGetEmissionsForItinerary() {
-    Itinerary i = createScheduledTransitItinerary(List.of(createTransitLeg(ROUTE_WITH_EMISSIONS)));
+    RouteRequest request = new RouteRequest();
+    Itinerary i = createScheduledTransitItinerary(List.of(createTransitLeg(ROUTE_WITH_EMISSIONS)), request);
     decorateWithEmission.decorate(i);
     assertEquals(new Grams(2223.902), i.getEmissionsPerPerson().getCo2());
   }
 
   @Test
   void testGetEmissionsForCarRoute() {
-    Itinerary i = createScheduledTransitItinerary(List.of(STREET_LEG));
+    RouteRequest request = new RouteRequest();
+    Itinerary i = createScheduledTransitItinerary(List.of(STREET_LEG), request);
     decorateWithEmission.decorate(i);
     assertEquals(new Grams(28.0864), i.getEmissionsPerPerson().getCo2());
   }
 
   @Test
   void testNoEmissionsForFeedWithoutEmissionsConfigured() {
+    RouteRequest request = new RouteRequest();
     Itinerary i = createScheduledTransitItinerary(
-      List.of(createTransitLeg(ROUTE_WITHOUT_EMISSIONS_CONFIGURED))
+      List.of(createTransitLeg(ROUTE_WITHOUT_EMISSIONS_CONFIGURED)),
+      request
     );
     decorateWithEmission.decorate(i);
     assertNull(i.getEmissionsPerPerson());
@@ -91,8 +96,10 @@ class EmissionsTest {
 
   @Test
   void testZeroEmissionsForItineraryWithZeroEmissions() {
+    RouteRequest request = new RouteRequest();
     Itinerary i = createScheduledTransitItinerary(
-      List.of(createTransitLeg(ROUTE_WITH_ZERO_EMISSIONS))
+      List.of(createTransitLeg(ROUTE_WITH_ZERO_EMISSIONS)),
+      request
     );
     decorateWithEmission.decorate(i);
     assertEquals(new Grams(0.0), i.getEmissionsPerPerson().getCo2());
@@ -100,8 +107,10 @@ class EmissionsTest {
 
   @Test
   void testGetEmissionsForCombinedRoute() {
+    RouteRequest request = new RouteRequest();
     Itinerary i = createScheduledTransitItinerary(
-      List.of(createTransitLeg(ROUTE_WITH_EMISSIONS), STREET_LEG)
+      List.of(createTransitLeg(ROUTE_WITH_EMISSIONS), STREET_LEG),
+      request
     );
     decorateWithEmission.decorate(i);
     assertEquals(new Grams(2251.9884), i.getEmissionsPerPerson().getCo2());
@@ -109,8 +118,10 @@ class EmissionsTest {
 
   @Test
   void testNoEmissionsForCombinedRouteWithoutTransitEmissions() {
+    RouteRequest request = new RouteRequest();
     Itinerary i = createScheduledTransitItinerary(
-      List.of(createTransitLeg(ROUTE_WITHOUT_EMISSIONS_CONFIGURED), STREET_LEG)
+      List.of(createTransitLeg(ROUTE_WITHOUT_EMISSIONS_CONFIGURED), STREET_LEG),
+      request
     );
     decorateWithEmission.decorate(i);
     var emissionsResult = i.getEmissionsPerPerson() != null

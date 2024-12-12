@@ -41,6 +41,7 @@ import org.opentripplanner.model.fare.ItineraryFares;
 import org.opentripplanner.model.plan.Itinerary;
 import org.opentripplanner.model.plan.Leg;
 import org.opentripplanner.model.plan.Place;
+import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.core.FareType;
 import org.opentripplanner.transit.model.basic.Money;
 import org.opentripplanner.transit.model.basic.TransitMode;
@@ -79,7 +80,8 @@ public class OrcaFareServiceTest {
    * types.
    */
   private static void calculateFare(List<Leg> legs, FareType fareType, Money expectedPrice) {
-    var itinerary = Itinerary.createScheduledTransitItinerary(legs);
+    RouteRequest request = new RouteRequest();
+    var itinerary = Itinerary.createScheduledTransitItinerary(legs, request);
     var itineraryFares = orcaFareService.calculateFares(itinerary);
     assertEquals(
       expectedPrice,
