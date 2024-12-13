@@ -10,6 +10,8 @@ import java.util.function.Predicate;
 import org.opentripplanner.model.plan.Itinerary;
 import org.opentripplanner.model.plan.StreetLeg;
 import org.opentripplanner.routing.algorithm.filterchain.filters.system.OutsideSearchWindowFilter;
+import org.opentripplanner.routing.algorithm.filterchain.filters.transit.RemoveBicycleTransitIfCyclingIsBetter;
+import org.opentripplanner.routing.algorithm.filterchain.filters.transit.RemoveCarTransitIfDrivingIsBetter;
 import org.opentripplanner.routing.algorithm.filterchain.filters.transit.RemoveTransitIfStreetOnlyIsBetter;
 import org.opentripplanner.routing.algorithm.filterchain.filters.transit.RemoveTransitIfWalkingIsBetter;
 import org.opentripplanner.routing.api.response.RoutingError;
@@ -56,10 +58,26 @@ public class RoutingErrorsAttacher {
           .getSystemNotices()
           .stream()
           .anyMatch(notice -> notice.tag().equals(RemoveTransitIfWalkingIsBetter.TAG));
+      Predicate<Itinerary> isWorseThanCycling = it ->
+        it
+          .getSystemNotices()
+          .stream()
+          .anyMatch(notice -> notice.tag().equals(RemoveBicycleTransitIfCyclingIsBetter.TAG));
+      Predicate<Itinerary> isWorseThanDriving = it ->
+        it
+          .getSystemNotices()
+          .stream()
+          .anyMatch(notice -> notice.tag().equals(RemoveCarTransitIfDrivingIsBetter.TAG));
       if (
         filteredItineraries
           .stream()
-          .allMatch(isOnStreetAllTheWay.or(isWorseThanStreet).or(isWorseThanWalking))
+          .allMatch(
+            isOnStreetAllTheWay
+              .or(isWorseThanStreet)
+              .or(isWorseThanWalking)
+              .or(isWorseThanCycling)
+              .or(isWorseThanDriving)
+          )
       ) {
         var nonTransitIsWalking = filteredItineraries
           .stream()

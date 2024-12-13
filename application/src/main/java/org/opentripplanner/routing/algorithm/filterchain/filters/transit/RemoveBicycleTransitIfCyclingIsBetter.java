@@ -5,6 +5,7 @@ import java.util.OptionalInt;
 import java.util.stream.Collectors;
 import org.opentripplanner.model.plan.Itinerary;
 import org.opentripplanner.routing.algorithm.filterchain.framework.spi.RemoveItineraryFlagger;
+import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.StreetMode;
 
 /**
@@ -44,9 +45,12 @@ public class RemoveBicycleTransitIfCyclingIsBetter implements RemoveItineraryFla
       .filter(it ->
         !it.isOnStreetAllTheWay() &&
         // Only if both access and egress modes are BIKE should the itinerary be filtered
+        it.getRequest() !=
+        null &&
         it.getRequest().journey().access().mode() == StreetMode.BIKE &&
         it.getRequest().journey().egress().mode() == StreetMode.BIKE &&
-        it.getGeneralizedCost() >= limit)
+        it.getGeneralizedCost() >= limit
+      )
       .collect(Collectors.toList());
   }
 

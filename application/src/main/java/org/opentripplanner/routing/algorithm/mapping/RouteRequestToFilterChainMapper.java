@@ -92,6 +92,8 @@ public class RouteRequestToFilterChainMapper {
       .withPageCursorInputSubscriber(pageCursorInputSubscriber)
       .withRemoveWalkAllTheWayResults(removeWalkAllTheWayResults)
       .withRemoveTransitIfWalkingIsBetter(true)
+      .withRemoveBicycleTransitIfCyclingIsBetter(true)
+      .withRemoveCarTransitIfDrivingIsBetter(true)
       .withFilterDirectFlexBySearchWindow(params.filterDirectFlexBySearchWindow())
       .withDebugEnabled(params.debug());
 

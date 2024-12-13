@@ -44,9 +44,12 @@ public class RemoveCarTransitIfDrivingIsBetter implements RemoveItineraryFlagger
       .filter(it ->
         !it.isOnStreetAllTheWay() &&
         // Only if both access and egress modes are CAR should the itinerary be filtered
+        it.getRequest() !=
+        null &&
         it.getRequest().journey().access().mode() == StreetMode.CAR &&
         it.getRequest().journey().egress().mode() == StreetMode.CAR &&
-        it.getGeneralizedCost() >= limit)
+        it.getGeneralizedCost() >= limit
+      )
       .collect(Collectors.toList());
   }
 

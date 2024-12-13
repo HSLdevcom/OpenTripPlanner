@@ -349,7 +349,7 @@ public class Itinerary implements ItinerarySortKey {
   }
 
   /**
-   * 
+   *
    * @return RouteRequest relevant to the itinerary, may be null if there is no RouteRequest associated with the itinerary
    */
   public RouteRequest getRequest() {

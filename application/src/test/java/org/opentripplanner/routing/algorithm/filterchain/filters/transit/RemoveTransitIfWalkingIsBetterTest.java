@@ -30,13 +30,13 @@ public class RemoveTransitIfWalkingIsBetterTest implements PlanTestConstants {
     // a walk itinerary
     Itinerary walk = newItinerary(A, 6).walk(D2m, E).build();
 
-    // a bicycle itinerary will not be filtered
+    // a bicycle itinerary that will not be filtered
     Itinerary bicycle = newItinerary(A).bicycle(6, 9, E).build();
 
-    // transit which has more walking as plain walk should be dropped
+    // a transit itinerary with more cost than the walk itinerary by itself should be dropped
     Itinerary i1 = newItinerary(A, 6).walk(D3m, D).bus(1, 9, 10, E).build();
 
-    // transit which has less walking than plain walk should be kept
+    // a transit itinerary with less cost than the walk itinerary by itself should be kept
     Itinerary i2 = newItinerary(A, 6).walk(D1m, B).bus(2, 7, 10, E).build();
 
     List<Itinerary> result = new RemoveTransitIfWalkingIsBetter()

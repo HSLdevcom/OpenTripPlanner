@@ -75,6 +75,7 @@ public class TestItineraryBuilder implements PlanTestConstants {
   private int c1 = 0;
   private int c2 = NOT_SET;
   private boolean isSearchWindowAware = true;
+  private RouteRequest request = new RouteRequest();
 
   private TestItineraryBuilder(Place origin, int startTime) {
     this.lastPlace = origin;
@@ -409,6 +410,11 @@ public class TestItineraryBuilder implements PlanTestConstants {
     return this;
   }
 
+  public TestItineraryBuilder withRequest(RouteRequest request) {
+    this.request = request;
+    return this;
+  }
+
   public Itinerary egress(int walkDuration) {
     walk(walkDuration, null);
     return build();
@@ -426,7 +432,6 @@ public class TestItineraryBuilder implements PlanTestConstants {
   public Itinerary build() {
     Itinerary itinerary;
     if (isSearchWindowAware) {
-      RouteRequest request = new RouteRequest();
       itinerary = Itinerary.createScheduledTransitItinerary(legs, request);
     } else {
       itinerary = Itinerary.createDirectItinerary(legs);

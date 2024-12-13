@@ -31,6 +31,8 @@ import org.opentripplanner.routing.algorithm.filterchain.filters.system.SingleCr
 import org.opentripplanner.routing.algorithm.filterchain.filters.system.mcmax.McMaxLimitFilter;
 import org.opentripplanner.routing.algorithm.filterchain.filters.transit.DecorateTransitAlert;
 import org.opentripplanner.routing.algorithm.filterchain.filters.transit.KeepItinerariesWithFewestTransfers;
+import org.opentripplanner.routing.algorithm.filterchain.filters.transit.RemoveBicycleTransitIfCyclingIsBetter;
+import org.opentripplanner.routing.algorithm.filterchain.filters.transit.RemoveCarTransitIfDrivingIsBetter;
 import org.opentripplanner.routing.algorithm.filterchain.filters.transit.RemoveItinerariesWithShortStreetLeg;
 import org.opentripplanner.routing.algorithm.filterchain.filters.transit.RemoveTransitIfStreetOnlyIsBetter;
 import org.opentripplanner.routing.algorithm.filterchain.filters.transit.RemoveTransitIfWalkingIsBetter;
@@ -88,6 +90,8 @@ public class ItineraryListFilterChainBuilder {
   private boolean removeItinerariesWithSameRoutesAndStops;
   private double minBikeParkingDistance;
   private boolean removeTransitIfWalkingIsBetter = true;
+  private boolean removeCarTransitIfDrivingIsBetter = true;
+  private boolean removeBicycleTransitIfCyclingIsBetter = true;
   private ItinerarySortKey itineraryPageCut;
   private boolean transitGroupPriorityUsed = false;
   private boolean filterDirectFlexBySearchWindow = true;
@@ -234,13 +238,35 @@ public class ItineraryListFilterChainBuilder {
   }
 
   /**
-   * A transit itinerary with higher generalized-cost than a walk-only itinerary is silly. This filter removes such
+   * A transit itinerary with a higher generalized-cost than a walk-only itinerary is silly. This filter removes such
    * itineraries.
    * <p>
-   * This filter only have an effect, if a walk-all-the-way itinerary exist.
+   * This filter only has an effect if a walk-all-the-way itinerary exists.
    */
   public ItineraryListFilterChainBuilder withRemoveTransitIfWalkingIsBetter(boolean value) {
     this.removeTransitIfWalkingIsBetter = value;
+    return this;
+  }
+
+  /**
+   * A bicycle transit itinerary with a higher generalized-cost than a bicycle-only itinerary is silly. This filter removes such
+   * itineraries.
+   * <p>
+   * This filter only has an effect if a bicycle-all-the-way itinerary exists.
+   */
+  public ItineraryListFilterChainBuilder withRemoveBicycleTransitIfCyclingIsBetter(boolean value) {
+    this.removeBicycleTransitIfCyclingIsBetter = value;
+    return this;
+  }
+
+  /**
+   * A car transit itinerary with a higher generalized-cost than a car-only itinerary is silly. This filter removes such
+   * itineraries.
+   * <p>
+   * This filter only has an effect if a car-all-the-way itinerary exists.
+   */
+  public ItineraryListFilterChainBuilder withRemoveCarTransitIfDrivingIsBetter(boolean value) {
+    this.removeCarTransitIfDrivingIsBetter = value;
     return this;
   }
 
@@ -441,6 +467,14 @@ public class ItineraryListFilterChainBuilder {
 
       if (removeTransitIfWalkingIsBetter) {
         addRemoveFilter(filters, new RemoveTransitIfWalkingIsBetter());
+      }
+
+      if (removeBicycleTransitIfCyclingIsBetter) {
+        addRemoveFilter(filters, new RemoveBicycleTransitIfCyclingIsBetter());
+      }
+
+      if (removeCarTransitIfDrivingIsBetter) {
+        addRemoveFilter(filters, new RemoveCarTransitIfDrivingIsBetter());
       }
 
       if (removeWalkAllTheWayResults) {
