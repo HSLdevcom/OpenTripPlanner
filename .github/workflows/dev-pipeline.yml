@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - dev-2.x
-      - javatest
 jobs:
   test:
     runs-on: ubuntu-latest
