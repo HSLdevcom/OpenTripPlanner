@@ -29,4 +29,4 @@ jobs:
           DOCKER_USER: ${{ secrets.DOCKER_USER }}
           DOCKER_AUTH: ${{ secrets.DOCKER_AUTH }}
           DOCKER_BASE_TAG: v2-prod
-          DOCKER_DEV_TAG: v2
+          DOCKER_DEV_TAG: ${{ github.event.release.target_commitish }}
