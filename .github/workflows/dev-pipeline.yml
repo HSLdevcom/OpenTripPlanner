@@ -47,7 +47,7 @@ jobs:
           node-version: 18
       - name: Build container image with Jib, push to Dockerhub
         env:
-          CONTAINER_REPO: docker.io/hsldevcom/opentripplanner:v2
+          CONTAINER_REPO: docker.io/hsldevcom/opentripplanner:${{ github.ref_name }}
           CONTAINER_REGISTRY_USER: ${{ secrets.DOCKER_USER }}
           CONTAINER_REGISTRY_PASSWORD: ${{ secrets.DOCKER_AUTH }}
         run: |
