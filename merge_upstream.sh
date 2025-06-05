@@ -9,12 +9,12 @@
 #     git config checkout.defaultRemote origin
 # First fetch the upstream: git fetch otp
 # Then run ./merge_upstream.sh otp/dev-2.x
-# The result is that updated dev-2.x is pushed to our fork and gets deployed to development.
+# The result is that updated dev-2.x is pushed to our fork and gets deployed to development (v2 branch).
 # You can test the merge as follows:   ./merge_upstream.sh --dryRun otp/dev-2.x
 
 #set -euo pipefail
 
-DEVBRANCH=dev-2.x
+DEVBRANCH=v2
 REMOTE_REPO=$(git remote -v  | grep -i "hsldevcom/OpenTripPlanner" | grep "push" | awk '{print $1;}')
 STATUS_FILE=".merge_upstream.tmp"
 STATUS=""
