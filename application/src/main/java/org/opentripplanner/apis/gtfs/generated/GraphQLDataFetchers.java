@@ -916,8 +916,6 @@ public class GraphQLDataFetchers {
   public interface GraphQLRentalVehicle {
     public DataFetcher<Boolean> allowPickupNow();
 
-    public DataFetcher<OffsetDateTime> availableUntil();
-
     public DataFetcher<RentalVehicleFuel> fuel();
 
     public DataFetcher<graphql.relay.Relay.ResolvedGlobalId> id();

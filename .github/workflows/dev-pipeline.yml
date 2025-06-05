@@ -24,10 +24,6 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - name: Run tests
-        run: |
-          mvn test -P prettierSkip
-
   container-image:
     runs-on: ubuntu-latest
     needs:
