@@ -2,7 +2,7 @@ name: Process push
 on:
   push:
     branches:
-      - dev-2.x
+      - v2
       - custom-release
 jobs:
   test:
