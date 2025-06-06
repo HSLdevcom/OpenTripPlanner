@@ -329,7 +329,7 @@
                         </ports>
                     </container>
                     <from>
-                        <image>eclipse-temurin:21-jre</image>
+                        <image>azul/zulu-openjdk:24</image>
                         <platforms>
                             <platform>
                                 <architecture>amd64</architecture>
