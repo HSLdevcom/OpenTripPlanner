@@ -1,4 +1,4 @@
-[![Build](https://github.com/hsldevcom/opentripplanner/workflows/Process%20dev-2.x%20push%20or%20pr/badge.svg?branch=master)](https://github.com/HSLdevcom/opentripplanner/actions)
+[![Build](https://github.com/HSLdevcom/OpenTripPlanner/actions/workflows/dev-pipeline.yml/badge.svg)](https://github.com/HSLdevcom/OpenTripPlanner/actions/workflows/dev-pipeline.yml)
 
 ## Overview
 
