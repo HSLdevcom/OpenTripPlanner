@@ -103,7 +103,7 @@ public class MqttGtfsRealtimeUpdater implements GraphUpdater {
     Mqtt5AsyncClient asyncClient = Mqtt5Client.builder()
       .identifier("OpenTripPlanner-" + UUID.randomUUID())
       .serverHost(parsedUrl.getHost())
-      .serverPort(parsedUrl.getPort())
+      // .serverPort(parsedUrl.getPort())
       .simpleAuth(auth)
       .automaticReconnectWithDefaultConfig()
       .addConnectedListener(ctx -> onConnect())
