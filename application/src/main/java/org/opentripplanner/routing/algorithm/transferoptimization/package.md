@@ -39,13 +39,11 @@ those paths (the post-processing).
     3. For a transfer between two trips we want to find the right balance, between
        extra-transfer-time and the path generalized-cost(like the cost of walking and riding a bus).
 
-## Not Supported (jet)
+## Not Supported
 
-- Using GTFS transfers.txt it is possible to set the `min_transfer_time` with `transfer_type = 2`.
-  See issue [#3369](https://github.com/opentripplanner/OpenTripPlanner/issues/3369)
-- The NeTEx Interchange MaximumWaitTime is ignored.
-- Transfer not-allowed at location. See
-  issue [#3505](https://github.com/opentripplanner/OpenTripPlanner/issues/3505).
+- The NeTEx Interchange MaximumWaitTime is ignored. Real-time feed is responsible for making the
+  transfer possible. If not, OTP will not suggest the transfer even though it is marked as
+  guaranteed.
 - Support for Trip matching when only Route is specified in transfers.txt. See
   issue [#3429](https://github.com/opentripplanner/OpenTripPlanner/issues/3429)
 
