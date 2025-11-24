@@ -1,7 +1,6 @@
 package org.opentripplanner.routing.algorithm.raptoradapter.router.street;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.Optional;
 import org.locationtech.jts.geom.Coordinate;
 import org.opentripplanner.framework.application.OTPRequestTimeoutException;
 import org.opentripplanner.model.GenericLocation;
@@ -26,27 +25,27 @@ public abstract class DirectStreetRouter {
   /**
    * @return direct street itineraries.
    */
-  public List<Itinerary> route(
+  public Optional<Itinerary> route(
     OtpServerRequestContext serverContext,
     RouteRequest request,
     LinkingContext linkingContext
   ) {
     if (isRequestValidForRouting(request)) {
-      return Collections.emptyList();
+      return Optional.empty();
     }
     OTPRequestTimeoutException.checkForTimeout();
 
     var maxCarSpeed = serverContext.streetLimitationParametersService().maxCarSpeed();
     var maxDistanceLimit = calculateDistanceMaxLimit(request, maxCarSpeed);
     if (!isStraightLineDistanceIsWithinLimit(linkingContext, request, maxDistanceLimit)) {
-      return Collections.emptyList();
+      return Optional.empty();
     }
 
     try {
-      var paths = findPaths(serverContext, linkingContext, request, maxCarSpeed);
-      return mapToItineraries(serverContext, request, paths);
+      var path = findPath(serverContext, linkingContext, request, maxCarSpeed);
+      return mapToItinerary(serverContext, request, path);
     } catch (PathNotFoundException e) {
-      return Collections.emptyList();
+      return Optional.empty();
     }
   }
 
@@ -66,9 +65,9 @@ public abstract class DirectStreetRouter {
   );
 
   /**
-   * Find graph paths between the locations in the request.
+   * Find a graph path between the locations in the request.
    */
-  abstract List<StreetPath> findPaths(
+  abstract StreetPath findPath(
     OtpServerRequestContext serverContext,
     LinkingContext linkingContext,
     RouteRequest request,
@@ -108,10 +107,10 @@ public abstract class DirectStreetRouter {
     throw new IllegalStateException("Could not set max limit for StreetMode");
   }
 
-  private static List<Itinerary> mapToItineraries(
+  private static Optional<Itinerary> mapToItinerary(
     OtpServerRequestContext serverContext,
     RouteRequest request,
-    List<StreetPath> paths
+    StreetPath path
   ) {
     final GraphPathToItineraryMapper graphPathToItineraryMapper = new GraphPathToItineraryMapper(
       new TransitServiceResolver(serverContext.transitService()),
@@ -120,11 +119,13 @@ public abstract class DirectStreetRouter {
       serverContext.streetDetailsService(),
       serverContext.graph().ellipsoidToGeoidDifference
     );
-    List<Itinerary> response = graphPathToItineraryMapper.mapItineraries(paths, request);
-    return ItinerariesHelper.decorateItinerariesWithRequestData(
-      response,
-      request.journey().wheelchair(),
-      request.preferences().wheelchair()
+    var response = graphPathToItineraryMapper.mapToItinerary(path, request);
+    return response.map(itinerary ->
+      ItinerariesHelper.decorateItineraryWithRequestData(
+        itinerary,
+        request.journey().wheelchair(),
+        request.preferences().wheelchair()
+      )
     );
   }
 }

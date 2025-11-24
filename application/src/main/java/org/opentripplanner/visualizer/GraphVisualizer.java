@@ -531,7 +531,7 @@ public class GraphVisualizer extends JFrame implements VertexSelectionListener {
       );
       var linkingRequest = LinkingContextRequestMapper.map(request);
       var linkingContext = linkingContextFactory.create(temporaryVerticesContainer, linkingRequest);
-      List<StreetPath> paths = finder.graphPathFinderEntryPoint(request, linkingContext);
+      StreetPath path = finder.graphPathFinderEntryPoint(request, linkingContext);
       long dt = System.currentTimeMillis() - t0;
       searchTimeElapsedLabel.setText("search time elapsed: " + dt + "ms");
 
@@ -544,7 +544,7 @@ public class GraphVisualizer extends JFrame implements VertexSelectionListener {
             System.out.println( "got spt:"+spt );
             */
 
-      if (paths == null) {
+      if (path == null) {
         System.out.println("no path");
         showGraph.highlightStreetPath(null);
         return;
@@ -553,7 +553,7 @@ public class GraphVisualizer extends JFrame implements VertexSelectionListener {
       // now's a convenient time to set graphical SPT weights
       showGraph.simpleSPT.setWeights();
 
-      showPathsInPanel(paths);
+      showPathsInPanel(List.of(path));
 
       // now's a good time to set showGraph's SPT drawing weights
       showGraph.setSPTFlattening(Float.parseFloat(sptFlattening.getText()));
