@@ -24,7 +24,7 @@ import org.opentripplanner.routing.algorithm.raptoradapter.router.AdditionalSear
 import org.opentripplanner.routing.algorithm.raptoradapter.router.FilterTransitWhenDirectModeIsEmpty;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.TransitRouter;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.DirectFlexRouter;
-import org.opentripplanner.routing.algorithm.raptoradapter.router.street.DirectStreetRouter;
+import org.opentripplanner.routing.algorithm.raptoradapter.router.street.DefaultDirectStreetRouter;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.StreetMode;
 import org.opentripplanner.routing.api.request.request.StreetRequest;
@@ -245,7 +245,7 @@ public class RoutingWorker {
     debugTimingAggregator.startedDirectStreetRouter();
     try {
       return RoutingResult.ok(
-        DirectStreetRouter.route(serverContext, directBuilder.buildRequest(), linkingContext()),
+        DefaultDirectStreetRouter.route(serverContext, directBuilder.buildRequest(), linkingContext()),
         emptyDirectModeHandler.removeWalkAllTheWayResults()
       );
     } catch (RoutingValidationException e) {
