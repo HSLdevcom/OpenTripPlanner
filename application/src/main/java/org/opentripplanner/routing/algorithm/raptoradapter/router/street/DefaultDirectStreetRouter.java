@@ -1,6 +1,5 @@
 package org.opentripplanner.routing.algorithm.raptoradapter.router.street;
 
-import java.util.List;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.impl.GraphPathFinder;
 import org.opentripplanner.routing.linking.LinkingContext;
@@ -16,7 +15,7 @@ import org.opentripplanner.street.model.path.StreetPath;
 public class DefaultDirectStreetRouter extends DirectStreetRouter {
 
   @Override
-  List<StreetPath> findPaths(
+  StreetPath findPath(
     OtpServerRequestContext serverContext,
     LinkingContext linkingContext,
     RouteRequest request,
