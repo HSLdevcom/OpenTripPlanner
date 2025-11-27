@@ -131,6 +131,17 @@ public class PlanPlaceType {
           )
           .build()
       )
+      .field(
+        GraphQLFieldDefinition.newFieldDefinition()
+          .name("viaLocationType")
+          .type(EnumTypes.VIA_LOCATION_TYPE)
+          .description(
+            "If this place was used as a via location in the request, this defines " +
+            "what type of a via location this place is."
+          )
+          .dataFetcher(environment -> ((Place) environment.getSource()).viaLocationType)
+          .build()
+      )
       //                .field(GraphQLFieldDefinition.newFieldDefinition()
       //                        .name("bikePark")
       //                        .type(bikeParkType)

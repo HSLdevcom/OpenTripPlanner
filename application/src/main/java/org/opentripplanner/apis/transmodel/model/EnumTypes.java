@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.function.Function;
 import org.opentripplanner.framework.doc.DocumentedEnum;
 import org.opentripplanner.model.plan.VertexType;
+import org.opentripplanner.model.plan.leg.ViaLocationType;
 import org.opentripplanner.model.plan.walkstep.AbsoluteDirection;
 import org.opentripplanner.model.plan.walkstep.RelativeDirection;
 import org.opentripplanner.model.transfer.TransferPriority;
@@ -461,6 +462,22 @@ public class EnumTypes {
     .value("bikePark", VertexType.VEHICLEPARKING)
     .value("bikeShare", VertexType.VEHICLERENTAL)
     //TODO QL: .value("parkAndRide", VertexType.PARKANDRIDE)
+    .build();
+
+  public static final GraphQLEnumType VIA_LOCATION_TYPE = GraphQLEnumType.newEnum()
+    .name("ViaLocationType")
+    .value(
+      "passThrough",
+      ViaLocationType.PASS_THROUGH,
+      "Stop location must be " +
+      "visited on-board a transit vehicle or the journey must alight or board at the location."
+    )
+    .value(
+      "visit",
+      ViaLocationType.VISIT,
+      "Location is a stop location where the " +
+      "passenger boards a vehicle or alights from a vehicle, or a coordinate which is visited."
+    )
     .build();
 
   public static final GraphQLEnumType WHEELCHAIR_BOARDING = GraphQLEnumType.newEnum()

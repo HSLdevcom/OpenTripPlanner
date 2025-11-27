@@ -527,6 +527,8 @@ type Place {
   rentalVehicle: RentalVehicle
   "Type of vertex. (Normal, Bike sharing station, Bike P+R, Transit quay) Mostly used for better localization of bike sharing and P+R station names"
   vertexType: VertexType
+  "If this place was used as a via location in the request, this defines what type of a via location this place is."
+  viaLocationType: ViaLocationType
 }
 
 type PlaceAtDistance {
@@ -2077,6 +2079,13 @@ enum VertexType {
   bikeShare
   normal
   transit
+}
+
+enum ViaLocationType {
+  "Stop location must be visited on-board a transit vehicle or the journey must alight or board at the location."
+  passThrough
+  "Location is a stop location where the passenger boards a vehicle or alights from a vehicle, or a coordinate which is visited."
+  visit
 }
 
 enum WheelchairBoarding {
