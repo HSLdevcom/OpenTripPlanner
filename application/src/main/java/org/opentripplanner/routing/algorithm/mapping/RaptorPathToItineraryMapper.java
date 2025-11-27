@@ -253,6 +253,18 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
         )
         .withTransferToNextLeg((ConstrainedTransfer) pathLeg.getConstrainedTransferAfterLeg())
         .withGeneralizedCost(toOtpDomainCost(pathLeg.c1() + lastLegCost))
+        .withFromViaLocationType(
+          ViaLocationTypeMapper.map(
+            request,
+            tripSchedule.getOriginalTripPattern().getStop(boardStopIndexInPattern)
+          )
+        )
+        .withToViaLocationType(
+          ViaLocationTypeMapper.map(
+            request,
+            tripSchedule.getOriginalTripPattern().getStop(alightStopIndexInPattern)
+          )
+        )
         .withFrequencyHeadwayInSeconds(frequencyHeadwayInSeconds)
         .build();
     }
@@ -275,6 +287,18 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
       )
       .withTransferToNextLeg((ConstrainedTransfer) pathLeg.getConstrainedTransferAfterLeg())
       .withGeneralizedCost(toOtpDomainCost(pathLeg.c1() + lastLegCost))
+      .withFromViaLocationType(
+        ViaLocationTypeMapper.map(
+          request,
+          tripSchedule.getOriginalTripPattern().getStop(boardStopIndexInPattern)
+        )
+      )
+      .withToViaLocationType(
+        ViaLocationTypeMapper.map(
+          request,
+          tripSchedule.getOriginalTripPattern().getStop(alightStopIndexInPattern)
+        )
+      )
       .build();
   }
 
@@ -414,7 +438,7 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
     }
     State[] states = transferStates.toArray(State[]::new);
     var graphPath = new GraphPath<>(states[states.length - 1]);
-    var subItinerary = graphPathToItineraryMapper.generateItinerary(graphPath);
+    var subItinerary = graphPathToItineraryMapper.generateItinerary(graphPath, request);
     return subItinerary.legs();
   }
 
@@ -460,7 +484,7 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
       .findOriginal(RoutingAccessEgress.class)
       .map(RoutingAccessEgress::getLastState)
       .map(GraphPath::new)
-      .map(graphPathToItineraryMapper::generateItinerary)
+      .map(path -> graphPathToItineraryMapper.generateItinerary(path, request))
       .orElseThrow();
   }
 

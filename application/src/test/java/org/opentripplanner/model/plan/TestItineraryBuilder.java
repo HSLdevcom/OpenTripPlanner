@@ -93,7 +93,7 @@ public class TestItineraryBuilder implements PlanTestConstants {
   }
 
   /**
-   * Create a new itinerary that start by waling from a place - the origin.
+   * Create a new itinerary that start by walking from a place - the origin.
    */
   public static TestItineraryBuilder newItinerary(Place origin, int startTime) {
     return new TestItineraryBuilder(origin, startTime);
@@ -567,6 +567,7 @@ public class TestItineraryBuilder implements PlanTestConstants {
         .withGeneralizedCost(legCost)
         .withDistanceMeters(distance)
         .withFrequencyHeadwayInSeconds(headwaySecs)
+        .withToViaLocationType(to.viaLocationType)
         .build();
     } else {
       leg = new ScheduledTransitLegBuilder()
@@ -581,6 +582,7 @@ public class TestItineraryBuilder implements PlanTestConstants {
         .withTransferFromPreviousLeg(transferFromPreviousLeg)
         .withGeneralizedCost(legCost)
         .withDistanceMeters(distance)
+        .withToViaLocationType(to.viaLocationType)
         .build();
     }
 

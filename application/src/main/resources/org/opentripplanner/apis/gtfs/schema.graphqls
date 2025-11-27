@@ -1104,6 +1104,11 @@ type Place {
   used for better localization of bike sharing and P+R station names
   """
   vertexType: VertexType @deprecated(reason : "Unmaintained. Use `stop`, `rentalVehicle`, `vehicleParking` or `vehicleRentalStation` to tell which type it is.") @timingData
+  """
+  If this place was used as a via location in the request, this defines what type of a via location
+  this place is.
+  """
+  viaLocationType: ViaLocationType
 }
 
 type Plan {
@@ -3920,6 +3925,20 @@ enum VertexType {
   PARKANDRIDE
   "TRANSIT"
   TRANSIT
+}
+
+"Categorization for via locations."
+enum ViaLocationType {
+  """
+  Stop location must be visited on-board a transit vehicle or the journey must alight or board at
+  the location.
+  """
+  PASS_THROUGH
+  """
+  Location is a stop location where the passenger boards a vehicle or alights from a vehicle,
+  or a coordinate which is visited.
+  """
+  VISIT
 }
 
 enum WheelchairBoarding {

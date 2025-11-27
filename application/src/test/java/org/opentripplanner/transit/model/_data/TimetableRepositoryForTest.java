@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Polygon;
 import org.opentripplanner._support.geometry.Coordinates;
@@ -18,6 +19,7 @@ import org.opentripplanner.framework.i18n.NonLocalizedString;
 import org.opentripplanner.model.PickDrop;
 import org.opentripplanner.model.StopTime;
 import org.opentripplanner.model.plan.Place;
+import org.opentripplanner.model.plan.leg.ViaLocationType;
 import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.framework.FeedScopedId;
 import org.opentripplanner.transit.model.network.GroupOfRoutes;
@@ -220,14 +222,22 @@ public class TimetableRepositoryForTest {
     return stopTime;
   }
 
-  public Place place(String name, Consumer<RegularStopBuilder> stopBuilder) {
+  public Place place(
+    String name,
+    Consumer<RegularStopBuilder> stopBuilder,
+    @Nullable ViaLocationType viaLocationType
+  ) {
     var stop = stop(name);
     stopBuilder.accept(stop);
-    return Place.forStop(stop.build());
+    return Place.forStop(stop.build(), viaLocationType);
+  }
+
+  public Place place(String name, Consumer<RegularStopBuilder> stopBuilder) {
+    return place(name, stopBuilder, null);
   }
 
   public Place place(String name, double lat, double lon) {
-    return place(name, b -> b.withCoordinate(lat, lon));
+    return place(name, b -> b.withCoordinate(lat, lon), null);
   }
 
   /**

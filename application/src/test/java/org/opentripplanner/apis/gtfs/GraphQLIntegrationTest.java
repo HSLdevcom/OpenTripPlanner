@@ -26,7 +26,6 @@ import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,7 +41,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.locationtech.jts.geom.Coordinate;
 import org.opentripplanner._support.text.I18NStrings;
-import org.opentripplanner._support.time.ZoneIds;
 import org.opentripplanner.ext.fares.ItineraryFaresDecorator;
 import org.opentripplanner.ext.fares.impl.gtfs.DefaultFareService;
 import org.opentripplanner.framework.geometry.WgsCoordinate;
@@ -62,6 +60,7 @@ import org.opentripplanner.model.plan.Itinerary;
 import org.opentripplanner.model.plan.Leg;
 import org.opentripplanner.model.plan.Place;
 import org.opentripplanner.model.plan.leg.ScheduledTransitLeg;
+import org.opentripplanner.model.plan.leg.ViaLocationType;
 import org.opentripplanner.model.plan.walkstep.RelativeDirection;
 import org.opentripplanner.model.plan.walkstep.WalkStep;
 import org.opentripplanner.model.plan.walkstep.WalkStepBuilder;
@@ -122,8 +121,10 @@ class GraphQLIntegrationTest {
   private static final Station OMEGA = TEST_MODEL.station("Omega").build();
   private static final Place A = TEST_MODEL.place("A", 5.0, 8.0);
   private static final Place B = TEST_MODEL.place("B", 6.0, 8.5);
-  private static final Place C = TEST_MODEL.place("C", builder ->
-    builder.withParentStation(OMEGA).withCoordinate(7.0, 9.0)
+  private static final Place C = TEST_MODEL.place(
+    "C",
+    builder -> builder.withParentStation(OMEGA).withCoordinate(7.0, 9.0),
+    ViaLocationType.PASS_THROUGH
   );
   private static final Place D = TEST_MODEL.place("D", 8.0, 9.5);
   private static final Place E = TEST_MODEL.place("E", 9.0, 10.0);
@@ -137,7 +138,6 @@ class GraphQLIntegrationTest {
   private static final Route ROUTE = TimetableRepositoryForTest.route("a-route").build();
   private static final String ADDED_TRIP_ID = "ADDED_TRIP";
   private static final String REPLACEMENT_TRIP_ID = "REPLACEMENT_TRIP";
-  public static final ZoneId TIME_ZONE = ZoneIds.BERLIN;
   public static final String FEED_ID = TimetableRepositoryForTest.FEED_ID;
 
   private static final VehicleRentalStation VEHICLE_RENTAL_STATION =
