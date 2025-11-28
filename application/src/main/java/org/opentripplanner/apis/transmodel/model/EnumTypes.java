@@ -466,17 +466,19 @@ public class EnumTypes {
 
   public static final GraphQLEnumType VIA_LOCATION_TYPE = GraphQLEnumType.newEnum()
     .name("ViaLocationType")
+    .description("Categorization for via locations.")
     .value(
       "passThrough",
       ViaLocationType.PASS_THROUGH,
-      "Stop location must be " +
-      "visited on-board a transit vehicle or the journey must alight or board at the location."
+      "The via stop location must be visited as part of a transit trip as at the " +
+      "boarding stop, the intermediate stop, or the alighting stop."
     )
     .value(
       "visit",
       ViaLocationType.VISIT,
-      "Location is a stop location where the " +
-      "passenger boards a vehicle or alights from a vehicle, or a coordinate which is visited."
+      "The location is visited physically by boarding or alighting a transit trip at " +
+      "a given stop, or by traveling to a requested coordinate location. Intermediate stops " +
+      "visited on-board do not count."
     )
     .build();
 

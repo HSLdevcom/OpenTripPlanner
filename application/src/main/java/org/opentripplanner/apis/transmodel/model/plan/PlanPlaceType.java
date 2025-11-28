@@ -136,8 +136,8 @@ public class PlanPlaceType {
           .name("viaLocationType")
           .type(EnumTypes.VIA_LOCATION_TYPE)
           .description(
-            "If this place was used as a via location in the request, this defines " +
-            "what type of a via location this place is."
+            "This defines if the place is a requested via location, and what kind it is. If the " +
+            "value is `null`, this place is not a via location."
           )
           .dataFetcher(environment -> ((Place) environment.getSource()).viaLocationType)
           .build()

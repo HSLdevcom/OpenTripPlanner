@@ -527,7 +527,7 @@ type Place {
   rentalVehicle: RentalVehicle
   "Type of vertex. (Normal, Bike sharing station, Bike P+R, Transit quay) Mostly used for better localization of bike sharing and P+R station names"
   vertexType: VertexType
-  "If this place was used as a via location in the request, this defines what type of a via location this place is."
+  "This defines if the place is a requested via location, and what kind it is. If the value is `null`, this place is not a via location."
   viaLocationType: ViaLocationType
 }
 
@@ -2081,10 +2081,11 @@ enum VertexType {
   transit
 }
 
+"Categorization for via locations."
 enum ViaLocationType {
-  "Stop location must be visited on-board a transit vehicle or the journey must alight or board at the location."
+  "The via stop location must be visited as part of a transit trip as at the boarding stop, the intermediate stop, or the alighting stop."
   passThrough
-  "Location is a stop location where the passenger boards a vehicle or alights from a vehicle, or a coordinate which is visited."
+  "The location is visited physically by boarding or alighting a transit trip at a given stop, or by traveling to a requested coordinate location. Intermediate stops visited on-board do not count."
   visit
 }
 

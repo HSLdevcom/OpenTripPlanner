@@ -1105,8 +1105,8 @@ type Place {
   """
   vertexType: VertexType @deprecated(reason : "Unmaintained. Use `stop`, `rentalVehicle`, `vehicleParking` or `vehicleRentalStation` to tell which type it is.") @timingData
   """
-  If this place was used as a via location in the request, this defines what type of a via location
-  this place is.
+  This defines if the place is a requested via location, and what kind it is. If the value is
+  `null`, this place is not a via location.
   """
   viaLocationType: ViaLocationType
 }
@@ -3930,13 +3930,13 @@ enum VertexType {
 "Categorization for via locations."
 enum ViaLocationType {
   """
-  Stop location must be visited on-board a transit vehicle or the journey must alight or board at
-  the location.
+  The via stop location must be visited as part of a transit trip as at the boarding stop, the
+  intermediate stop, or the alighting stop.
   """
   PASS_THROUGH
   """
-  Location is a stop location where the passenger boards a vehicle or alights from a vehicle,
-  or a coordinate which is visited.
+  The location is visited physically by boarding or alighting a transit trip at a given stop, or by
+  traveling to a requested coordinate location. Intermediate stops visited on-board do not count.
   """
   VISIT
 }
