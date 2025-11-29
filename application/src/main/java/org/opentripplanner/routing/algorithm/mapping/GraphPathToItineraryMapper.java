@@ -11,7 +11,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import org.locationtech.jts.geom.Coordinate;
-import org.opentripplanner.astar.model.GraphPath;
 import org.opentripplanner.core.model.basic.Cost;
 import org.opentripplanner.core.model.i18n.I18NString;
 import org.opentripplanner.ext.flex.FlexibleTransitLeg;
@@ -35,6 +34,7 @@ import org.opentripplanner.street.model.edge.Edge;
 import org.opentripplanner.street.model.edge.StreetEdge;
 import org.opentripplanner.street.model.edge.VehicleParkingEdge;
 import org.opentripplanner.street.model.note.StreetNote;
+import org.opentripplanner.street.model.path.ElevationChange;
 import org.opentripplanner.street.model.path.StreetPath;
 import org.opentripplanner.street.model.vertex.StreetVertex;
 import org.opentripplanner.street.model.vertex.TemporaryStreetLocation;
@@ -98,10 +98,17 @@ public class GraphPathToItineraryMapper {
   }
 
   /**
-   * Generates a TripPlan from a path
+   * Generates a TripPlan from a path.
    */
   public Optional<Itinerary> mapToItinerary(StreetPath path, RouteRequest request) {
-    Itinerary itinerary = generateItinerary(path, request);
+    return mapToItinerary(List.of(path), request);
+  }
+
+  /**
+   * Generates a TripPlan from a set of paths. Each path generates a leg in the itinerary.
+   */
+  public Optional<Itinerary> mapToItinerary(List<StreetPath> paths, RouteRequest request) {
+    Itinerary itinerary = generateItinerary(paths, request);
     if (itinerary.legs().isEmpty()) {
       return Optional.empty();
     }
@@ -109,42 +116,63 @@ public class GraphPathToItineraryMapper {
     return Optional.of(itinerary);
   }
 
+  public Itinerary generateItinerary(StreetPath path, RouteRequest request) {
+    return generateItinerary(List.of(path), request);
+  }
+
   /**
-   * Generate an itinerary from a {@link GraphPath}. This method first slices the list of states at
-   * the leg boundaries. These smaller state arrays are then used to generate legs.
+   * Generate an itinerary from a list {@link StreetPath}s. Each path generates one more or more
+   * legs. This method first slices the list of states at the leg boundaries. These smaller state
+   * arrays are then used to generate legs.
    *
-   * @param path The graph path to base the itinerary on
+   * @param paths The graph paths to base the itinerary on
    * @return The generated itinerary
    */
-  public Itinerary generateItinerary(StreetPath path, RouteRequest request) {
+  public Itinerary generateItinerary(List<StreetPath> paths, RouteRequest request) {
     List<Leg> legs = new ArrayList<>();
-    WalkStep previousStep = null;
-    for (var subPath : slicePath(path)) {
-      if (
-        OTPFeature.FlexRouting.isOn() && subPath.states().get(1).backEdge instanceof FlexTripEdge
-      ) {
-        legs.add(generateFlexLeg(subPath));
-        previousStep = null;
-        continue;
-      }
-      StreetLeg leg = generateLeg(subPath, previousStep, request);
-      legs.add(leg);
+    for (StreetPath path : paths) {
+      WalkStep previousStep = null;
+      for (var subPath : slicePath(path)) {
+        if (
+          OTPFeature.FlexRouting.isOn() && subPath.states().get(1).backEdge instanceof FlexTripEdge
+        ) {
+          legs.add(generateFlexLeg(subPath));
+          previousStep = null;
+          continue;
+        }
+        StreetLeg leg = generateLeg(subPath, previousStep, request);
+        legs.add(leg);
 
-      List<WalkStep> walkSteps = leg.listWalkSteps();
-      if (!walkSteps.isEmpty()) {
-        previousStep = walkSteps.getLast();
-      } else {
-        previousStep = null;
+        List<WalkStep> walkSteps = leg.listWalkSteps();
+        if (!walkSteps.isEmpty()) {
+          previousStep = walkSteps.getLast();
+        } else {
+          previousStep = null;
+        }
       }
     }
 
-    var cost = Cost.costOfSeconds(path.lastState().weight);
+    var cost = Cost.costOfSeconds(
+      paths
+        .stream()
+        .mapToDouble(path -> path.lastState().weight)
+        .sum()
+    );
     var builder = Itinerary.ofDirect(legs).withGeneralizedCost(cost);
 
     builder.withArrivedAtDestinationWithRentedVehicle(
-      path.lastState().isRentingVehicleFromStation()
+      paths.getLast().lastState().isRentingVehicleFromStation()
     );
-    builder.addElevationChange(path.calculateElevations());
+    // TODO maybe do something about this
+    var elevationGained = paths
+      .stream()
+      .mapToDouble(path -> path.calculateElevations().elevationGainedMeters())
+      .sum();
+    var elevationLost = paths
+      .stream()
+      .mapToDouble(path -> path.calculateElevations().elevationLostMeters())
+      .sum();
+    builder.addElevationChange(new ElevationChange(elevationGained, elevationLost));
 
     return builder.build();
   }
