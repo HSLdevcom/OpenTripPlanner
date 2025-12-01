@@ -27,7 +27,7 @@ import org.opentripplanner.transit.model.framework.FeedScopedId;
 import org.opentripplanner.transit.service.DefaultTransitService;
 import org.opentripplanner.transit.service.TimetableRepository;
 
-class AccessEgressRouterTest extends GraphRoutingTest {
+class DefaultAccessEgressRouterTest extends GraphRoutingTest {
 
   private Graph graph;
   private TimetableRepository timetableRepository;
@@ -264,7 +264,7 @@ class AccessEgressRouterTest extends GraphRoutingTest {
       var linkingRequest = LinkingContextRequestMapper.map(request);
       var linkingContext = linkingContextFactory.create(verticesContainer, linkingRequest);
 
-      return new AccessEgressRouter(
+      return new DefaultAccessEgressRouter(
         new SiteRepositoryResolver(timetableRepository.getSiteRepository())
       ).findAccessEgresses(
         request,

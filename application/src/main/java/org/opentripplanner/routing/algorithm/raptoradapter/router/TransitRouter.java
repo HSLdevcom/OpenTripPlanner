@@ -23,9 +23,9 @@ import org.opentripplanner.raptor.api.response.RaptorResponse;
 import org.opentripplanner.raptor.spi.ExtraMcRouterSearch;
 import org.opentripplanner.routing.algorithm.mapping.RaptorPathToItineraryMapper;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgressPenaltyDecorator;
-import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgressRouter;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgressType;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgresses;
+import org.opentripplanner.routing.algorithm.raptoradapter.router.street.DefaultAccessEgressRouter;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.FlexAccessEgressRouter;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.RaptorTransitData;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.RoutingAccessEgress;
@@ -63,7 +63,7 @@ public class TransitRouter {
   private final AdditionalSearchDays additionalSearchDays;
   private final ViaCoordinateTransferFactory viaTransferResolver;
   private final LinkingContext linkingContext;
-  private final AccessEgressRouter accessEgressRouter;
+  private final DefaultAccessEgressRouter accessEgressRouter;
 
   private TransitRouter(
     RouteRequest request,
@@ -82,7 +82,7 @@ public class TransitRouter {
     this.debugTimingAggregator = debugTimingAggregator;
     this.viaTransferResolver = serverContext.viaTransferResolver();
     this.linkingContext = linkingContext;
-    this.accessEgressRouter = new AccessEgressRouter(
+    this.accessEgressRouter = new DefaultAccessEgressRouter(
       new TransitServiceResolver(serverContext.transitService())
     );
   }
