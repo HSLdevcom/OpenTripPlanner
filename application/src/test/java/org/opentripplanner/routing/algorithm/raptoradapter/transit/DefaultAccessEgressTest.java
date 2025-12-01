@@ -1,11 +1,13 @@
 package org.opentripplanner.routing.algorithm.raptoradapter.transit;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.framework.model.Cost;
 import org.opentripplanner.framework.model.TimeAndCost;
@@ -62,8 +64,8 @@ class DefaultAccessEgressTest {
   }
 
   @Test
-  void getLastState() {
-    assertEquals(LAST_STATE, subject.getLastState());
+  void getLastStates() {
+    assertEquals(List.of(LAST_STATE), subject.getLastStates());
   }
 
   /**
@@ -75,7 +77,9 @@ class DefaultAccessEgressTest {
   void containsDriving() {
     var state = TestStateBuilder.ofDriving().streetEdge().streetEdge().streetEdge().build();
     var access = new DefaultAccessEgress(0, state);
-    assertTrue(access.getLastState().containsModeCar());
+    var lastStates = access.getLastStates();
+    assertThat(lastStates).hasSize(1);
+    assertTrue(lastStates.getFirst().containsModeCar());
   }
 
   /**
@@ -87,7 +91,9 @@ class DefaultAccessEgressTest {
   void walking() {
     var state = TestStateBuilder.ofWalking().streetEdge().streetEdge().streetEdge().build();
     var access = new DefaultAccessEgress(0, state);
-    assertFalse(access.getLastState().containsModeCar());
+    var lastStates = access.getLastStates();
+    assertThat(lastStates).hasSize(1);
+    assertFalse(lastStates.getFirst().containsModeCar());
   }
 
   @Test
