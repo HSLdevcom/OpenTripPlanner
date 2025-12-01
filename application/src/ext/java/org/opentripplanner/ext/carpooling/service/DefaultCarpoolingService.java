@@ -410,7 +410,7 @@ public class DefaultCarpoolingService implements CarpoolingService {
 
       var nearbyStopsWithVertices = new HashMap<NearbyStop, Vertex>();
       for (var stop : nearbyStops) {
-        nearbyStopsWithVertices.put(stop, stop.state.getVertex());
+        nearbyStopsWithVertices.put(stop, stop.lastStates.getFirst().getVertex());
       }
 
       var candidateTripsWithVertices = candidateTrips
