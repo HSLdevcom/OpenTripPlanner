@@ -12,6 +12,7 @@ import java.util.List;
 import org.opentripplanner.ext.carpooling.CarpoolingService;
 import org.opentripplanner.ext.ridehailing.RideHailingAccessShifter;
 import org.opentripplanner.framework.application.OTPFeature;
+import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgressRouter;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgressType;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.DefaultAccessEgressRouter;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.FlexAccessEgressRouter;
@@ -38,6 +39,7 @@ class AccessEgressFetcher {
   private final LinkingContext linkingContext;
   private final TransitServiceResolver transitServiceResolver;
   private final AccessEgressMapper accessEgressMapper;
+  private final AccessEgressRouter accessEgressRouter;
   private final CarpoolingService carpoolingService;
 
   /**
@@ -64,6 +66,7 @@ class AccessEgressFetcher {
     this.carpoolingService = carpoolingService;
     this.transitServiceResolver = new TransitServiceResolver(serverContext.transitService());
     this.accessEgressMapper = new AccessEgressMapper(transitServiceResolver);
+    this.accessEgressRouter = new DefaultAccessEgressRouter();
   }
 
   Collection<? extends RoutingAccessEgress> fetchAccess() {
@@ -98,7 +101,7 @@ class AccessEgressFetcher {
     Duration durationLimit = accessEgressPreferences.maxDuration().valueOf(mode);
     int stopCountLimit = accessEgressPreferences.maxStopCountLimit().limitForMode(mode);
 
-    var nearbyStops = DefaultAccessEgressRouter.findAccessEgresses(
+    var nearbyStops = accessEgressRouter.findAccessEgresses(
       accessRequest,
       mode,
       serverContext.listExtensionRequestContexts(accessRequest),
@@ -117,6 +120,7 @@ class AccessEgressFetcher {
       var flexAccessList = FlexAccessEgressRouter.routeAccessEgress(
         accessRequest,
         serverContext,
+        accessEgressRouter,
         additionalSearchDays,
         serverContext.flexParameters(),
         serverContext.listExtensionRequestContexts(accessRequest),
