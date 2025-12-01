@@ -34,7 +34,7 @@ public class FlexAccessEgressRouter {
     TransitService transitService = serverContext.transitService();
 
     Collection<NearbyStop> accessStops = accessOrEgress.isAccess()
-      ? AccessEgressRouter.findAccessEgresses(
+      ? DefaultAccessEgressRouter.findAccessEgresses(
           request,
           StreetMode.WALK,
           extensionRequestContexts,
@@ -46,7 +46,7 @@ public class FlexAccessEgressRouter {
       : List.of();
 
     Collection<NearbyStop> egressStops = accessOrEgress.isEgress()
-      ? AccessEgressRouter.findAccessEgresses(
+      ? DefaultAccessEgressRouter.findAccessEgresses(
           request,
           StreetMode.WALK,
           extensionRequestContexts,
