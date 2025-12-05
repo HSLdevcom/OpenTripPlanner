@@ -283,7 +283,8 @@ class DefaultAccessEgressRouterTest extends GraphRoutingTest {
         accessEgress,
         durationLimit,
         maxStopCount,
-        linkingContext
+        linkingContext,
+        30
       );
     }
   }
