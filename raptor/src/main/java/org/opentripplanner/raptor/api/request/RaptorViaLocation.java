@@ -3,6 +3,7 @@ package org.opentripplanner.raptor.api.request;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.IntStream;
 import javax.annotation.Nullable;
@@ -138,18 +139,21 @@ public final class RaptorViaLocation {
       .toList();
 
     // Compare all pairs to check for duplicates and non-optimal connections
+    var connectionsToRemove = new HashSet<RaptorViaConnection>();
     for (int i = 0; i < list.size(); ++i) {
       var a = list.get(i);
       for (int j = i + 1; j < list.size(); ++j) {
         var b = list.get(j);
-        if (a.isBetterOrEqual(b) || b.isBetterOrEqual(a)) {
-          throw new IllegalArgumentException(
-            "All connection need to be pareto-optimal: (" + a + ") <-> (" + b + ")"
-          );
+        if (a.isBetterOrEqual(b)) {
+          connectionsToRemove.add(b);
+          continue;
+        }
+        if (b.isBetterOrEqual(a)) {
+          connectionsToRemove.add(a);
         }
       }
     }
-    return list;
+    return list.stream().filter(connection -> !connectionsToRemove.contains(connection)).toList();
   }
 
   public abstract static sealed class AbstractBuilder<T extends AbstractBuilder> {
