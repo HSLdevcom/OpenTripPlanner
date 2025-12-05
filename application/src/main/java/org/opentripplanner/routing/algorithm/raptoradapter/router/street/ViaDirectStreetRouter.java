@@ -11,6 +11,7 @@ import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.StreetMode;
 import org.opentripplanner.routing.api.request.request.StreetRequest;
 import org.opentripplanner.routing.api.request.via.ViaLocation;
+import org.opentripplanner.routing.error.PathNotFoundException;
 import org.opentripplanner.routing.impl.GraphPathFinder;
 import org.opentripplanner.routing.linking.LinkingContext;
 import org.opentripplanner.street.model.edge.Edge;
@@ -25,8 +26,8 @@ public class ViaDirectStreetRouter extends DirectStreetRouter {
     RouteRequest request
   ) {
     return request.arriveBy()
-      ? findArriveByPaths(linkingContext, graphPathFinder, request)
-      : findDepartAfterPaths(linkingContext, graphPathFinder, request);
+      ? findArriveByPaths(linkingContext, graphPathFinder, request, false, false)
+      : findDepartAfterPaths(linkingContext, graphPathFinder, request, false, false);
   }
 
   boolean isRequestInvalidForRouting(RouteRequest request) {
@@ -63,10 +64,12 @@ public class ViaDirectStreetRouter extends DirectStreetRouter {
     return distance < maxDistanceLimit;
   }
 
-  private List<GraphPath<State, Edge, Vertex>> findArriveByPaths(
+  List<GraphPath<State, Edge, Vertex>> findArriveByPaths(
     LinkingContext linkingContext,
     GraphPathFinder graphPathFinder,
-    RouteRequest request
+    RouteRequest request,
+    boolean allowPartialResults,
+    boolean skipLastLeg
   ) {
     var baseRequest = getViaFriendlyRequest(request);
     var mode = baseRequest.journey().direct().mode();
@@ -82,80 +85,100 @@ public class ViaDirectStreetRouter extends DirectStreetRouter {
     var newStartTime = request.dateTime();
     var maxDuration = getMaximumDirectDuration(request, mode);
     var maxDurationLeft = maxDuration;
-    for (int i = lastLocations.size() - 2; i >= 0; i--) {
-      var from = lastLocations.get(i);
-      var to = lastLocations.get(i + 1);
-      var patchedRequest = getRequest(
-        requestWithNewMode,
-        from,
-        to,
-        newStartTime,
-        newStreetRequest.mode(),
-        maxDurationLeft
-      );
-      var path = graphPathFinder.graphPathFinderEntryPoint(patchedRequest, linkingContext);
-      paths.add(path);
+    try {
+      for (int i = lastLocations.size() - 2; i >= 0; i--) {
+        var from = lastLocations.get(i);
+        var to = lastLocations.get(i + 1);
+        var patchedRequest = getRequest(
+          requestWithNewMode,
+          from,
+          to,
+          newStartTime,
+          newStreetRequest.mode(),
+          maxDurationLeft
+        );
+        var path = graphPathFinder.graphPathFinderEntryPoint(patchedRequest, linkingContext);
+        paths.add(path);
 
-      var minimumWaitTime = minimumWaitTimes.get(i);
-      newStartTime = Instant.ofEpochSecond(path.getStartTime()).minus(minimumWaitTime);
-      // Wait time is not counted here as it doesn't slow down routing or inconvenience travelers
-      // like travel time does
-      totalTravelDuration += path.getDuration();
-      maxDurationLeft = maxDuration.minus(Duration.ofSeconds(totalTravelDuration));
+        var minimumWaitTime = minimumWaitTimes.get(i);
+        newStartTime = Instant.ofEpochSecond(path.getStartTime()).minus(minimumWaitTime);
+        // Wait time is not counted here as it doesn't slow down routing or inconvenience travelers
+        // like travel time does
+        totalTravelDuration += path.getDuration();
+        maxDurationLeft = maxDuration.minus(Duration.ofSeconds(totalTravelDuration));
+      }
+
+      if (!skipLastLeg) {
+        var firstRequest = getRequest(
+          baseRequest,
+          baseRequest.from(),
+          baseRequest.listViaLocationsWithCoordinates().getFirst(),
+          newStartTime,
+          mode,
+          maxDuration
+        );
+        paths.add(graphPathFinder.graphPathFinderEntryPoint(firstRequest, linkingContext));
+      }
+    } catch (PathNotFoundException e) {
+      if (!allowPartialResults) {
+        throw e;
+      }
     }
-
-    var firstRequest = getRequest(
-      baseRequest,
-      baseRequest.from(),
-      baseRequest.listViaLocationsWithCoordinates().getFirst(),
-      newStartTime,
-      mode,
-      maxDuration
-    );
-    paths.add(graphPathFinder.graphPathFinderEntryPoint(firstRequest, linkingContext));
     return paths.reversed();
   }
 
-  private List<GraphPath<State, Edge, Vertex>> findDepartAfterPaths(
+  List<GraphPath<State, Edge, Vertex>> findDepartAfterPaths(
     LinkingContext linkingContext,
     GraphPathFinder graphPathFinder,
-    RouteRequest request
+    RouteRequest request,
+    boolean allowPartialResults,
+    boolean skipLastLeg
   ) {
     var vias = request.listViaLocationsWithCoordinates();
     var baseRequest = getViaFriendlyRequest(request);
     var firstRequest = baseRequest.copyOf().withTo(vias.getFirst()).buildRequest();
     List<GraphPath<State, Edge, Vertex>> paths = new ArrayList<>();
-    paths.add(graphPathFinder.graphPathFinderEntryPoint(firstRequest, linkingContext));
+    try {
+      paths.add(graphPathFinder.graphPathFinderEntryPoint(firstRequest, linkingContext));
 
-    var mode = baseRequest.journey().direct().mode();
-    var newStreetRequest = getStreetRequestAfterFirstVia(mode);
-    var requestWithNewMode = getRequestWithNewMode(firstRequest, newStreetRequest);
+      var mode = baseRequest.journey().direct().mode();
+      var newStreetRequest = getStreetRequestAfterFirstVia(mode);
+      var requestWithNewMode = getRequestWithNewMode(firstRequest, newStreetRequest);
 
-    var lastLocations = new ArrayList<>(vias);
-    lastLocations.add(baseRequest.to());
-    var minimumWaitTimes = getMinimumWaitTimes(baseRequest);
+      var lastLocations = new ArrayList<>(vias);
+      if (!skipLastLeg) {
+        lastLocations.add(baseRequest.to());
+      }
+      var minimumWaitTimes = getMinimumWaitTimes(baseRequest);
 
-    var totalTravelDuration = paths.getFirst().getDuration();
-    var maxDuration = getMaximumDirectDuration(request, mode);
-    for (int i = 0; i < lastLocations.size() - 1; i++) {
-      var from = lastLocations.get(i);
-      var to = lastLocations.get(i + 1);
-      var maxDurationLeft = maxDuration.minus(Duration.ofSeconds(totalTravelDuration));
-      var minimumWaitTime = minimumWaitTimes.get(i);
-      var newStartTime = Instant.ofEpochSecond(paths.getLast().getEndTime()).plus(minimumWaitTime);
-      var patchedRequest = getRequest(
-        requestWithNewMode,
-        from,
-        to,
-        newStartTime,
-        newStreetRequest.mode(),
-        maxDurationLeft
-      );
-      var path = graphPathFinder.graphPathFinderEntryPoint(patchedRequest, linkingContext);
-      paths.add(path);
-      // Wait time is not counted here as it doesn't slow down routing or inconvenience travelers
-      // like travel time does
-      totalTravelDuration += path.getDuration();
+      var totalTravelDuration = paths.getFirst().getDuration();
+      var maxDuration = getMaximumDirectDuration(request, mode);
+      for (int i = 1; i < lastLocations.size(); i++) {
+        var from = lastLocations.get(i - 1);
+        var to = lastLocations.get(i);
+        var maxDurationLeft = maxDuration.minus(Duration.ofSeconds(totalTravelDuration));
+        var minimumWaitTime = minimumWaitTimes.get(i - 1);
+        var newStartTime = Instant.ofEpochSecond(paths.getLast().getEndTime()).plus(
+          minimumWaitTime
+        );
+        var patchedRequest = getRequest(
+          requestWithNewMode,
+          from,
+          to,
+          newStartTime,
+          newStreetRequest.mode(),
+          maxDurationLeft
+        );
+        var path = graphPathFinder.graphPathFinderEntryPoint(patchedRequest, linkingContext);
+        paths.add(path);
+        // Wait time is not counted here as it doesn't slow down routing or inconvenience travelers
+        // like travel time does
+        totalTravelDuration += path.getDuration();
+      }
+    } catch (PathNotFoundException e) {
+      if (!allowPartialResults) {
+        throw e;
+      }
     }
     return paths;
   }
