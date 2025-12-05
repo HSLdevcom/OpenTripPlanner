@@ -17,8 +17,8 @@ import org.opentripplanner.routing.algorithm.raptoradapter.router.startonboardac
 import org.opentripplanner.routing.algorithm.raptoradapter.router.startonboardaccess.TripLocationResolver;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.startonboardaccess.TripScheduleIndexResolver;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgressRouter;
+import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgressRouterFactory;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgressType;
-import org.opentripplanner.routing.algorithm.raptoradapter.router.street.DefaultAccessEgressRouter;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.FlexAccessEgressRouter;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.RoutingAccessEgress;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.mappers.AccessEgressMapper;
@@ -77,7 +77,7 @@ class AccessEgressFetcher {
     this.accessEgressMapper = new AccessEgressMapper(transitServiceResolver);
     this.tripScheduleIndexResolver = new TripScheduleIndexResolver(requestTransitDataProvider);
     this.tripLocationResolver = new TripLocationResolver(serverContext.transitService());
-    this.accessEgressRouter = new DefaultAccessEgressRouter();
+    this.accessEgressRouter = AccessEgressRouterFactory.create(request);
   }
 
   Collection<? extends RoutingAccessEgress> fetchAccess() {
@@ -156,7 +156,9 @@ class AccessEgressFetcher {
       type,
       durationLimit,
       stopCountLimit,
-      linkingContext
+      linkingContext,
+      serverContext.streetLimitationParametersService(),
+      serverContext.vehicleRentalService()
     );
     var accessEgresses = accessEgressMapper.mapNearbyStops(nearbyStops);
     accessEgresses = timeshiftRideHailing(streetRequest, type, accessEgresses);

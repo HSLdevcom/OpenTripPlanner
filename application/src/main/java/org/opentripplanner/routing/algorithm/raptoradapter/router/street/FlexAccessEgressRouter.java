@@ -42,7 +42,9 @@ public class FlexAccessEgressRouter {
           AccessEgressType.ACCESS,
           serverContext.flexParameters().maxAccessWalkDuration(),
           0,
-          linkingContext
+          linkingContext,
+          serverContext.streetLimitationParametersService(),
+          serverContext.vehicleRentalService()
         )
       : List.of();
 
@@ -54,7 +56,9 @@ public class FlexAccessEgressRouter {
           AccessEgressType.EGRESS,
           serverContext.flexParameters().maxEgressWalkDuration(),
           0,
-          linkingContext
+          linkingContext,
+          serverContext.streetLimitationParametersService(),
+          serverContext.vehicleRentalService()
         )
       : List.of();
 
