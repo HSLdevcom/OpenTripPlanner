@@ -337,28 +337,27 @@ public class SearchParams {
     for (var egress : egressPaths) {
       egress.validateAccessEgressVisitVia(numberOfViaVisits);
     }
+    // // Validate that combined access and egress via visits don't exceed total
+    // int maxAccessViaVisits = accessPaths
+    //   .stream()
+    //   .mapToInt(RaptorAccessEgress::numberOfViaLocationsVisited)
+    //   .max()
+    //   .orElse(0);
+    // int maxEgressViaVisits = egressPaths
+    //   .stream()
+    //   .mapToInt(RaptorAccessEgress::numberOfViaLocationsVisited)
+    //   .max()
+    //   .orElse(0);
 
-    // Validate that combined access and egress via visits don't exceed total
-    int maxAccessViaVisits = accessPaths
-      .stream()
-      .mapToInt(RaptorAccessEgress::numberOfViaLocationsVisited)
-      .max()
-      .orElse(0);
-    int maxEgressViaVisits = egressPaths
-      .stream()
-      .mapToInt(RaptorAccessEgress::numberOfViaLocationsVisited)
-      .max()
-      .orElse(0);
-
-    if (maxAccessViaVisits + maxEgressViaVisits > numberOfViaVisits) {
-      assertProperty(
-        false,
-        "Access/Egress visits " +
-        (maxAccessViaVisits + maxEgressViaVisits) +
-        " via locations, but only " +
-        numberOfViaVisits +
-        " are defined"
-      );
-    }
+    // if (maxAccessViaVisits + maxEgressViaVisits > numberOfViaVisits) {
+    //   assertProperty(
+    //     false,
+    //     "Access/Egress visits " +
+    //     (maxAccessViaVisits + maxEgressViaVisits) +
+    //     " via locations, but only " +
+    //     numberOfViaVisits +
+    //     " are defined"
+    //   );
+    // }
   }
 }
