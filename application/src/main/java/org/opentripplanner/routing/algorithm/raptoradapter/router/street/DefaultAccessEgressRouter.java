@@ -20,14 +20,11 @@ public class DefaultAccessEgressRouter extends AccessEgressRouter {
 
   private final StopResolver stopResolver;
 
-  public DefaultAccessEgressRouter(StopResolver stopResolver) {
+  DefaultAccessEgressRouter(StopResolver stopResolver) {
     super(stopResolver);
     this.stopResolver = stopResolver;
   }
 
-  /**
-   * Find accesses or egresses.
-   */
   @Override
   Collection<NearbyStop> findStreetAccessEgresses(
     RouteRequest request,
@@ -37,7 +34,8 @@ public class DefaultAccessEgressRouter extends AccessEgressRouter {
     Duration durationLimit,
     int maxStopCount,
     LinkingContext linkingContext,
-    Set<Vertex> ignoreVertices
+    Set<Vertex> ignoreVertices,
+    float maxCarSpeed
   ) {
     var originVertices = accessOrEgress.isAccess()
       ? linkingContext.findVertices(request.from())

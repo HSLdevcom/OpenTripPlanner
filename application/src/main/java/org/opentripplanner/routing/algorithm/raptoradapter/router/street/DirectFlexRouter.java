@@ -39,7 +39,8 @@ public class DirectFlexRouter {
       AccessEgressType.ACCESS,
       serverContext.flexParameters().maxAccessWalkDuration(),
       0,
-      linkingContext
+      linkingContext,
+      serverContext.streetLimitationParametersService().maxCarSpeed()
     );
     Collection<NearbyStop> egressStops = accessEgressRouter.findAccessEgresses(
       request,
@@ -48,7 +49,8 @@ public class DirectFlexRouter {
       AccessEgressType.EGRESS,
       serverContext.flexParameters().maxEgressWalkDuration(),
       0,
-      linkingContext
+      linkingContext,
+      serverContext.streetLimitationParametersService().maxCarSpeed()
     );
 
     var flexRouter = new FlexRouter(

@@ -27,7 +27,7 @@ public abstract class AccessEgressRouter {
   private static final Logger LOG = LoggerFactory.getLogger(AccessEgressRouter.class);
   private final NearbyStopFactory nearbyStopFactory;
 
-  public AccessEgressRouter(StopResolver stopResolver) {
+  AccessEgressRouter(StopResolver stopResolver) {
     this.nearbyStopFactory = new NearbyStopFactory(stopResolver::getRegularStop);
   }
 
@@ -41,7 +41,8 @@ public abstract class AccessEgressRouter {
     AccessEgressType accessOrEgress,
     Duration durationLimit,
     int maxStopCount,
-    LinkingContext linkingContext
+    LinkingContext linkingContext,
+    float maxCarSpeed
   ) {
     OTPRequestTimeoutException.checkForTimeout();
 
@@ -69,7 +70,8 @@ public abstract class AccessEgressRouter {
       durationLimit,
       maxStopCount,
       linkingContext,
-      ignoreVertices
+      ignoreVertices,
+      maxCarSpeed
     );
 
     var results = ListUtils.combine(zeroDistanceAccessEgress, streetAccessEgress);
@@ -88,7 +90,8 @@ public abstract class AccessEgressRouter {
     Duration durationLimit,
     int maxStopCount,
     LinkingContext linkingContext,
-    Set<Vertex> ignoreVertices
+    Set<Vertex> ignoreVertices,
+    float maxCarSpeed
   );
 
   /**

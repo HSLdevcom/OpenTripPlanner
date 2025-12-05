@@ -22,7 +22,7 @@ public class FlexAccessEgressRouter {
 
   public static Collection<FlexAccessEgress> routeAccessEgress(
     RouteRequest request,
-    DefaultAccessEgressRouter accessEgressRouter,
+    AccessEgressRouter accessEgressRouter,
     OtpServerRequestContext serverContext,
     AdditionalSearchDays searchDays,
     FlexParameters config,
@@ -42,7 +42,8 @@ public class FlexAccessEgressRouter {
           AccessEgressType.ACCESS,
           serverContext.flexParameters().maxAccessWalkDuration(),
           0,
-          linkingContext
+          linkingContext,
+          serverContext.streetLimitationParametersService().maxCarSpeed()
         )
       : List.of();
 
@@ -54,7 +55,8 @@ public class FlexAccessEgressRouter {
           AccessEgressType.EGRESS,
           serverContext.flexParameters().maxEgressWalkDuration(),
           0,
-          linkingContext
+          linkingContext,
+          serverContext.streetLimitationParametersService().maxCarSpeed()
         )
       : List.of();
 
