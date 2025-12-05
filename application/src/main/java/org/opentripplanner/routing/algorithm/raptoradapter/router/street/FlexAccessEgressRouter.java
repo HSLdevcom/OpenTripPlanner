@@ -39,11 +39,13 @@ public class FlexAccessEgressRouter {
       ? accessEgressRouter.findAccessEgresses(
         request,
         new StreetRequest(StreetMode.WALK),
+        serverContext.traverseVisitor(),
         extensionRequestContexts,
         AccessEgressType.ACCESS,
         serverContext.flexParameters().maxAccessWalkDuration(),
         0,
-        linkingContext
+        linkingContext,
+        serverContext.streetLimitationParametersService().maxCarSpeed()
       )
       : List.of();
 
@@ -51,11 +53,13 @@ public class FlexAccessEgressRouter {
       ? accessEgressRouter.findAccessEgresses(
         request,
         new StreetRequest(StreetMode.WALK),
+        serverContext.traverseVisitor(),
         extensionRequestContexts,
         AccessEgressType.EGRESS,
         serverContext.flexParameters().maxEgressWalkDuration(),
         0,
-        linkingContext
+        linkingContext,
+        serverContext.streetLimitationParametersService().maxCarSpeed()
       )
       : List.of();
 

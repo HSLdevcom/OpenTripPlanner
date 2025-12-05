@@ -1,6 +1,10 @@
 package org.opentripplanner.raptor.api.model;
 
 import static org.opentripplanner.raptor.api.model.RaptorConstants.TIME_NOT_SET;
+import static org.opentripplanner.raptor.api.model.RaptorValueType.C1;
+import static org.opentripplanner.raptor.api.model.RaptorValueType.RIDES;
+import static org.opentripplanner.raptor.api.model.RaptorValueType.TIME_PENALTY;
+import static org.opentripplanner.raptor.api.model.RaptorValueType.VIAS;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
@@ -96,7 +100,7 @@ public interface RaptorAccessEgress {
   }
 
   default boolean hasTimePenalty() {
-    return timePenalty() != RaptorConstants.TIME_NOT_SET;
+    return RaptorConstants.isTimeSet(timePenalty());
   }
 
   /* TIME-DEPENDENT ACCESS/TRANSFER/EGRESS */
@@ -125,7 +129,7 @@ public interface RaptorAccessEgress {
 
   /**
    * In a via-search (both pass-through and visit-via) the access/egress may contain one
-   * ore more via-locations. If so Raptor needs to know how many via-locations are included
+   * ore more via-locations. If so, Raptor needs to know how many via-locations are included
    * so it can skip these.
    * <p>
    * If the access/egress {@code stop} is a via-location then this method should include
@@ -135,6 +139,34 @@ public interface RaptorAccessEgress {
    */
   default int numberOfViaLocationsVisited() {
     return RaptorConstants.ZERO;
+  }
+
+  /**
+   * Validate that this access or egress path visits via locations correctly.
+   * The number of via locations visited must not exceed the total number of via locations
+   * defined in the search.
+   *
+   * @param numberOfViaLocations the total number of via locations in the search
+   * @throws IllegalArgumentException if the via visits are invalid
+   */
+  default void validateAccessEgressVisitVia(int numberOfViaLocations) {
+    int viaVisits = numberOfViaLocationsVisited();
+
+    if (viaVisits < 0) {
+      throw new IllegalArgumentException(
+        "Access/Egress cannot have negative via visits: " + viaVisits
+      );
+    }
+
+    if (viaVisits > numberOfViaLocations) {
+      throw new IllegalArgumentException(
+        "Access/Egress visits " +
+        viaVisits +
+        " via locations, but only " +
+        numberOfViaLocations +
+        " are defined"
+      );
+    }
   }
 
   /**
@@ -271,10 +303,16 @@ public interface RaptorAccessEgress {
     }
     buf.append(' ').append(DurationUtils.durationToStr(durationInSeconds()));
     if (includeCost && c1() > 0) {
-      buf.append(' ').append(RaptorValueFormatter.formatC1(c1()));
+      buf.append(' ').append(C1.format(c1()));
     }
     if (hasRides()) {
-      buf.append(' ').append(numberOfRides()).append('x');
+      buf.append(' ').append(RIDES.format(numberOfRides()));
+    }
+    if (numberOfViaLocationsVisited() > 0) {
+      buf.append(' ').append(VIAS.format(numberOfViaLocationsVisited()));
+    }
+    if (hasTimePenalty()) {
+      buf.append(' ').append(TIME_PENALTY.format(timePenalty()));
     }
     if (hasOpeningHours()) {
       buf.append(' ').append(openingHoursToString());

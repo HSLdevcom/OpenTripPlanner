@@ -11,7 +11,7 @@ import org.opentripplanner.raptor.rangeraptor.DefaultRangeRaptorWorker;
 import org.opentripplanner.raptor.rangeraptor.RangeRaptor;
 import org.opentripplanner.raptor.rangeraptor.RangeRaptorWorkerComposite;
 import org.opentripplanner.raptor.rangeraptor.context.SearchContext;
-import org.opentripplanner.raptor.rangeraptor.context.SearchContextViaLeg;
+import org.opentripplanner.raptor.rangeraptor.context.SearchContextViaSegments;
 import org.opentripplanner.raptor.rangeraptor.internalapi.Heuristics;
 import org.opentripplanner.raptor.rangeraptor.internalapi.PassThroughPointsService;
 import org.opentripplanner.raptor.rangeraptor.internalapi.RangeRaptorWorker;
@@ -19,7 +19,7 @@ import org.opentripplanner.raptor.rangeraptor.internalapi.RaptorRouter;
 import org.opentripplanner.raptor.rangeraptor.internalapi.RaptorRouterResult;
 import org.opentripplanner.raptor.rangeraptor.internalapi.RaptorWorkerState;
 import org.opentripplanner.raptor.rangeraptor.internalapi.RoutingStrategy;
-import org.opentripplanner.raptor.rangeraptor.multicriteria.McStopArrivals;
+import org.opentripplanner.raptor.rangeraptor.multicriteria.arrivals.McStopArrivals;
 import org.opentripplanner.raptor.rangeraptor.multicriteria.configure.McRangeRaptorConfig;
 import org.opentripplanner.raptor.rangeraptor.standard.configure.StdRangeRaptorConfig;
 import org.opentripplanner.raptor.rangeraptor.transit.RaptorSearchWindowCalculator;
@@ -66,7 +66,11 @@ public class RaptorConfig<T extends RaptorTripSchedule> {
   ) {
     var context = context(transitData, request);
     var stdConfig = new StdRangeRaptorConfig<>(context);
-    var worker = createWorker(context.legs().getFirst(), stdConfig.state(), stdConfig.strategy());
+    var worker = createWorker(
+      context.segments().getFirst(),
+      stdConfig.state(),
+      stdConfig.strategy()
+    );
     return createRangeRaptor(context, worker);
   }
 
@@ -105,18 +109,18 @@ public class RaptorConfig<T extends RaptorTripSchedule> {
     McStopArrivals<T> nextStopArrivals = null;
 
     if (request.searchParams().isVisitViaSearch()) {
-      for (SearchContextViaLeg<T> cxLeg : context.legs().reversed()) {
+      for (SearchContextViaSegments<T> ctxSegment : context.segments().reversed()) {
         var c = new McRangeRaptorConfig<>(
-          cxLeg,
+          ctxSegment,
           passThroughPointsService
-        ).connectWithNextLegArrivals(nextStopArrivals);
-        var w = createWorker(cxLeg, c.state(), c.strategy());
-        worker = RangeRaptorWorkerComposite.of(w, worker);
+        ).connectWithNextSegmentArrivals(nextStopArrivals);
+        var w = createWorker(ctxSegment, c.state(), c.strategy());
+        worker = RangeRaptorWorkerComposite.of(c.createPathParetoComparator(), w, worker);
         nextStopArrivals = c.stopArrivals();
       }
     } else {
       // The first leg is the only leg
-      var leg = context.legs().getFirst();
+      var leg = context.segments().getFirst();
       var c = new McRangeRaptorConfig<>(leg, passThroughPointsService).withHeuristics(heuristics);
       worker = createWorker(leg, c.state(), c.strategy());
     }
@@ -172,17 +176,17 @@ public class RaptorConfig<T extends RaptorTripSchedule> {
   }
 
   private RangeRaptorWorker<T> createWorker(
-    SearchContextViaLeg<T> ctxLeg,
+    SearchContextViaSegments<T> ctxSegment,
     RaptorWorkerState<T> workerState,
     RoutingStrategy<T> routingStrategy
   ) {
-    var ctx = ctxLeg.parent();
+    var ctx = ctxSegment.parent();
     return new DefaultRangeRaptorWorker<>(
       workerState,
       routingStrategy,
       ctx.transitData(),
       ctx.slackProvider(),
-      ctxLeg.accessPaths(),
+      ctxSegment.accessPaths(),
       ctx.calculator(),
       ctx.lifeCycle(),
       ctx.performanceTimers(),
@@ -194,7 +198,7 @@ public class RaptorConfig<T extends RaptorTripSchedule> {
     return new RangeRaptor<>(
       worker,
       ctx.transitData(),
-      ctx.legs().getFirst().accessPaths(),
+      ctx.segments().getFirst().accessPaths(),
       ctx.roundTracker(),
       ctx.calculator(),
       ctx.createLifeCyclePublisher(),

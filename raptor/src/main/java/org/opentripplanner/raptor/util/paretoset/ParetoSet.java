@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 /**
  * This {@link java.util.Collection} store all pareto-optimal elements. The {@link #add(Object)}
@@ -23,10 +24,9 @@ import java.util.stream.Collectors;
  *
  * @param <T> the element type
  */
-public class ParetoSet<T> extends AbstractCollection<T> {
+public sealed class ParetoSet<T> extends AbstractCollection<T> permits ParetoSetWithListener {
 
   private final ParetoComparator<T> comparator;
-  private final ParetoSetEventListener<? super T> eventListener;
 
   @SuppressWarnings("unchecked")
   private T[] elements = (T[]) new Object[16];
@@ -35,28 +35,35 @@ public class ParetoSet<T> extends AbstractCollection<T> {
 
   private T goodElement = null;
 
+  private int marker = 0;
+
+  protected ParetoSet(ParetoComparator<T> comparator) {
+    this.comparator = comparator;
+  }
+
+  /**
+   * Create a new ParetoSet with a comparator.
+   */
+  public static <T> ParetoSet<T> of(ParetoComparator<T> comparator) {
+    return new ParetoSet<>(comparator);
+  }
+
   /**
    * Create a new ParetoSet with a comparator and a drop event listener.
    *
    * @param comparator    The comparator to use with this set
    * @param eventListener At most one listener can be registered to listen for drop events.
    */
-  public ParetoSet(
+  public static <T> ParetoSet<T> of(
     ParetoComparator<T> comparator,
-    ParetoSetEventListener<? super T> eventListener
+    @Nullable ParetoSetEventListener<? super T> eventListener
   ) {
-    this.comparator = comparator;
-    this.eventListener = eventListener;
+    return eventListener == null
+      ? of(comparator)
+      : new ParetoSetWithListener<>(comparator, eventListener);
   }
 
-  /**
-   * Create a new ParetoSet with a comparator.
-   */
-  public ParetoSet(ParetoComparator<T> comparator) {
-    this(comparator, null);
-  }
-
-  public T get(int index) {
+  public final T get(int index) {
     return elements[index];
   }
 
@@ -66,18 +73,36 @@ public class ParetoSet<T> extends AbstractCollection<T> {
    * This is NOT thread-safe and the behavior is undefined if the collection is modified during the
    * iteration.
    */
-  @Override
   public final Iterator<T> iterator() {
     return tailIterator(0);
   }
 
-  @Override
-  public int size() {
+  /*
+  public final Iterable iterable() {
+    return new Iterable() {
+      @Override
+      public Iterator iterator() {
+        return iterator();
+      }
+    };
+  }
+  */
+
+  public final int size() {
     return size;
   }
 
-  @Override
-  public boolean add(T newValue) {
+  public final boolean isEmpty() {
+    return size == 0;
+  }
+
+  /*
+  public Stream<T> stream() {
+    return Arrays.stream(elements, 0, size);
+  }
+   */
+
+  public final boolean add(T newValue) {
     if (size == 0) {
       acceptAndAppendValue(newValue);
       return true;
@@ -123,15 +148,17 @@ public class ParetoSet<T> extends AbstractCollection<T> {
     return false;
   }
 
-  @Override
-  public boolean remove(Object o) {
-    throw new UnsupportedOperationException();
-  }
+  /*
+  public void addAll(Collection<T> elements) {
+    for (T element : elements) {
+      add(element);
+    }
+  }*/
 
-  @Override
-  public void clear() {
+  public final void clear() {
     size = 0;
     goodElement = null;
+    marker = 0;
   }
 
   @Override
@@ -145,7 +172,7 @@ public class ParetoSet<T> extends AbstractCollection<T> {
    * <p/>
    * Both methods are optimized for performance; hence the add method does not use this method.
    */
-  public boolean qualify(T newValue) {
+  public final boolean qualify(T newValue) {
     if (size == 0) {
       return true;
     }
@@ -207,16 +234,10 @@ public class ParetoSet<T> extends AbstractCollection<T> {
    * Notify subclasses about reindexing. This method is empty, and only exist for subclasses to
    * override it.
    */
-  protected void notifyElementMoved(int fromIndex, int toIndex) {
-    // Noop
-  }
-
-  protected ParetoComparator<T> getComparator() {
-    return comparator;
-  }
-
-  protected ParetoSetEventListener<? super T> getEventListener() {
-    return eventListener;
+  private final void notifyElementMoved(int fromIndex, int toIndex) {
+    if (fromIndex == marker) {
+      marker = toIndex;
+    }
   }
 
   /**
@@ -242,7 +263,7 @@ public class ParetoSet<T> extends AbstractCollection<T> {
    * is changed the returned values of the iterator also changes. Do not update on this collection
    * while using this iterator.
    */
-  private Iterator<T> tailIterator(final int startInclusive) {
+  private final Iterator<T> tailIterator(final int startInclusive) {
     return new Iterator<>() {
       int i = startInclusive;
 
@@ -262,7 +283,7 @@ public class ParetoSet<T> extends AbstractCollection<T> {
    * Remove all elements dominated by the {@code newValue} starting from {@code index + 1}. The
    * element at {@code index} is dropped.
    */
-  private void removeDominatedElementsFromRestOfSetAndAddNewElement(
+  private final void removeDominatedElementsFromRestOfSetAndAddNewElement(
     final T newValue,
     final int index
   ) {
@@ -291,44 +312,50 @@ public class ParetoSet<T> extends AbstractCollection<T> {
     size = i + 1;
   }
 
-  private boolean leftVectorDominatesRightVector(T left, T right) {
+  private final boolean leftVectorDominatesRightVector(T left, T right) {
     return leftDominanceExist(left, right) && !rightDominanceExist(left, right);
   }
 
-  private void acceptAndAppendValue(T newValue) {
+  private final void acceptAndAppendValue(T newValue) {
     notifyElementAccepted(newValue);
     elements[size++] = newValue;
   }
 
-  private void assertEnoughSpaceInSet() {
+  private final void assertEnoughSpaceInSet() {
     if (size == elements.length) {
       elements = Arrays.copyOf(elements, elements.length * 2);
     }
   }
 
-  private boolean leftDominanceExist(T left, T right) {
+  private final boolean leftDominanceExist(T left, T right) {
     return comparator.leftDominanceExist(left, right);
   }
 
-  private boolean rightDominanceExist(T left, T right) {
+  private final boolean rightDominanceExist(T left, T right) {
     return comparator.leftDominanceExist(right, left);
   }
 
-  private void notifyElementAccepted(T newElement) {
-    if (eventListener != null) {
-      eventListener.notifyElementAccepted(newElement);
-    }
+  protected void notifyElementAccepted(T newElement) {}
+
+  protected void notifyElementDropped(T element, T droppedByElement) {}
+
+  protected void notifyElementRejected(T element, T rejectByElement) {}
+
+  public final boolean hasElementsAfterMarker() {
+    return marker != size();
   }
 
-  private void notifyElementDropped(T element, T droppedByElement) {
-    if (eventListener != null) {
-      eventListener.notifyElementDropped(element, droppedByElement);
-    }
+  /**
+   * List all elements added after the marker.
+   */
+  public final Iterable<T> elementsAfterMarker() {
+    return tail(marker);
   }
 
-  private void notifyElementRejected(T element, T rejectByElement) {
-    if (eventListener != null) {
-      eventListener.notifyElementRejected(element, rejectByElement);
-    }
+  /**
+   * Move the marker after the last element in the set.
+   */
+  public final void markAtEndOfSet() {
+    marker = size();
   }
 }

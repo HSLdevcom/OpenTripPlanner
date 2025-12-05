@@ -1,17 +1,21 @@
 package org.opentripplanner.raptor.rangeraptor.context;
 
 import javax.annotation.Nullable;
+import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
 import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
 import org.opentripplanner.raptor.rangeraptor.transit.AccessPaths;
 import org.opentripplanner.raptor.rangeraptor.transit.EgressPaths;
 import org.opentripplanner.raptor.rangeraptor.transit.ViaConnections;
 
 /**
- * A search can be split into one or more legs. The {@code parent} search context will have a list
- * of legs. The first leg will have a list of {@code accessPaths} and the {@link ViaConnections}
- * for transferring to the next leg. The last leg will have {@code egressPaths}.
+ * A search can be split into one or more segments with a via point between each segment. The
+ * {@code parent} search context will have a list of contexts for each segments. The access and
+ * egress paths are injected into the appropriate segment based on the number-of-via-points they
+ * contains {@link RaptorAccessEgress#numberOfViaLocationsVisited()}. Tf the access and egress is
+ * not visiting any via locations, then the first segment will have all {@code accessPaths}
+ * included and the last segment will have all {@code egressPaths}.
  */
-public class SearchContextViaLeg<T extends RaptorTripSchedule> {
+public class SearchContextViaSegments<T extends RaptorTripSchedule> {
 
   private final SearchContext<T> parent;
   private final AccessPaths accessPaths;
@@ -22,7 +26,7 @@ public class SearchContextViaLeg<T extends RaptorTripSchedule> {
   @Nullable
   private final EgressPaths egressPaths;
 
-  public SearchContextViaLeg(
+  public SearchContextViaSegments(
     SearchContext<T> parent,
     AccessPaths accessPaths,
     @Nullable ViaConnections viaConnections,

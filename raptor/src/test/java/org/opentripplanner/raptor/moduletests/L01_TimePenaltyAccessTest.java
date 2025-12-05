@@ -46,8 +46,7 @@ public class L01_TimePenaltyAccessTest implements RaptorTestConstants {
   // There are 5 possible trips
 
   private final TestTransitData data = new TestTransitData();
-  private final RaptorRequestBuilder<TestTripSchedule> requestBuilder =
-    new RaptorRequestBuilder<>();
+  private final RaptorRequestBuilder<TestTripSchedule> requestBuilder = data.requestBuilder();
   private final RaptorService<TestTripSchedule> raptorService = new RaptorService<>(
     RaptorConfig.defaultConfigForTest()
   );
@@ -62,7 +61,7 @@ public class L01_TimePenaltyAccessTest implements RaptorTestConstants {
 
     requestBuilder.searchParams().timetable(true);
 
-    ModuleTestDebugLogging.setupDebugLogging(data, requestBuilder);
+    ModuleTestDebugLogging.setupDebugLogging(data);
   }
 
   private static List<RaptorModuleTestCase> tripsAtTheEndOfTheSearchWindowTestCase() {
@@ -70,8 +69,8 @@ public class L01_TimePenaltyAccessTest implements RaptorTestConstants {
     int lat = time("0:42");
 
     var expected = new ExpectedList(
-      "Walk 2m 0:08 0:10 C₁240 ~ A 0s ~ BUS R1 0:10 .. [0:08 0:41 33m Tₓ0 C₁2_760]",
-      "Walk 2m 0:09 0:11 C₁240 ~ A 0s ~ BUS R1 0:11 .. [0:09 0:42 33m Tₓ0 C₁2_760]"
+      "Walk 2m Pₜ60 0:08 0:10 C₁240 ~ A 0s ~ BUS R1 0:10 .. [0:08 0:41 33m Tₙ0 C₁2_760]",
+      "Walk 2m Pₜ60 0:09 0:11 C₁240 ~ A 0s ~ BUS R1 0:11 .. [0:09 0:42 33m Tₙ0 C₁2_760]"
     );
 
     return RaptorModuleTestCase.of()
@@ -105,8 +104,8 @@ public class L01_TimePenaltyAccessTest implements RaptorTestConstants {
     // The latest buss is at 0:19, so with EDT=0:16 can only reach the last two buses,
     // Running this test without the time-penalty confirm this result.
     var expected = new ExpectedList(
-      "Walk 2m 0:16 0:18 C₁240 ~ A 0s ~ BUS R1 0:18 .. [0:16 0:49 33m Tₓ0 C₁2_760]",
-      "Walk 2m 0:17 0:19 C₁240 ~ A 0s ~ BUS R1 0:19 .. [0:17 0:50 33m Tₓ0 C₁2_760]"
+      "Walk 2m Pₜ60 0:16 0:18 C₁240 ~ A 0s ~ BUS R1 0:18 .. [0:16 0:49 33m Tₙ0 C₁2_760]",
+      "Walk 2m Pₜ60 0:17 0:19 C₁240 ~ A 0s ~ BUS R1 0:19 .. [0:17 0:50 33m Tₙ0 C₁2_760]"
     );
 
     return RaptorModuleTestCase.of()

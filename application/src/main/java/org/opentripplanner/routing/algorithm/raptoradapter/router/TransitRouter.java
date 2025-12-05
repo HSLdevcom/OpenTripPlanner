@@ -24,6 +24,7 @@ import org.opentripplanner.raptor.spi.ExtraMcRouterSearch;
 import org.opentripplanner.routing.algorithm.mapping.RaptorPathToItineraryMapper;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgressPenaltyDecorator;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgressRouter;
+import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgressRouterFactory;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgressType;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgresses;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.street.FlexAccessEgressRouter;
@@ -82,7 +83,8 @@ public class TransitRouter {
     this.debugTimingAggregator = debugTimingAggregator;
     this.viaTransferResolver = serverContext.viaTransferResolver();
     this.linkingContext = linkingContext;
-    this.accessEgressRouter = new AccessEgressRouter(
+    this.accessEgressRouter = AccessEgressRouterFactory.create(
+      request,
       new TransitServiceResolver(serverContext.transitService())
     );
   }
@@ -274,11 +276,13 @@ public class TransitRouter {
     var nearbyStops = accessEgressRouter.findAccessEgresses(
       accessRequest,
       streetRequest,
+      serverContext.traverseVisitor(),
       serverContext.listExtensionRequestContexts(accessRequest),
       type,
       durationLimit,
       stopCountLimit,
-      linkingContext
+      linkingContext,
+      serverContext.streetLimitationParametersService().maxCarSpeed()
     );
     var accessEgresses = AccessEgressMapper.mapNearbyStops(nearbyStops, type);
     accessEgresses = timeshiftRideHailing(streetRequest, type, accessEgresses);

@@ -318,5 +318,46 @@ public class SearchParams {
       viaLocations.isEmpty() || isVisitViaSearch() || isPassThroughSearch(),
       "Combining pass-through and regular via-vist it is not allowed: " + viaLocations + "."
     );
+
+    // Validate via-visit access and egress paths
+    validateViaVisitAccessEgress();
+  }
+
+  /**
+   * Validates that access and egress paths via-visit locations. Note! At the moment only
+   * via-visit searches can have via-locations, not pass-through searches.
+   */
+  private void validateViaVisitAccessEgress() {
+    int numberOfViaVisits = isPassThroughSearch() ? 0 : this.viaLocations.size();
+
+    // Validate individual access and egress paths
+    for (var access : accessPaths) {
+      access.validateAccessEgressVisitVia(numberOfViaVisits);
+    }
+    for (var egress : egressPaths) {
+      egress.validateAccessEgressVisitVia(numberOfViaVisits);
+    }
+    // // Validate that combined access and egress via visits don't exceed total
+    // int maxAccessViaVisits = accessPaths
+    //   .stream()
+    //   .mapToInt(RaptorAccessEgress::numberOfViaLocationsVisited)
+    //   .max()
+    //   .orElse(0);
+    // int maxEgressViaVisits = egressPaths
+    //   .stream()
+    //   .mapToInt(RaptorAccessEgress::numberOfViaLocationsVisited)
+    //   .max()
+    //   .orElse(0);
+
+    // if (maxAccessViaVisits + maxEgressViaVisits > numberOfViaVisits) {
+    //   assertProperty(
+    //     false,
+    //     "Access/Egress visits " +
+    //     (maxAccessViaVisits + maxEgressViaVisits) +
+    //     " via locations, but only " +
+    //     numberOfViaVisits +
+    //     " are defined"
+    //   );
+    // }
   }
 }
