@@ -348,7 +348,7 @@ public class SearchParams {
     //   .mapToInt(RaptorAccessEgress::numberOfViaLocationsVisited)
     //   .max()
     //   .orElse(0);
-    
+
     // if (maxAccessViaVisits + maxEgressViaVisits > numberOfViaVisits) {
     //   assertProperty(
     //     false,
