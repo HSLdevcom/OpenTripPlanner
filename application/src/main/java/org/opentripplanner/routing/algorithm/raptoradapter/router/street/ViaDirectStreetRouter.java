@@ -80,12 +80,11 @@ public class ViaDirectStreetRouter extends DirectStreetRouter {
     lastLocations.add(baseRequest.to());
     var minimumWaitTimes = getMinimumWaitTimes(baseRequest);
 
-    var totalTravelDuration = 0;
     var paths = new ArrayList<GraphPath<State, Edge, Vertex>>();
     var newStartTime = request.dateTime();
-    var maxDuration = getMaximumDirectDuration(request, mode);
-    var maxDurationLeft = maxDuration;
-    for (int i = lastLocations.size() - 2; i >= 0; i--) {
+    var maxDurationLeft = getMaximumDirectDuration(request, mode);
+    int i = lastLocations.size() - 2;
+    while (i >= 0 && maxDurationLeft.isPositive()) {
       var from = lastLocations.get(i);
       var to = lastLocations.get(i + 1);
       var patchedRequest = getRequest(
@@ -103,8 +102,8 @@ public class ViaDirectStreetRouter extends DirectStreetRouter {
       newStartTime = Instant.ofEpochSecond(path.getStartTime()).minus(minimumWaitTime);
       // Wait time is not counted here as it doesn't slow down routing or inconvenience travelers
       // like travel time does
-      totalTravelDuration += path.getDuration();
-      maxDurationLeft = maxDuration.minus(Duration.ofSeconds(totalTravelDuration));
+      maxDurationLeft = maxDurationLeft.minus(Duration.ofSeconds(path.getDuration()));
+      i--;
     }
 
     var firstRequest = getRequest(
@@ -113,7 +112,7 @@ public class ViaDirectStreetRouter extends DirectStreetRouter {
       baseRequest.listViaLocationsWithCoordinates().getFirst(),
       newStartTime,
       mode,
-      maxDuration
+      maxDurationLeft
     );
     paths.add(graphPathFinder.graphPathFinderEntryPoint(firstRequest, linkingContext));
     return paths.reversed();
@@ -137,13 +136,13 @@ public class ViaDirectStreetRouter extends DirectStreetRouter {
     var lastLocations = new ArrayList<>(vias);
     lastLocations.add(baseRequest.to());
     var minimumWaitTimes = getMinimumWaitTimes(baseRequest);
-
-    var totalTravelDuration = paths.getFirst().getDuration();
-    var maxDuration = getMaximumDirectDuration(request, mode);
-    for (int i = 0; i < lastLocations.size() - 1; i++) {
+    var maxDurationLeft = getMaximumDirectDuration(request, mode).minus(
+      Duration.ofSeconds(paths.getFirst().getDuration())
+    );
+    int i = 0;
+    while (i < lastLocations.size() - 1 && maxDurationLeft.isPositive()) {
       var from = lastLocations.get(i);
       var to = lastLocations.get(i + 1);
-      var maxDurationLeft = maxDuration.minus(Duration.ofSeconds(totalTravelDuration));
       var minimumWaitTime = minimumWaitTimes.get(i);
       var newStartTime = Instant.ofEpochSecond(paths.getLast().getEndTime()).plus(minimumWaitTime);
       var patchedRequest = getRequest(
@@ -158,7 +157,8 @@ public class ViaDirectStreetRouter extends DirectStreetRouter {
       paths.add(path);
       // Wait time is not counted here as it doesn't slow down routing or inconvenience travelers
       // like travel time does
-      totalTravelDuration += path.getDuration();
+      maxDurationLeft = maxDurationLeft.minus(Duration.ofSeconds(path.getDuration()));
+      i++;
     }
     return paths;
   }
