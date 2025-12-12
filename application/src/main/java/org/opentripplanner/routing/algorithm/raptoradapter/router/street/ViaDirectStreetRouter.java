@@ -19,6 +19,7 @@ import org.opentripplanner.street.search.state.State;
 
 public class ViaDirectStreetRouter extends DirectStreetRouter {
 
+  @Override
   List<GraphPath<State, Edge, Vertex>> findPaths(
     GraphPathFinder graphPathFinder,
     LinkingContext linkingContext,
@@ -29,6 +30,7 @@ public class ViaDirectStreetRouter extends DirectStreetRouter {
       : findDepartAfterPaths(linkingContext, graphPathFinder, request);
   }
 
+  @Override
   boolean isRequestInvalidForRouting(RouteRequest request) {
     // No support for pass-through locations or visit via locations with just stops as they force
     // you to use transit.
@@ -38,6 +40,7 @@ public class ViaDirectStreetRouter extends DirectStreetRouter {
     );
   }
 
+  @Override
   boolean isStraightLineDistanceWithinLimit(
     LinkingContext linkingContext,
     RouteRequest request,

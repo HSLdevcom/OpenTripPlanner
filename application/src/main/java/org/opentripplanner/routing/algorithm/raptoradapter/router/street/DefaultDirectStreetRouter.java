@@ -17,6 +17,7 @@ import org.opentripplanner.street.search.state.State;
  */
 public class DefaultDirectStreetRouter extends DirectStreetRouter {
 
+  @Override
   List<GraphPath<State, Edge, Vertex>> findPaths(
     GraphPathFinder graphPathFinder,
     LinkingContext linkingContext,
@@ -25,10 +26,12 @@ public class DefaultDirectStreetRouter extends DirectStreetRouter {
     return List.of(graphPathFinder.graphPathFinderEntryPoint(request, linkingContext));
   }
 
+  @Override
   boolean isRequestInvalidForRouting(RouteRequest request) {
     return request.journey().direct().mode() == StreetMode.NOT_SET;
   }
 
+  @Override
   boolean isStraightLineDistanceWithinLimit(
     LinkingContext linkingContext,
     RouteRequest request,
