@@ -39,6 +39,9 @@ public final class AccessEgressFunctions {
    *         number of rides is lower
    *     </li>
    *     <li>
+   *         number of via locations is higher
+   *     </li>
+   *     <li>
    *         reached the stop on-board, and not on foot. This is optimal because arriving on foot
    *         limits your options, you are not allowed to continue on foot and transfer(walk) to
    *         a nearby stop.
@@ -55,7 +58,8 @@ public final class AccessEgressFunctions {
     ((l.stopReachedOnBoard() && !r.stopReachedOnBoard()) ||
       r.hasOpeningHours() ||
       l.numberOfRides() < r.numberOfRides() ||
-      l.durationInSeconds() < r.durationInSeconds());
+      l.durationInSeconds() < r.durationInSeconds() ||
+      l.numberOfViaLocationsVisited() > r.numberOfViaLocationsVisited());
 
   /**
    * Filter Multi-criteria Raptor access and egress paths. This can be used to wash
@@ -105,8 +109,8 @@ public final class AccessEgressFunctions {
   }
 
   /**
-   * Filter the given input keeping all elements satisfying the given include predicate. If the
-   * {@code keepOne} flag is set only one raptor transfer is kept for each group of numOfRides.
+   * Filter the given input keeping all elements satisfying the given include predicate and
+   * then group them by number-of-rides.
    */
   static TIntObjectMap<List<RaptorAccessEgress>> groupByRound(
     Collection<RaptorAccessEgress> input,
@@ -133,14 +137,14 @@ public final class AccessEgressFunctions {
     ParetoComparator<RaptorAccessEgress> comparator
   ) {
     var mapByStop = groupByStop(paths);
-    var set = new ParetoSet<>(comparator);
+    var set = ParetoSet.of(comparator);
     var result = new ArrayList<RaptorAccessEgress>();
 
     for (int stop : mapByStop.keys()) {
       var list = mapByStop.get(stop);
       set.clear();
       set.addAll(list);
-      result.addAll(set);
+      result.addAll(set.stream().toList());
     }
     return result;
   }

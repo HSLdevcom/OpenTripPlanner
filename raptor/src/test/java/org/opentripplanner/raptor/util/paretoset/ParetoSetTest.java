@@ -2,7 +2,6 @@ package org.opentripplanner.raptor.util.paretoset;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -46,7 +45,7 @@ public class ParetoSetTest {
   @Test
   public void initiallyEmpty() {
     // Given a empty set
-    ParetoSet<TestVector> set = new ParetoSet<>(LESS_THEN);
+    ParetoSet<TestVector> set = ParetoSet.of(LESS_THEN);
 
     assertEquals("{}", set.toString(), "The initial set should be empty.");
     assertTrue(set.isEmpty(), "The initial set should be empty.");
@@ -54,7 +53,7 @@ public class ParetoSetTest {
 
   @Test
   public void addVector() {
-    ParetoSet<TestVector> set = new ParetoSet<>(
+    ParetoSet<TestVector> set = ParetoSet.of(
       (l, r) ->
         l.v1 < r.v1 || // less than
         l.v2 != r.v2 || // different dominates
@@ -72,20 +71,9 @@ public class ParetoSetTest {
   }
 
   @Test
-  public void removeAVectorIsNotAllowed() {
-    // Given a set with a vector
-    ParetoSet<TestVector> set = new ParetoSet<>(LESS_THEN);
-    TestVector vector = new TestVector("V0", 5);
-    addOk(set, vector);
-
-    // When vector is removed, expect an exception
-    assertThrows(UnsupportedOperationException.class, () -> set.remove(vector));
-  }
-
-  @Test
   public void testLessThen() {
     // Given a set with one element: [5]
-    ParetoSet<TestVector> set = new ParetoSet<>(LESS_THEN);
+    ParetoSet<TestVector> set = ParetoSet.of(LESS_THEN);
     set.add(new TestVector("V0", 5));
 
     // When adding the same value
@@ -110,7 +98,7 @@ public class ParetoSetTest {
   @Test
   public void testDifferent() {
     // Given a set with one element: [5]
-    ParetoSet<TestVector> set = new ParetoSet<>(DIFFERENT);
+    ParetoSet<TestVector> set = ParetoSet.of(DIFFERENT);
     set.add(new TestVector("V0", 5));
 
     // When adding the same value
@@ -135,7 +123,7 @@ public class ParetoSetTest {
   public void testTwoCriteriaWithLessThen() {
     // Given a set with one element with 2 criteria: [5, 5]
     // and a function where at least one value is less then to make it into the set
-    ParetoSet<TestVector> set = new ParetoSet<>(LESS_LESS_THEN);
+    ParetoSet<TestVector> set = ParetoSet.of(LESS_LESS_THEN);
     TestVector v0 = new TestVector("V0", 5, 5);
 
     // Cases that does NOT make it into the set
@@ -155,7 +143,7 @@ public class ParetoSetTest {
   @Test
   public void testTwoCriteria_lessThen_and_different() {
     // Given a set with one element with 2 criteria: [5, 5]
-    ParetoSet<TestVector> set = new ParetoSet<>(LESS_DIFFERENT_THEN);
+    ParetoSet<TestVector> set = ParetoSet.of(LESS_DIFFERENT_THEN);
     TestVector v0 = new TestVector("V0", 5, 5);
 
     // Cases that does NOT make it into the set
@@ -174,7 +162,7 @@ public class ParetoSetTest {
   @Test
   public void testTwoCriteria_lessThen_and_lessThenValue() {
     // Given a set with one element with 2 criteria: [5, 5]
-    ParetoSet<TestVector> set = new ParetoSet<>((l, r) -> l.v1 < r.v1 || l.v2 < r.v2 + 1);
+    ParetoSet<TestVector> set = ParetoSet.of((l, r) -> l.v1 < r.v1 || l.v2 < r.v2 + 1);
     TestVector v0 = new TestVector("V0", 5, 5);
 
     // Cases that does NOT make it into the set
@@ -195,7 +183,7 @@ public class ParetoSetTest {
   @Test
   public void testOneVectorDominatesMany() {
     // Given a set and function
-    ParetoSet<TestVector> set = new ParetoSet<>(LESS_LESS_THEN);
+    ParetoSet<TestVector> set = ParetoSet.of(LESS_LESS_THEN);
 
     // Add some values - all pareto optimal
     set.add(new TestVector("V0", 5, 1));
@@ -222,7 +210,7 @@ public class ParetoSetTest {
   @Test
   public void testRelaxedCriteriaAcceptingTheTwoSmallestValues() {
     // Given a set and function
-    ParetoSet<TestVector> set = new ParetoSet<>((l, r) -> l.v1 < r.v1 || l.v2 < r.v2 + 2);
+    ParetoSet<TestVector> set = ParetoSet.of((l, r) -> l.v1 < r.v1 || l.v2 < r.v2 + 2);
 
     // Add some values
     set.add(new TestVector("V0", 5, 5));
@@ -243,7 +231,7 @@ public class ParetoSetTest {
   @Test
   public void testRelaxedCriteriaAcceptingTenPercentExtra() {
     // Given a set and function
-    ParetoSet<TestVector> set = new ParetoSet<>(
+    ParetoSet<TestVector> set = ParetoSet.of(
       (l, r) -> l.v1 < r.v1 || l.v2 <= IntUtils.round(r.v2 * 1.1)
     );
 
@@ -261,7 +249,7 @@ public class ParetoSetTest {
   public void testFourCriteria() {
     // Given a set with one element with 2 criteria: [5, 5]
     // and the pareto function is: <, !=, >, <+2
-    ParetoSet<TestVector> set = new ParetoSet<>(
+    ParetoSet<TestVector> set = ParetoSet.of(
       (l, r) -> l.v1 < r.v1 || l.v2 != r.v2 || l.v3 > r.v3 || l.v4 < r.v4 + 2
     );
     TestVector v0 = new TestVector("V0", 5, 5, 5, 5);
@@ -300,7 +288,7 @@ public class ParetoSetTest {
   @Test
   public void testAutoScalingOfParetoSet() {
     // Given a set with 2 criteria
-    ParetoSet<TestVector> set = new ParetoSet<>(LESS_LESS_THEN);
+    ParetoSet<TestVector> set = ParetoSet.of(LESS_LESS_THEN);
 
     // The initial size is set to 16.
     // Add 100 mutually dominant values
@@ -320,7 +308,7 @@ public class ParetoSetTest {
   @Test
   public void testAddingMultipleElements() {
     // Given a set with 2 criteria: LT and LT
-    ParetoSet<TestVector> set = new ParetoSet<>(LESS_LESS_THEN);
+    ParetoSet<TestVector> set = ParetoSet.of(LESS_LESS_THEN);
     TestVector v55 = new TestVector("v55", 5, 5);
     TestVector v53 = new TestVector("v53", 5, 3);
     TestVector v44 = new TestVector("v44", 4, 4);
@@ -356,7 +344,7 @@ public class ParetoSetTest {
   @Test
   public void elementsAreNotDroppedWhenParetoOptimalElementsAreAdded() {
     // Given a set with 2 criteria: LT and LT
-    ParetoSet<TestVector> set = new ParetoSet<>(LESS_LESS_THEN, listener);
+    ParetoSet<TestVector> set = ParetoSet.of(LESS_LESS_THEN, listener);
 
     // Before any elements are added the list of dropped elements should be empty
     assertTrue(dropped.isEmpty());
@@ -373,7 +361,7 @@ public class ParetoSetTest {
   @Test
   public void firstElementIsDroppedWhenANewDominatingElementIsAdded() {
     // Given a set with 2 criteria: LT and LT and a vector [7, 3]
-    ParetoSet<TestVector> set = new ParetoSet<>(LESS_LESS_THEN, listener);
+    ParetoSet<TestVector> set = ParetoSet.of(LESS_LESS_THEN, listener);
     set.add(vector(7, 3));
     assertTrue(dropped.isEmpty());
 
@@ -398,7 +386,7 @@ public class ParetoSetTest {
   @Test
   public void lastElementIsDroppedWhenANewDominatingElementIsAdded() {
     // Given a set with 2 criteria: LT and LT and a vector [7, 3]
-    ParetoSet<TestVector> set = new ParetoSet<>(LESS_LESS_THEN, listener);
+    ParetoSet<TestVector> set = ParetoSet.of(LESS_LESS_THEN, listener);
     set.add(vector(5, 5));
     set.add(vector(7, 3));
     assertTrue(dropped.isEmpty());
