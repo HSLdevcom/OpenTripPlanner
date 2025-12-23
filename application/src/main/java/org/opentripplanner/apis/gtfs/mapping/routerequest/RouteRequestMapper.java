@@ -42,6 +42,13 @@ public class RouteRequestMapper {
       request.withDateTime(Instant.now());
     }
 
+    var bookingTime = args.getGraphQLBookingTime();
+    if (bookingTime != null) {
+      request.withBookingTime(bookingTime.toInstant());
+    } else {
+      request.withBookingTime(Instant.now());
+    }
+
     boolean isTripPlannedForNow = RouteRequest.isAPIGtfsTripPlannedForNow(request.dateTime());
 
     request.withFrom(parseGenericLocation(args.getGraphQLOrigin()));

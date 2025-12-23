@@ -3760,6 +3760,7 @@ public class GraphQLTypes {
 
     private String after;
     private String before;
+    private java.time.OffsetDateTime bookingTime;
     private GraphQLPlanDateTimeInput dateTime;
     private GraphQLPlanLabeledLocationInput destination;
     private Integer first;
@@ -3776,6 +3777,7 @@ public class GraphQLTypes {
       if (args != null) {
         this.after = (String) args.get("after");
         this.before = (String) args.get("before");
+        this.bookingTime = (java.time.OffsetDateTime) args.get("bookingTime");
         this.dateTime = new GraphQLPlanDateTimeInput((Map<String, Object>) args.get("dateTime"));
         this.destination = new GraphQLPlanLabeledLocationInput(
           (Map<String, Object>) args.get("destination")
@@ -3806,6 +3808,10 @@ public class GraphQLTypes {
 
     public String getGraphQLBefore() {
       return this.before;
+    }
+
+    public java.time.OffsetDateTime getGraphQLBookingTime() {
+      return this.bookingTime;
     }
 
     public GraphQLPlanDateTimeInput getGraphQLDateTime() {
@@ -3858,6 +3864,10 @@ public class GraphQLTypes {
 
     public void setGraphQLBefore(String before) {
       this.before = before;
+    }
+
+    public void setGraphQLBookingTime(java.time.OffsetDateTime bookingTime) {
+      this.bookingTime = bookingTime;
     }
 
     public void setGraphQLDateTime(GraphQLPlanDateTimeInput dateTime) {
