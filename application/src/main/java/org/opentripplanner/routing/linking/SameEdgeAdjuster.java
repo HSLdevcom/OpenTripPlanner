@@ -127,9 +127,9 @@ public class SameEdgeAdjuster {
   }
 
   /**
-   * If the origin and destination are very close to each other (within meters), they can be
-   * projected on the same street edge at the same geographical location, in which case there is no
-   * point in further processing the request. This method raises a
+   * If the two locations are very close to each other (within meters), they can be projected on the
+   * same street edge at the same geographical location, in which case there is no point in further
+   * processing the request. This method raises a
    * {@link RoutingErrorCode#WALKING_BETTER_THAN_TRANSIT} in this case.
    *
    * @throws RoutingValidationException if the from and to vertices are at the same geographical

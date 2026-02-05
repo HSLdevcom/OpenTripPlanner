@@ -217,8 +217,8 @@ public class LinkingContextFactory {
     List<GenericLocation> visitViaLocationsWithCoordinates,
     Map<GenericLocation, Set<Vertex>> visitViaLocationVertices
   ) {
-    addAdjustedEdgesBetween(container, fromVertices, toVertices);
     if (visitViaLocationsWithCoordinates.isEmpty()) {
+      addAdjustedEdgesBetween(container, fromVertices, toVertices);
       return;
     }
     addAdjustedEdgesBetween(
@@ -408,10 +408,22 @@ public class LinkingContextFactory {
       routingErrors.addAll(errors);
     }
 
-    // if from and to share any vertices, the user is already at their destination, and the result
-    // is a trivial path
-    if (!Sets.intersection(fromVertices, toVertices).isEmpty()) {
-      routingErrors.add(new RoutingError(RoutingErrorCode.WALKING_BETTER_THAN_TRANSIT, null));
+    // We try to avoid processing requests where some adjacent locations are too near each other as
+    // it can lead to strange routing results.
+    var adjacentVertices = new ArrayList<Set<Vertex>>();
+    adjacentVertices.add(fromVertices);
+    for (var location : visitViaLocationsWithCoordinates) {
+      var viaVertices = visitViaLocationVertices.get(location);
+      adjacentVertices.add(viaVertices);
+    }
+    adjacentVertices.add(toVertices);
+    for (int i = 0; i < adjacentVertices.size() - 1; i++) {
+      var fromSet = adjacentVertices.get(i);
+      var toSet = adjacentVertices.get(i + 1);
+      if (!Sets.intersection(fromSet, toSet).isEmpty()) {
+        routingErrors.add(new RoutingError(RoutingErrorCode.WALKING_BETTER_THAN_TRANSIT, null));
+        break;
+      }
     }
 
     if (!routingErrors.isEmpty()) {
