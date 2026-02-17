@@ -157,10 +157,10 @@ function whatDoYouWant() {
   echo ""
   ANSWER=""
 
-  read -r -p "Do you want to continue: [y:Yes or n:No]?" ANSWER
+  read -r -p "Do you want to continue: [y:Yes or n:No]? " ANSWER
 
   # If the answer isn't yes, then exit the script.
-  if [[ ! "${ANSWER,,}" =~ ^(y|yes)$ ]]; then
+  if [[ ! "${ANSWER,,}" =~ ^(y|ye|yes)$ ]]; then
     exit 0
   fi
 }
