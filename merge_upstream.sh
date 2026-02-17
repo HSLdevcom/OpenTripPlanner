@@ -1,25 +1,24 @@
 #!/usr/bin/env bash
 
-# Pulls upstream state (usually this should be opentripplanner/opentripplanner/dev-2.x)
-# Rebases local extension branches on top of pulled upstream and pushes rebased extensions
-# Replaces upstream CI actions with digitransit setup
-# Pushes the result (upstream + local modifications) to digitransit OTP dev-2.x branch
-# To apply this script, you need to set up upstream opentripplanner as remote (say a remote called otp)
-# IMPORTANT: make sure that digitransit origin is the default repository:
-#     git config checkout.defaultRemote origin
-# First fetch the upstream: git fetch otp
-# Then run ./merge_upstream.sh otp/dev-2.x
-# The result is that updated dev-2.x is pushed to our fork and gets deployed to development (v2 branch).
-# You can test the merge as follows:   ./merge_upstream.sh --dryRun otp/dev-2.x
+# See the printHelp function for instructions on using this script.
+# You can run ./merge_upstream.sh -h to view the output in your terminal.
+
+# Capabilities of this script:
+# - Pull remote branch state (usually this should be the upstream OpenTripPlanner dev-2.x branch).
+# - CURRENTLY NOT IN USE - Rebase local extension branches on top of pulled upstream and push rebased extensions.
+# - Replace upstream CI actions with Digitransit setup.
+# - If configured, push the result (upstream + local modifications) to Digitransit OTP v2 (default) or custom-release branch.
 
 #set -euo pipefail
 
 DEVBRANCH=v2
 REMOTE_REPO=$(git remote -v | grep -i "hsldevcom/OpenTripPlanner" | grep "push" | awk '{print $1;}')
+DEFAULT_REMOTE=$(git config checkout.defaultRemote)
 STATUS_FILE=".merge_upstream.tmp"
 STATUS=""
-DRY_RUN=""
 OTP_BASE=""
+FORCE_PUSH_TO_BRANCH=""
+CUSTOM_RELEASE=""
 
 # bash colored output control characters
 BASH_GREEN="\e[32m"
@@ -55,18 +54,46 @@ function main() {
 }
 
 function setup() {
-  if [[ $# -eq 2 && "$1" == "--dryRun" ]]; then
-    DRY_RUN="--dryRun"
-    OTP_BASE="$2"
-  elif [[ $# -eq 1 ]]; then
-    OTP_BASE="$1"
-  else
+  if [[ "$REMOTE_REPO" != "origin" ]]; then
+    printHelp
+    echo ""
+    echo "The origin remote does not point to hsldevcom/OpenTripPlanner"
+    exit 1
+  fi
+
+  if [[ "$DEFAULT_REMOTE" != "origin" ]]; then
+    printHelp
+    echo ""
+    echo "The default remote is not set to origin"
+    exit 1
+  fi
+
+  while getopts "b:pc" opt; do
+    case "$opt" in
+    b)
+      OTP_BASE="$OPTARG"
+      ;;
+    p)
+      FORCE_PUSH_TO_BRANCH="-p"
+      ;;
+    c)
+      CUSTOM_RELEASE="-c"
+      DEVBRANCH="custom-release"
+      ;;
+    *)
+      printHelp
+      exit 1
+      ;;
+    esac
+  done
+
+  if [[ -z "$OTP_BASE" ]]; then
     printHelp
     exit 1
   fi
 
   echo ""
-  echo "Options: ${DRY_RUN}"
+  echo "Options: ${FORCE_PUSH_TO_BRANCH} ${CUSTOM_RELEASE}"
   echo "Git base branch/commit: ${OTP_BASE}"
   echo "Digitransit development branch: ${DEVBRANCH}"
   echo "Digitransit remote repo(pull/push): ${REMOTE_REPO}"
@@ -83,7 +110,7 @@ function setup() {
     exit 2
   fi
 
-  git fetch "${REMOTE_REPO}"
+  git fetch --all
 }
 
 # This script create a status file '.merge_upstream.tmp'. This file is used to resume the
@@ -190,7 +217,7 @@ function rebaseAndMergeExtBranch() {
 
     echo ""
     echo "Push '${EXT_BRANCH}'"
-    if [[ -z "${DRY_RUN}" ]]; then
+    if [[ ! -z "${FORCE_PUSH_TO_BRANCH}" ]]; then
       git push -f
     else
       echo "Skip: git push -f   (--dryRun)"
@@ -208,7 +235,7 @@ function configDigitransitCI() {
   rm -rf .github
   git checkout origin/digitransit_ext_config .github
   git commit -a -m "Configure Digitransit CI actions"
-  if [[ -z "${DRY_RUN}" ]]; then
+  if [[ ! -z "${FORCE_PUSH_TO_BRANCH}" ]]; then
     git push -f
   fi
 }
@@ -264,19 +291,25 @@ function clearStatus() {
 
 function printHelp() {
   echo ""
-  echo -e "This script takes one argument, the base **${BOLD}branch${BASH_ENDFORMAT}** or **${BOLD}commit${BASH_ENDFORMAT}** to use for the"
-  echo "release. The '${DEVBRANCH}' branch is reset to this commit and then the extension"
-  echo "branches are rebased onto that. "
-  echo "It tags and pushes all changes to remote git repo."
+  echo -e "This script requires one argument, the base ${BOLD}branch${BASH_ENDFORMAT} or ${BOLD}commit${BASH_ENDFORMAT} to use for the output branch."
+  echo "The output branch v2 (default) or custom-release is reset to this commit and then the extension branches are rebased onto that."
+  echo "Changes are force pushed to the remote git repo if the -p flag is used."
+  echo ""
+  echo "Make sure origin is set to hsldevcom/OpenTripPlanner and that it is the default repository (git config checkout.defaultRemote origin)."
+  echo "You also need to set up upstream OTP as a remote."
   echo ""
   echo_bold "Options:"
   echo ""
-  echo "   --dryRun : Run script locally, nothing is pushed to remote server."
+  echo "  MANDATORY:"
+  echo "    -b : The base branch (or pathspec) to use for the output. Given as an argument to 'git reset --hard <argument>'."
+  echo "  OPTIONAL:"
+  echo "    -p : Force push to the selected branch v2 (default) or custom-release at the end of the script."
+  echo "    -c : Use the custom-release branch instead of v2 for the output of this script."
   echo ""
   echo_bold "Usage:"
   echo ""
-  echo "  $ ./merge_upstream.sh otp/dev-2.x"
-  echo "  $ ./merge_upstream.sh --dryRun otp/dev-2.x"
+  echo " $ ./merge_upstream.sh -b upstream/dev-2.x"
+  echo " $ ./merge_upstream.sh -b upstream/dev-2.x -p -c"
   echo ""
 }
 
