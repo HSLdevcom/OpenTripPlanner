@@ -62,6 +62,7 @@ function setup() {
     exit 1
   fi
 
+  # Parse -b (mandatory), -p, and -c options and set appropriate variables when an option is given.
   while getopts "b:pc" opt; do
     case "$opt" in
     b)
@@ -81,6 +82,7 @@ function setup() {
     esac
   done
 
+  # If no OTP base branch/pathspec is given.
   if [[ -z "$OTP_BASE" ]]; then
     printHelp
     exit 1
