@@ -217,7 +217,7 @@ function rebaseAndMergeExtBranch() {
 
     echo ""
     echo "Push '${EXT_BRANCH}'"
-    if [[ ! -z "${FORCE_PUSH_TO_BRANCH}" ]]; then
+    if [[ -n "${FORCE_PUSH_TO_BRANCH}" ]]; then
       git push -f
     else
       echo "Skip: git push -f   (--dryRun)"
@@ -235,7 +235,7 @@ function configDigitransitCI() {
   rm -rf .github
   git checkout origin/digitransit_ext_config .github
   git commit -a -m "Configure Digitransit CI actions"
-  if [[ ! -z "${FORCE_PUSH_TO_BRANCH}" ]]; then
+  if [[ -n "${FORCE_PUSH_TO_BRANCH}" ]]; then
     git push -f
   fi
 }
