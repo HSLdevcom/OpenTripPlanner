@@ -10,6 +10,8 @@
 
 set -euo pipefail
 
+SCRIPT_DIR=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
+
 DEVBRANCH=v2
 REMOTE_REPO=$(git remote -v | grep -i "hsldevcom/OpenTripPlanner" | grep "push" | awk '{print $1;}')
 DEFAULT_REMOTE=$(git config checkout.defaultRemote)
@@ -43,6 +45,7 @@ echo_bold() {
 function main() {
   setup "$@"
   resetDevelop
+  createChangelogDiffFile
   configDigitransitCI
   logSuccess
 }
@@ -112,10 +115,10 @@ function setup() {
 function resetDevelop() {
   echo ""
   echo_bold "## ------------------------------------------------------------------------------------- ##"
-  echo_bold "##   RESET '${DEVBRANCH}' TO '${OTP_BASE}'"
+  echo_bold "##   RESET '${DEVBRANCH}' BRANCH TO '${OTP_BASE}'"
   echo_bold "## ------------------------------------------------------------------------------------- ##"
   echo ""
-  echo "Would you like to reset the '${DEVBRANCH}' to '${OTP_BASE}'? "
+  echo "Would you like to reset the '${DEVBRANCH}' branch to '${OTP_BASE}'? "
   echo ""
 
   whatDoYouWant
@@ -130,8 +133,16 @@ function resetDevelop() {
   echo ""
 }
 
+function createChangelogDiffFile() {
+  mkdir -p "$SCRIPT_DIR/digitransit"
+  LATEST_TAG=$(curl https://api.github.com/repos/HSLdevcom/OpenTripPlanner/releases/latest | jq -r .tag_name)
+  python3 "$SCRIPT_DIR/script/changelog-diff.py" $LATEST_TAG $OTP_BASE > "$SCRIPT_DIR/digitransit/RELEASE_CHANGELOG.md"
+
+  git add "$SCRIPT_DIR/digitransit"
+  git commit -m "Create RELEASE_CHANGELOG.md"
+}
+
 function configDigitransitCI() {
-  git checkout "${DEVBRANCH}"
   rm -rf .github
   git checkout origin/digitransit_ext_config .github
   git commit -a -m "Configure Digitransit CI actions"
