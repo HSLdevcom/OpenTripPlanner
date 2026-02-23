@@ -26,7 +26,12 @@
 
 # Overview of CI and Branch Configuration
 
-This is the Digitransit fork of [OpenTripPlanner](https://github.com/opentripplanner/OpenTripPlanner). The [`digitransit_ext_config`](https://github.com/HSLdevcom/OpenTripPlanner/tree/digitransit_ext_config) branch contains the Digitransit CI configuration and scripts.
+This is the Digitransit fork of [OpenTripPlanner](https://github.com/opentripplanner/OpenTripPlanner).
+The [`digitransit_ext_config`](https://github.com/HSLdevcom/OpenTripPlanner/tree/digitransit_ext_config) branch contains the Digitransit CI configuration and scripts.
+
+> **The contents of the `v2` branch are reset often and nothing is configured to be retained in the branch permanently!
+It should not be used as a base for changes.
+Always use the upstream [`dev-2.x`](https://github.com/opentripplanner/OpenTripPlanner) branch as a base and make contributions there.**
 
 ## Relevant Branches
 
@@ -36,7 +41,7 @@ There is also a `custom-release` branch that is used for building versions of OT
 
 ## CI Configuration
 
-Checkout [.github/workflows](/.github/workflows/). The configured CI pipelines build docker images for dev and prod. The built images can be found here: https://hub.docker.com/r/hsldevcom/opentripplanner.
+Checkout [`.github/workflows`](/.github/workflows/). The configured CI pipelines build docker images for dev and prod. The built images can be found here: https://hub.docker.com/r/hsldevcom/opentripplanner.
 
 ## `merge_upstream.sh`
 
