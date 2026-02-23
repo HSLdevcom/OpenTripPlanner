@@ -46,3 +46,4 @@ Checkout [`.github/workflows`](/.github/workflows/). The configured CI pipelines
 ## `merge_upstream.sh`
 
 This script can be used to merge and push changes from e.g. `upstream/dev-2.x` to the `v2` or `custom-release` branches.
+You need to have `python3` and `jq` installed.
