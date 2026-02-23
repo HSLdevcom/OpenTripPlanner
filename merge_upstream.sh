@@ -25,19 +25,19 @@ BASH_ENDFORMAT="\e[0m"
 BOLD="\e[1m"
 
 echo_green() {
-  echo -e "$BASH_GREEN$1$BASH_ENDFORMAT"
+  printf "$BASH_GREEN$1$BASH_ENDFORMAT\n"
 }
 
 echo_yellow() {
-  echo -e "$BASH_YELLOW$1$BASH_ENDFORMAT"
+  printf "$BASH_YELLOW$1$BASH_ENDFORMAT\n"
 }
 
 echo_red() {
-  echo -e "$BASH_RED$1$BASH_ENDFORMAT"
+  printf "$BASH_RED$1$BASH_ENDFORMAT\n"
 }
 
 echo_bold() {
-  echo -e "$BOLD$1$BASH_ENDFORMAT"
+  printf "$BOLD$1$BASH_ENDFORMAT\n"
 }
 
 function main() {
@@ -159,15 +159,16 @@ function whatDoYouWant() {
 
   read -r -p "Do you want to continue: [y:Yes or n:No]? " ANSWER
 
+  ANSWER_LOWERCASE=$(echo "$ANSWER" | tr '[:upper:]' '[:lower:]')
   # If the answer isn't yes, then exit the script.
-  if [[ ! "${ANSWER,,}" =~ ^(y|ye|yes)$ ]]; then
+  if [[ ! "${ANSWER_LOWERCASE}" =~ ^(y|ye|yes)$ ]]; then
     exit 0
   fi
 }
 
 function printHelp() {
   echo ""
-  echo -e "This script requires one argument, the base ${BOLD}branch${BASH_ENDFORMAT} or ${BOLD}commit${BASH_ENDFORMAT} to use for the output branch."
+  printf "This script requires one argument, the base ${BOLD}branch${BASH_ENDFORMAT} or ${BOLD}commit${BASH_ENDFORMAT} to use for the output branch.\n"
   echo "The output branch, v2 (default) or custom-release, is reset to this commit."
   echo "Changes are force pushed to the remote git repo if the -p flag is used."
   echo ""
