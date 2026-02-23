@@ -82,7 +82,7 @@ function setup() {
     esac
   done
 
-  # If no OTP base branch/pathspec is given.
+  # If no OTP base branch/tree-ish argument is given.
   if [[ -z "$OTP_BASE" ]]; then
     printHelp
     exit 1
@@ -178,7 +178,7 @@ function printHelp() {
   echo_bold "Options:"
   echo ""
   echo "  MANDATORY:"
-  echo "    -b : The base branch (or pathspec) to use for the output. Given as an argument to 'git reset --hard <argument>'."
+  echo "    -b : The base branch (or tree-ish) argument to use for the output. Given as an argument to 'git reset --hard <argument>'."
   echo "  OPTIONAL:"
   echo "    -p : Force push to the selected branch, v2 (default) or custom-release, at the end of the script."
   echo "    -c : Use the custom-release branch instead of v2 for the output of this script."
