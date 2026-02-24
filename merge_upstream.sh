@@ -136,7 +136,8 @@ function resetDevelop() {
 function createChangelogDiffFile() {
   mkdir -p "$SCRIPT_DIR/digitransit"
   LATEST_TAG=$(curl https://api.github.com/repos/HSLdevcom/OpenTripPlanner/releases/latest | jq -r .tag_name)
-  python3 "$SCRIPT_DIR/script/changelog-diff.py" $LATEST_TAG $OTP_BASE > "$SCRIPT_DIR/digitransit/RELEASE_CHANGELOG.md"
+  echo "# Digitransit OTP Release Summary" > "$SCRIPT_DIR/digitransit/RELEASE_CHANGELOG.md"
+  python3 "$SCRIPT_DIR/script/changelog-diff.py" $LATEST_TAG $OTP_BASE >> "$SCRIPT_DIR/digitransit/RELEASE_CHANGELOG.md"
 
   git add "$SCRIPT_DIR/digitransit"
   git commit -m "Create RELEASE_CHANGELOG.md"
