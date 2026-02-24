@@ -199,7 +199,7 @@ function checkDiffComparisonBranch() {
   # If no diff comparison branch or commit object argument is given.
   if [[ -z "$DIFF_COMPARISON_BRANCH" ]]; then
     # Assign the latest release tag.
-    DIFF_COMPARISON_BRANCH=$(curl https://api.github.com/repos/HSLdevcom/OpenTripPlanner/releases/latest | jq -r .tag_name)
+    DIFF_COMPARISON_BRANCH=$(curl -s https://api.github.com/repos/HSLdevcom/OpenTripPlanner/releases/latest | jq -r .tag_name)
   fi
 }
 
