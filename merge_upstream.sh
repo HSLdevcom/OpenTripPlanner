@@ -58,7 +58,7 @@ function main() {
 function setup() {
   checkOriginRemote
 
-  # Parse -b (mandatory), -p, and -c options and set appropriate variables when an option is given.
+  # Parse -b (mandatory), -p, -c, and -d options and set appropriate variables when an option is given.
   while getopts "b:pcd:" opt; do
     case "$opt" in
     b)
