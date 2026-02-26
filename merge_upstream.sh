@@ -10,12 +10,19 @@
 
 set -euo pipefail
 
-DEVBRANCH=v2
-REMOTE_REPO=$(git remote -v | grep -i "hsldevcom/OpenTripPlanner" | grep "push" | awk '{print $1;}')
+SCRIPT_DIR=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
+
 DEFAULT_REMOTE=$(git config checkout.defaultRemote)
-OTP_BASE=""
+ORIGIN_REMOTE="origin"
+INCOMING_OTP_BASE_REMOTE=""
+HSLDEVCOM_REMOTE=$(git remote -v | grep -i "hsldevcom/OpenTripPlanner" | grep "push" | awk '{print $1;}')
+
+OUTPUT_BRANCH=v2
+
+OPTIONS=""
+INCOMING_OTP_BASE=""
 FORCE_PUSH_TO_BRANCH=""
-CUSTOM_RELEASE=""
+DIFF_COMPARISON_BRANCH=""
 
 # bash colored output control characters
 BASH_GREEN="\e[32m"
@@ -43,37 +50,32 @@ echo_bold() {
 function main() {
   setup "$@"
   resetDevelop
+  createChangelogDiffFile
   configDigitransitCI
   logSuccess
 }
 
 function setup() {
-  if [[ "$REMOTE_REPO" != "origin" ]]; then
-    printHelp
-    echo ""
-    echo "The origin remote does not point to hsldevcom/OpenTripPlanner"
-    exit 1
-  fi
+  checkOriginRemote
 
-  if [[ "$DEFAULT_REMOTE" != "origin" ]]; then
-    printHelp
-    echo ""
-    echo "The default remote is not set to origin"
-    exit 1
-  fi
-
-  # Parse -b (mandatory), -p, and -c options and set appropriate variables when an option is given.
-  while getopts "b:pc" opt; do
+  # Parse -b (mandatory), -p, -c, and -d options and set appropriate variables when an option is given.
+  while getopts "b:pcd:" opt; do
     case "$opt" in
     b)
-      OTP_BASE="$OPTARG"
+      OPTIONS="$OPTIONS -b $OPTARG"
+      INCOMING_OTP_BASE="$OPTARG"
       ;;
     p)
-      FORCE_PUSH_TO_BRANCH="-p"
+      OPTIONS="$OPTIONS -p"
+      FORCE_PUSH_TO_BRANCH="true"
       ;;
     c)
-      CUSTOM_RELEASE="-c"
-      DEVBRANCH="custom-release"
+      OPTIONS="$OPTIONS -c"
+      OUTPUT_BRANCH="custom-release"
+      ;;
+    d)
+      OPTIONS="$OPTIONS -d $OPTARG"
+      DIFF_COMPARISON_BRANCH="$OPTARG"
       ;;
     *)
       printHelp
@@ -82,22 +84,25 @@ function setup() {
     esac
   done
 
-  # If no OTP base branch/pathspec is given.
-  if [[ -z "$OTP_BASE" ]]; then
-    printHelp
-    exit 1
-  fi
+  checkDiffComparisonBranch
+  parseIncomingOtpBase
 
   echo ""
-  echo "Options: ${FORCE_PUSH_TO_BRANCH} ${CUSTOM_RELEASE}"
-  echo "Git base branch/commit: ${OTP_BASE}"
-  echo "Digitransit development branch: ${DEVBRANCH}"
-  echo "Digitransit remote repo(pull/push): ${REMOTE_REPO}"
+  echo "Options:$OPTIONS"
+  echo "Git base branch or commit object:         ${INCOMING_OTP_BASE}"
+  if [[ -n "${FORCE_PUSH_TO_BRANCH}" ]]; then
+    echo "Force push to branch:                     true"
+  else
+    echo "Force push to branch:                     false"
+  fi
+  echo "Diff comparison branch or commit object:  ${DIFF_COMPARISON_BRANCH}"
+  echo "Digitransit output branch:                ${OUTPUT_BRANCH}"
+  echo "Digitransit remote repo:                  ${HSLDEVCOM_REMOTE}"
   echo ""
 
   if git diff-index --quiet HEAD --; then
     echo ""
-    echo "OK - No local changes, prepare to checkout '${DEVBRANCH}'"
+    echo "OK - No local changes, prepare to checkout '${OUTPUT_BRANCH}'"
     echo ""
   else
     echo ""
@@ -106,38 +111,46 @@ function setup() {
     exit 2
   fi
 
-  git fetch --all
+  git fetch --multiple "$ORIGIN_REMOTE" "$INCOMING_OTP_BASE_REMOTE"
 }
 
 function resetDevelop() {
   echo ""
   echo_bold "## ------------------------------------------------------------------------------------- ##"
-  echo_bold "##   RESET '${DEVBRANCH}' TO '${OTP_BASE}'"
+  echo_bold "##   RESET '${OUTPUT_BRANCH}' BRANCH TO '${INCOMING_OTP_BASE}'"
   echo_bold "## ------------------------------------------------------------------------------------- ##"
   echo ""
-  echo "Would you like to reset the '${DEVBRANCH}' to '${OTP_BASE}'? "
+  echo "Would you like to reset the '${OUTPUT_BRANCH}' branch to '${INCOMING_OTP_BASE}'? "
   echo ""
 
   whatDoYouWant
 
   echo ""
-  echo "Checkout '${DEVBRANCH}'"
-  git checkout ${DEVBRANCH}
+  echo "Checkout '${OUTPUT_BRANCH}'"
+  git checkout ${OUTPUT_BRANCH}
 
   echo ""
-  echo "Reset '${DEVBRANCH}' branch to '${OTP_BASE}' (hard)"
-  git reset --hard "${OTP_BASE}"
+  echo "Reset '${OUTPUT_BRANCH}' branch to '${INCOMING_OTP_BASE}' (hard)"
+  git reset --hard "${INCOMING_OTP_BASE}"
   echo ""
 }
 
+function createChangelogDiffFile() {
+  mkdir -p "$SCRIPT_DIR/digitransit"
+  echo "# Digitransit OTP Release Summary" > "$SCRIPT_DIR/digitransit/RELEASE_CHANGELOG.md"
+  python3 "$SCRIPT_DIR/script/changelog-diff.py" $DIFF_COMPARISON_BRANCH $INCOMING_OTP_BASE >> "$SCRIPT_DIR/digitransit/RELEASE_CHANGELOG.md"
+
+  git add "$SCRIPT_DIR/digitransit"
+  git commit -m "Create RELEASE_CHANGELOG.md"
+}
+
 function configDigitransitCI() {
-  git checkout "${DEVBRANCH}"
   rm -rf .github
   git checkout origin/digitransit_ext_config .github
   git commit -a -m "Configure Digitransit CI actions"
   if [[ -n "${FORCE_PUSH_TO_BRANCH}" ]]; then
     echo ""
-    echo "Force pushing contents to '${DEVBRANCH}'"
+    echo "Force pushing contents to '${OUTPUT_BRANCH}'"
     git push -f
   fi
 }
@@ -147,7 +160,7 @@ function logSuccess() {
   echo_green "## ------------------------------------------------------------------------------------- ##"
   echo_green "##   UPSTREAM MERGE DONE  --  SUCCESS"
   echo_green "## ------------------------------------------------------------------------------------- ##"
-  echo "   - '${REMOTE_REPO}/${DEVBRANCH}' reset to '${OTP_BASE}'"
+  echo "   - '${HSLDEVCOM_REMOTE}/${OUTPUT_BRANCH}' reset to '${INCOMING_OTP_BASE}'"
   echo "   - 'digitransit_ext_config' CI features added"
   echo ""
   echo ""
@@ -166,6 +179,42 @@ function whatDoYouWant() {
   fi
 }
 
+function checkOriginRemote() {
+  if [[ "$HSLDEVCOM_REMOTE" != "$ORIGIN_REMOTE" ]]; then
+    printHelp
+    echo ""
+    echo "The origin remote does not point to hsldevcom/OpenTripPlanner"
+    exit 1
+  fi
+
+  if [[ "$DEFAULT_REMOTE" != "$ORIGIN_REMOTE" ]]; then
+    printHelp
+    echo ""
+    echo "The default remote is not set to origin"
+    exit 1
+  fi
+}
+
+function checkDiffComparisonBranch() {
+  # If no diff comparison branch or commit object argument is given.
+  if [[ -z "$DIFF_COMPARISON_BRANCH" ]]; then
+    # Assign the latest release tag.
+    DIFF_COMPARISON_BRANCH=$(curl -s https://api.github.com/repos/HSLdevcom/OpenTripPlanner/releases/latest | jq -r .tag_name)
+  fi
+}
+
+function parseIncomingOtpBase() {
+  # If no OTP base branch or commit object argument is given.
+  if [[ -z "$INCOMING_OTP_BASE" ]]; then
+    printHelp
+    exit 1
+  fi
+
+  if [[ "$INCOMING_OTP_BASE" == */* ]]; then
+    INCOMING_OTP_BASE_REMOTE="${INCOMING_OTP_BASE%%/*}"
+  fi
+}
+
 function printHelp() {
   echo ""
   printf "This script requires one argument, the base ${BOLD}branch${BASH_ENDFORMAT} or ${BOLD}commit${BASH_ENDFORMAT} to use for the output branch.\n"
@@ -178,10 +227,12 @@ function printHelp() {
   echo_bold "Options:"
   echo ""
   echo "  MANDATORY:"
-  echo "    -b : The base branch (or pathspec) to use for the output. Given as an argument to 'git reset --hard <argument>'."
+  echo "    -b : The base branch (or commit object) argument to use for the output. Given as an argument to 'git reset --hard <argument>'."
   echo "  OPTIONAL:"
   echo "    -p : Force push to the selected branch, v2 (default) or custom-release, at the end of the script."
   echo "    -c : Use the custom-release branch instead of v2 for the output of this script."
+  echo "    -d : Define a changelog diff comparison branch (or commit object) that the new incoming changelog will be compared to."
+  echo "         If nothing is specified, the latest Digitransit OTP release tag is used."
   echo ""
   echo_bold "Usage:"
   echo ""
