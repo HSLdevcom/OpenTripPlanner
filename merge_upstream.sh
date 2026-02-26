@@ -111,7 +111,7 @@ function setup() {
     exit 2
   fi
 
-  git fetch --multiple "$ORIGIN_REMOTE" "$INCOMING_OTP_BASE_REMOTE"
+  git fetch --all
 }
 
 function resetDevelop() {
