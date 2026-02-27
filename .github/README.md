@@ -43,7 +43,7 @@ There is also a `custom-release` branch that is used for building versions of OT
 
 Checkout [`.github/workflows`](/.github/workflows/). The configured CI pipelines build docker images for dev and prod. The built images can be found here: https://hub.docker.com/r/hsldevcom/opentripplanner.
 
-## [`merge_upstream.sh`](/merge_upstream.sh)
+## [`merge_upstream.sh`](https://github.com/HSLdevcom/OpenTripPlanner/blob/digitransit_ext_config/merge_upstream.sh)
 
 This script can be used to merge and push changes from e.g. `upstream/dev-2.x` to the `v2` or `custom-release` branches.
 You need to have `python3` and `jq` installed.

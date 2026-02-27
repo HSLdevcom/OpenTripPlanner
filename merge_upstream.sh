@@ -14,7 +14,6 @@ SCRIPT_DIR=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
 
 DEFAULT_REMOTE=$(git config checkout.defaultRemote)
 ORIGIN_REMOTE="origin"
-INCOMING_OTP_BASE_REMOTE=""
 HSLDEVCOM_REMOTE=$(git remote -v | grep -i "hsldevcom/OpenTripPlanner" | grep "push" | awk '{print $1;}')
 
 OUTPUT_BRANCH=v2
@@ -208,10 +207,6 @@ function parseIncomingOtpBase() {
   if [[ -z "$INCOMING_OTP_BASE" ]]; then
     printHelp
     exit 1
-  fi
-
-  if [[ "$INCOMING_OTP_BASE" == */* ]]; then
-    INCOMING_OTP_BASE_REMOTE="${INCOMING_OTP_BASE%%/*}"
   fi
 }
 
