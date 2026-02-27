@@ -22,6 +22,7 @@ OPTIONS=""
 INCOMING_OTP_BASE=""
 FORCE_PUSH_TO_BRANCH=""
 DIFF_COMPARISON_BRANCH=""
+SKIP_GIT_FETCH=""
 
 # bash colored output control characters
 BASH_GREEN="\e[32m"
@@ -57,8 +58,8 @@ function main() {
 function setup() {
   checkOriginRemote
 
-  # Parse -b (mandatory), -p, -c, and -d options and set appropriate variables when an option is given.
-  while getopts "b:pcd:" opt; do
+  # Parse -b (mandatory), -p, -c, -d, and -s options and set appropriate variables when an option is given.
+  while getopts "b:pcd:s" opt; do
     case "$opt" in
     b)
       OPTIONS="$OPTIONS -b $OPTARG"
@@ -76,6 +77,10 @@ function setup() {
       OPTIONS="$OPTIONS -d $OPTARG"
       DIFF_COMPARISON_BRANCH="$OPTARG"
       ;;
+    s)
+      OPTIONS="$OPTIONS -s"
+      SKIP_GIT_FETCH="true"
+      ;;
     *)
       printHelp
       exit 1
@@ -84,7 +89,7 @@ function setup() {
   done
 
   checkDiffComparisonBranch
-  parseIncomingOtpBase
+  checkIncomingOtpBase
 
   echo ""
   echo "Options:$OPTIONS"
@@ -95,6 +100,11 @@ function setup() {
     echo "Force push to branch:                     false"
   fi
   echo "Diff comparison branch or commit object:  ${DIFF_COMPARISON_BRANCH}"
+  if [[ -n "${SKIP_GIT_FETCH}" ]]; then
+    echo "Skip git fetch:                           true"
+  else
+    echo "Skip git fetch:                           false"
+  fi
   echo "Digitransit output branch:                ${OUTPUT_BRANCH}"
   echo "Digitransit remote repo:                  ${HSLDEVCOM_REMOTE}"
   echo ""
@@ -110,7 +120,11 @@ function setup() {
     exit 2
   fi
 
-  git fetch --all
+  if [[ -n "${SKIP_GIT_FETCH}" ]]; then
+    echo "Skipping 'git fetch --all'"
+  else
+    git fetch --all
+  fi
 }
 
 function resetDevelop() {
@@ -202,7 +216,7 @@ function checkDiffComparisonBranch() {
   fi
 }
 
-function parseIncomingOtpBase() {
+function checkIncomingOtpBase() {
   # If no OTP base branch or commit object argument is given.
   if [[ -z "$INCOMING_OTP_BASE" ]]; then
     printHelp
@@ -228,6 +242,7 @@ function printHelp() {
   echo "    -c : Use the custom-release branch instead of v2 for the output of this script."
   echo "    -d : Define a changelog diff comparison branch (or commit object) that the new incoming changelog will be compared to."
   echo "         If nothing is specified, the latest Digitransit OTP release tag is used."
+  echo "    -s : Skip the 'git fetch --all' command."
   echo ""
   echo_bold "Usage:"
   echo ""
