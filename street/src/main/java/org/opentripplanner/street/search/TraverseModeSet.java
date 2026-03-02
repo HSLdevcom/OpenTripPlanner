@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.opentripplanner.utils.collection.SetUtils;
 
 /**
@@ -43,6 +44,14 @@ public class TraverseModeSet implements Cloneable, Serializable {
    */
   public TraverseModeSet merge(TraverseModeSet other) {
     return new TraverseModeSet(SetUtils.combine(this.getModes(), other.getModes()));
+  }
+
+  public TraverseModeSet minus(TraverseModeSet other) {
+    var modesNotInOther = this.getModes()
+      .stream()
+      .filter(e -> !other.getModes().contains(e))
+      .collect(Collectors.toUnmodifiableSet());
+    return new TraverseModeSet(modesNotInOther);
   }
 
   /**

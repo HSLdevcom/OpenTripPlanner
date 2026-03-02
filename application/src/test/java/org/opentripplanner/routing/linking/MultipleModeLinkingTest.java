@@ -18,11 +18,17 @@ import org.opentripplanner.street.search.TraverseModeSet;
 
 class MultipleModeLinkingTest {
 
+  private static final TraverseModeSet ALL_MODES = TraverseModeSet.allModes();
+  private static final TraverseModeSet NONE = new TraverseModeSet();
+  private static final double NO_RESULTS_DEGREES = 0.0000001;
+  private static final double WALK_RESULT_DEGREES = 0.0001;
+  private static final double ALL_RESULTS_DEGREES = 0.001;
+
   private static List<Arguments> multiModeLinkingWithSeparateTestCases() {
     return List.of(
       Arguments.of(
-        TraverseModeSet.allModes(),
-        TraverseModeSet.allModes(),
+        ALL_MODES,
+        ALL_MODES,
         List.of(
           "(0,0) → (0.005,0) PEDESTRIAN ♿✅",
           "(0.005,0) → (0.01,0) PEDESTRIAN ♿✅",
@@ -59,8 +65,8 @@ class MultipleModeLinkingTest {
         )
       ),
       Arguments.of(
-        TraverseModeSet.allModes(),
-        new TraverseModeSet(),
+        ALL_MODES,
+        NONE,
         List.of("(0,0) → (0.005,0) PEDESTRIAN ♿✅", "(0,0.0002) → (0.005,0.0002) CAR ♿✅"),
         List.of(
           "(0,0) → (0.005,0) PEDESTRIAN ♿✅",
@@ -70,8 +76,8 @@ class MultipleModeLinkingTest {
         )
       ),
       Arguments.of(
-        new TraverseModeSet(),
-        TraverseModeSet.allModes(),
+        NONE,
+        ALL_MODES,
         List.of("(0.005,0.0002) → (0.01,0.0002) CAR ♿✅", "(0.005,0) → (0.01,0) PEDESTRIAN ♿✅"),
         List.of(
           "(0.005,-0.0001) → (0.005,0) PEDESTRIAN",
@@ -125,8 +131,8 @@ class MultipleModeLinkingTest {
   private static List<Arguments> multiModeLinkingWithSameLinksTestCases() {
     return List.of(
       Arguments.of(
-        TraverseModeSet.allModes(),
-        TraverseModeSet.allModes(),
+        ALL_MODES,
+        ALL_MODES,
         List.of("(0,0) → (0.005,0) ALL ♿✅", "(0.005,0) → (0.01,0) ALL ♿✅"),
         List.of(
           "(0,0) → (0.005,0) ALL ♿✅",
@@ -147,14 +153,14 @@ class MultipleModeLinkingTest {
         )
       ),
       Arguments.of(
-        TraverseModeSet.allModes(),
-        new TraverseModeSet(),
+        ALL_MODES,
+        NONE,
         List.of("(0,0) → (0.005,0) ALL ♿✅"),
         List.of("(0,0) → (0.005,0) ALL ♿✅", "(0.005,0) → (0.005,-0.0001) ALL")
       ),
       Arguments.of(
-        new TraverseModeSet(),
-        TraverseModeSet.allModes(),
+        NONE,
+        ALL_MODES,
         List.of("(0.005,0) → (0.01,0) ALL ♿✅"),
         List.of("(0.005,0) → (0.01,0) ALL ♿✅", "(0.005,-0.0001) → (0.005,0) ALL")
       )
@@ -190,6 +196,106 @@ class MultipleModeLinkingTest {
     env.linkVertexForRequest(0.005, -0.0001, incoming, outgoing);
 
     // vertex is linked to the closest edge, not to all 3 edges
+    assertThat(env.graph().summarizeTempEdges()).containsExactlyElementsIn(expectedTempEdges);
+
+    // the majority of the temporary edges are in the disposable edge collection
+    assertThat(env.disposable().summarize()).containsExactlyElementsIn(expectedDisposableEdges);
+    env.disposeEdges();
+
+    // after disposing all temporary edges should be gone
+    assertCleanUp(env);
+  }
+
+  private static List<Arguments> multiModeWithExpansionTestCases() {
+    return List.of(
+      // Both attempts fail
+      Arguments.of(NO_RESULTS_DEGREES, NO_RESULTS_DEGREES * 2, List.of(), List.of()),
+      // Second attempt finds results only for WALK
+      Arguments.of(
+        NO_RESULTS_DEGREES,
+        WALK_RESULT_DEGREES,
+        List.of("(0,0) → (0.005,0) PEDESTRIAN ♿✅", "(0.005,0) → (0.01,0) PEDESTRIAN ♿✅"),
+        List.of(
+          "(0,0) → (0.005,0) PEDESTRIAN ♿✅",
+          "(0.005,0) → (0.01,0) PEDESTRIAN ♿✅",
+          "(0.005,-0.0001) → (0.005,0) PEDESTRIAN",
+          "(0.005,0) → (0.005,-0.0001) PEDESTRIAN"
+        )
+      ),
+      // Second attempt finds results for ALL
+      Arguments.of(
+        NO_RESULTS_DEGREES,
+        ALL_RESULTS_DEGREES,
+        List.of(
+          "(0,0) → (0.005,0) PEDESTRIAN ♿✅",
+          "(0.005,0) → (0.01,0) PEDESTRIAN ♿✅",
+          "(0,0.0002) → (0.005,0.0002) CAR ♿✅",
+          "(0.005,0.0002) → (0.01,0.0002) CAR ♿✅"
+        ),
+        List.of(
+          "(0,0) → (0.005,0) PEDESTRIAN ♿✅",
+          "(0.005,0) → (0.01,0) PEDESTRIAN ♿✅",
+          "(0,0.0002) → (0.005,0.0002) CAR ♿✅",
+          "(0.005,0.0002) → (0.01,0.0002) CAR ♿✅",
+          "(0.005,-0.0001) → (0.005,0) PEDESTRIAN",
+          "(0.005,0) → (0.005,-0.0001) PEDESTRIAN",
+          "(0.005,0.0002) → (0.005,-0.0001) CAR",
+          "(0.005,-0.0001) → (0.005,0.0002) CAR"
+        ),
+        // First attempt finds results for WALK and the second for CAR
+        Arguments.of(
+          WALK_RESULT_DEGREES,
+          ALL_RESULTS_DEGREES,
+          List.of(
+            "(0,0) → (0.005,0) PEDESTRIAN ♿✅",
+            "(0.005,0) → (0.01,0) PEDESTRIAN ♿✅",
+            "(0,0.0002) → (0.005,0.0002) CAR ♿✅",
+            "(0.005,0.0002) → (0.01,0.0002) CAR ♿✅"
+          ),
+          List.of(
+            "(0,0) → (0.005,0) PEDESTRIAN ♿✅",
+            "(0.005,0) → (0.01,0) PEDESTRIAN ♿✅",
+            "(0,0.0002) → (0.005,0.0002) CAR ♿✅",
+            "(0.005,0.0002) → (0.01,0.0002) CAR ♿✅",
+            "(0.005,-0.0001) → (0.005,0) PEDESTRIAN",
+            "(0.005,0) → (0.005,-0.0001) PEDESTRIAN",
+            "(0.005,0.0002) → (0.005,-0.0001) CAR",
+            "(0.005,-0.0001) → (0.005,0.0002) CAR"
+          )
+        )
+      )
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("multiModeWithExpansionTestCases")
+  void multiModeWithExpansion(
+    double initialSearchRadiusDegrees,
+    double maxSearchRadiusDegrees,
+    List<String> expectedTempEdges,
+    List<String> expectedDisposableEdges
+  ) {
+    // test model has 3 parallel horizontal edges, all of them allow everything
+    IntersectionVertex[] vertices = {
+      intersectionVertex(0.0, 0.0),
+      intersectionVertex(0.01, 0.0),
+      intersectionVertex(0.0, 0.0001),
+      intersectionVertex(0.01, 0.0001),
+      intersectionVertex(0.0, 0.0002),
+      intersectionVertex(0.01, 0.0002),
+    };
+    streetEdge(vertices[0], vertices[1], 0.01, PEDESTRIAN);
+    streetEdge(vertices[2], vertices[3], 0.01, PEDESTRIAN);
+    streetEdge(vertices[4], vertices[5], 0.01, CAR);
+
+    var env = new LinkingEnvironment(vertices);
+
+    assertThat(env.graph().listStreetEdges()).hasSize(3);
+
+    // Attempt to link point below all edges, in the middle
+    env.linkVertexForRequest(0.005, -0.0001, initialSearchRadiusDegrees, maxSearchRadiusDegrees);
+
+    // vertex might be linked to the closest edge, not to all 3 edges
     assertThat(env.graph().summarizeTempEdges()).containsExactlyElementsIn(expectedTempEdges);
 
     // the majority of the temporary edges are in the disposable edge collection
