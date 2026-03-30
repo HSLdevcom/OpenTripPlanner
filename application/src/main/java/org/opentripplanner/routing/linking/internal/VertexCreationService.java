@@ -1,7 +1,7 @@
 package org.opentripplanner.routing.linking.internal;
 
 import java.util.List;
-import org.opentripplanner.core.model.i18n.LocalizedString;
+import java.util.UUID;
 import org.opentripplanner.core.model.i18n.NonLocalizedString;
 import org.opentripplanner.model.GenericLocation;
 import org.opentripplanner.routing.linking.TemporaryVerticesContainer;
@@ -12,7 +12,6 @@ import org.opentripplanner.street.model.vertex.TemporaryStreetLocation;
 import org.opentripplanner.street.model.vertex.Vertex;
 import org.opentripplanner.street.search.TraverseMode;
 import org.opentripplanner.street.search.TraverseModeSet;
-import org.opentripplanner.utils.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,9 +41,12 @@ public class VertexCreationService {
     TemporaryVerticesContainer container,
     VertexCreationRequest request
   ) {
+    // We don't need a proper label for the vertex, we can resolve it later for request responses,
+    // if needed
+    var label = new NonLocalizedString(UUID.randomUUID().toString());
     var temporaryStreetLocation = new TemporaryStreetLocation(
       request.coordinate(),
-      request.label()
+      label
     );
 
     var disposableEdgeCollection = vertexLinker.linkVertexForRequest(
@@ -72,10 +74,7 @@ public class VertexCreationService {
   ) {
     var incomingModes = getIncomingModes(modes, type);
     var outgoingModes = getOutgoingModes(modes, type);
-    var label = StringUtils.hasValue(location.label)
-      ? new NonLocalizedString(location.label)
-      : new LocalizedString(type.translationKey());
-    return new VertexCreationRequest(location.getCoordinate(), label, incomingModes, outgoingModes);
+    return new VertexCreationRequest(location.getCoordinate(), incomingModes, outgoingModes);
   }
 
   /**

@@ -3,7 +3,6 @@ package org.opentripplanner.routing.linking.internal;
 import java.util.List;
 import java.util.Objects;
 import org.locationtech.jts.geom.Coordinate;
-import org.opentripplanner.core.model.i18n.I18NString;
 import org.opentripplanner.street.search.TraverseMode;
 
 /**
@@ -12,7 +11,6 @@ import org.opentripplanner.street.search.TraverseMode;
 public class VertexCreationRequest {
 
   private final Coordinate coordinate;
-  private final I18NString label;
   private final List<TraverseMode> incomingModes;
   private final List<TraverseMode> outgoingModes;
 
@@ -24,22 +22,16 @@ public class VertexCreationRequest {
    */
   public VertexCreationRequest(
     Coordinate coordinate,
-    I18NString label,
     List<TraverseMode> incomingModes,
     List<TraverseMode> outgoingModes
   ) {
     this.coordinate = Objects.requireNonNull(coordinate);
-    this.label = Objects.requireNonNull(label);
     this.incomingModes = Objects.requireNonNull(incomingModes);
     this.outgoingModes = Objects.requireNonNull(outgoingModes);
   }
 
   public Coordinate coordinate() {
     return coordinate;
-  }
-
-  public I18NString label() {
-    return label;
   }
 
   /**

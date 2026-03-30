@@ -23,6 +23,7 @@ import org.opentripplanner.routing.api.response.InputField;
 import org.opentripplanner.routing.api.response.RoutingError;
 import org.opentripplanner.routing.api.response.RoutingErrorCode;
 import org.opentripplanner.routing.error.RoutingValidationException;
+import org.opentripplanner.routing.linking.internal.VertexCreationRequest;
 import org.opentripplanner.routing.linking.internal.VertexCreationService;
 import org.opentripplanner.routing.linking.internal.VertexCreationService.LocationType;
 import org.opentripplanner.street.geometry.GeometryUtils;
@@ -83,7 +84,7 @@ public class LinkingContextFactory {
     LinkingContextRequest request
   ) {
     var from = request.from();
-    var fromVertices = getFromVertices(container, request);
+    var fromVerticesAndRequests = getFromVerticesAndRequests(container, request);
     var fromStopVertices = getStopVertices(request.from());
     var to = request.to();
     var toVertices = getToVertices(container, request);
@@ -118,13 +119,13 @@ public class LinkingContextFactory {
     return new LinkingContext(verticesByLocation, fromStopVertices, toStopVertices);
   }
 
-  private Set<Vertex> getFromVertices(
+  private LocationVerticesAndRequests getFromVerticesAndRequests(
     TemporaryVerticesContainer container,
     LinkingContextRequest request
   ) {
     var from = request.from();
     if (from == null || !from.isSpecified()) {
-      return Set.of();
+      return new LocationVerticesAndRequests(Set.of(), Set.of());
     }
     var modes = request.accessMode() != StreetMode.NOT_SET
       ? EnumSet.of(request.accessMode())
@@ -132,7 +133,7 @@ public class LinkingContextFactory {
     if (request.directMode() != StreetMode.NOT_SET) {
       modes.add(request.directMode());
     }
-    return getStreetVerticesForLocation(container, from, modes, LocationType.FROM);
+    return getVerticesAndRequestsForLocation(container, from, modes, LocationType.FROM);
   }
 
   private Set<Vertex> getToVertices(
@@ -260,14 +261,14 @@ public class LinkingContextFactory {
    * Gets a set of vertices corresponding to the location provided. It first tries to match one of
    * the stop or station types by id, and if not successful, it uses the coordinates if provided.
    */
-  private Set<Vertex> getStreetVerticesForLocation(
+  private LocationVerticesAndRequests getVerticesAndRequestsForLocation(
     TemporaryVerticesContainer container,
     GenericLocation location,
     EnumSet<StreetMode> streetModes,
     LocationType type
   ) {
     if (!location.isSpecified()) {
-      return Set.of();
+      return new LocationVerticesAndRequests(Set.of(), Set.of());
     }
 
     List<TraverseMode> modes = streetModes
@@ -278,27 +279,28 @@ public class LinkingContextFactory {
       .distinct()
       .toList();
 
-    var results = new HashSet<Vertex>();
+    var vertices = new HashSet<Vertex>();
+    var requests = new HashSet<VertexCreationRequest>();
     if (location.stopId != null) {
       if (!modes.stream().allMatch(TraverseMode::isInCar)) {
-        results.addAll(getStreetVerticesForStop(location));
+        vertices.addAll(getStreetVerticesForStop(location));
       }
       if (modes.stream().anyMatch(TraverseMode::isInCar)) {
         // Ensure that there is a car routable vertex that can originate from stop's coordinate as
         // transit stops might not be linked for cars.
-        var carRoutableVertex = getCarRoutableStreetVertex(container, location, type);
-        carRoutableVertex.ifPresent(results::add);
+        var carRoutableRequest = getCarRoutableStreetVertex(container, location, type);
+        carRoutableRequest.ifPresent(requests::add);
       }
     }
 
     // If no vertices found from stop ID lookup and coordinates are available, use coordinates as fallback
-    if (results.isEmpty() && location.getCoordinate() != null) {
+    if (vertices.isEmpty() && requests.isEmpty() && location.getCoordinate() != null) {
       // Connect a temporary vertex from coordinate to graph
       var request = VertexCreationService.createVertexCreationRequest(location, modes, type);
-      results.add(vertexCreationService.createVertexFromCoordinate(container, request));
+      requests.add(request);
     }
 
-    return results;
+    return new LocationVerticesAndRequests(vertices, requests);
   }
 
   private Set<Vertex> getStreetVerticesForStop(GenericLocation location) {
@@ -326,7 +328,7 @@ public class LinkingContextFactory {
    * We need to use coordinates of the stop for cars as an alternative as not all stops are routable
    * with cars.
    */
-  private Optional<Vertex> getCarRoutableStreetVertex(
+  private Optional<VertexCreationRequest> getCarRoutableStreetVertex(
     TemporaryVerticesContainer container,
     GenericLocation location,
     LocationType type
@@ -365,7 +367,7 @@ public class LinkingContextFactory {
       List.of(TraverseMode.CAR),
       type
     );
-    return Optional.of(vertexCreationService.createVertexFromCoordinate(container, request));
+    return Optional.of(request);
   }
 
   private void checkIfVerticesFound(
@@ -466,5 +468,23 @@ public class LinkingContextFactory {
       .stream()
       .flatMap(id -> graph.findStopVertex(id).stream())
       .collect(Collectors.toUnmodifiableSet());
+  }
+
+  private class LocationVerticesAndRequests {
+    private final Set<Vertex> vertices;
+    private final Set<VertexCreationRequest> vertexCreationRequests;
+
+    public LocationVerticesAndRequests(Set<Vertex> vertices, Set<VertexCreationRequest> vertexCreationRequests) {
+      this.vertices = vertices;
+      this.vertexCreationRequests = vertexCreationRequests;
+    }
+
+    public Set<Vertex> getVertices() {
+      return vertices;
+    }
+
+    public Set<VertexCreationRequest> getVertexCreationRequests() {
+      return vertexCreationRequests;
+    }
   }
 }
