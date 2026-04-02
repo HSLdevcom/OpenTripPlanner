@@ -95,7 +95,7 @@ public class FlexTripEdge extends Edge {
     StateEditor editor = s0.edit(this);
     editor.setBackMode(TraverseMode.FLEX);
     // TODO: decide good value
-    editor.incrementWeight(10 * 60);
+    // editor.incrementWeight(10 * 60);
     int timeInSeconds = getTimeInSeconds();
     editor.incrementTimeInSeconds(timeInSeconds);
     editor.incrementWeight(timeInSeconds);
