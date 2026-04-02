@@ -18,14 +18,26 @@ public class NearbyStop implements Comparable<NearbyStop> {
   public final StopLocation stop;
   public final double distance;
 
+  /**
+   * All edges that are needed to reach the stop.
+   */
   public final List<Edge> edges;
-  public final State state;
 
-  public NearbyStop(StopLocation stop, double distance, List<Edge> edges, State state) {
+  /**
+   * This a list of states where the last state in the list is always at the stop and states before
+   * that state end at a via location.
+   */
+  public final List<State> lastStates;
+
+  public NearbyStop(StopLocation stop, double distance, List<Edge> edges, List<State> lastStates) {
     this.stop = Objects.requireNonNull(stop);
     this.distance = distance;
     this.edges = edges;
-    this.state = state;
+    this.lastStates = lastStates;
+  }
+
+  public NearbyStop(StopLocation stop, double distance, List<Edge> edges, State lastState) {
+    this(stop, distance, edges, List.of(Objects.requireNonNull(lastState)));
   }
 
   /**
@@ -55,14 +67,9 @@ public class NearbyStop implements Comparable<NearbyStop> {
 
   @Override
   public int compareTo(NearbyStop that) {
-    if ((this.state == null) != (that.state == null)) {
-      throw new IllegalStateException(
-        "Only NearbyStops which both contain or lack a state may be compared."
-      );
-    }
-
-    if (this.state != null) {
-      return (int) (this.state.getWeight()) - (int) (that.state.getWeight());
+    var weightDifference = (int) (this.weight()) - (int) (that.weight());
+    if (weightDifference != 0) {
+      return weightDifference;
     }
     return (int) (this.distance) - (int) (that.distance);
   }
@@ -71,12 +78,21 @@ public class NearbyStop implements Comparable<NearbyStop> {
    * Duration it took to reach the stop.
    */
   public Duration duration() {
-    return Duration.ofSeconds(state.getElapsedTimeSeconds());
+    return Duration.ofSeconds(
+      lastStates.stream().mapToLong(State::getElapsedTimeSeconds).reduce(0, Long::sum)
+    );
+  }
+
+  /**
+   * Weight (cost) of reaching the stop.
+   */
+  public double weight() {
+    return lastStates.stream().mapToDouble(State::getWeight).reduce(0.0, Double::sum);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(stop, distance, edges, state);
+    return Objects.hash(stop, distance, edges, lastStates);
   }
 
   @Override
@@ -92,7 +108,7 @@ public class NearbyStop implements Comparable<NearbyStop> {
       Double.compare(that.distance, distance) == 0 &&
       stop.equals(that.stop) &&
       Objects.equals(edges, that.edges) &&
-      Objects.equals(state, that.state)
+      Objects.equals(lastStates, that.lastStates)
     );
   }
 
@@ -102,8 +118,8 @@ public class NearbyStop implements Comparable<NearbyStop> {
       "stop %s at %.1f meters%s%s",
       stop,
       distance,
-      edges != null ? " (" + edges.size() + " edges)" : "",
-      state != null ? " w/state" : ""
+      " (" + edges.size() + " edges)",
+      " (" + lastStates.size() + " lastStates)"
     );
   }
 }
