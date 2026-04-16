@@ -5,50 +5,36 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.opentripplanner.ext.flex.FlexAccessEgress;
-import org.opentripplanner.routing.algorithm.raptoradapter.router.street.AccessEgressType;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.DefaultAccessEgress;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.FlexAccessEgressAdapter;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.RoutingAccessEgress;
 import org.opentripplanner.routing.graphfinder.NearbyStop;
-import org.opentripplanner.street.search.state.State;
 import org.opentripplanner.transit.model.site.RegularStop;
 
 public class AccessEgressMapper {
 
-  public static List<RoutingAccessEgress> mapNearbyStops(
-    Collection<NearbyStop> accessStops,
-    AccessEgressType accessOrEgress
-  ) {
+  public static List<RoutingAccessEgress> mapNearbyStops(Collection<NearbyStop> accessStops) {
     return accessStops
       .stream()
-      .map(nearbyStop -> mapNearbyStop(nearbyStop, accessOrEgress))
+      .map(AccessEgressMapper::mapNearbyStop)
       .filter(Objects::nonNull)
       .collect(Collectors.toList());
   }
 
   public static Collection<RoutingAccessEgress> mapFlexAccessEgresses(
-    Collection<FlexAccessEgress> flexAccessEgresses,
-    AccessEgressType accessOrEgress
+    Collection<FlexAccessEgress> flexAccessEgresses
   ) {
     return flexAccessEgresses
       .stream()
-      .map(flexAccessEgress -> new FlexAccessEgressAdapter(flexAccessEgress, accessOrEgress))
+      .map(FlexAccessEgressAdapter::new)
       .collect(Collectors.toList());
   }
 
-  private static RoutingAccessEgress mapNearbyStop(
-    NearbyStop nearbyStop,
-    AccessEgressType accessOrEgress
-  ) {
+  private static RoutingAccessEgress mapNearbyStop(NearbyStop nearbyStop) {
     if (!(nearbyStop.stop instanceof RegularStop)) {
       return null;
     }
 
-    return new DefaultAccessEgress(
-      nearbyStop.stop.getIndex(),
-      accessOrEgress.isEgress()
-        ? nearbyStop.lastStates.stream().map(State::reverse).toList().reversed()
-        : nearbyStop.lastStates
-    );
+    return new DefaultAccessEgress(nearbyStop.stop.getIndex(), nearbyStop.lastStates);
   }
 }

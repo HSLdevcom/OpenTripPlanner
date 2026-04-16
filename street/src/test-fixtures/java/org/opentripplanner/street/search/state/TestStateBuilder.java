@@ -50,10 +50,7 @@ public class TestStateBuilder {
   }
 
   private TestStateBuilder(StreetSearchRequest request) {
-    currentState = new State(
-      StreetModelFactory.intersectionVertex(count, count),
-      request
-    );
+    currentState = new State(StreetModelFactory.intersectionVertex(count, count), request);
   }
 
   public static TestStateBuilder of(StreetSearchRequest request) {
@@ -110,7 +107,12 @@ public class TestStateBuilder {
     var from = (StreetVertex) currentState.vertex;
     var to = StreetModelFactory.intersectionVertex(count, count);
 
-    var edgeBuilder = StreetModelFactory.streetEdgeBuilder(from, to, 100, StreetTraversalPermission.ALL);
+    var edgeBuilder = StreetModelFactory.streetEdgeBuilder(
+      from,
+      to,
+      100,
+      StreetTraversalPermission.ALL
+    );
     customizer.accept(edgeBuilder);
     var edge = edgeBuilder.buildAndConnect();
     var states = edge.traverse(currentState);

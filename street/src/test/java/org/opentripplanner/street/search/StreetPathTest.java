@@ -87,7 +87,7 @@ class StreetPathTest {
       .build();
 
     var path = new StreetPath(state);
-    var subPath = path.subPath(1,3);
+    var subPath = path.subPath(1, 3);
     assertEquals(START_TIME.plus(Duration.ofSeconds(10)), subPath.startTime());
     assertEquals(START_TIME.plus(Duration.ofSeconds(15)), subPath.endTime());
     assertEquals(5.0, subPath.weight());
@@ -99,6 +99,6 @@ class StreetPathTest {
       .withStartTime(START_TIME)
       .withMode(StreetMode.WALK)
       .build();
-   return TestStateBuilder.of(request);
+    return TestStateBuilder.of(request);
   }
 }

@@ -23,7 +23,7 @@ public interface RoutingAccessEgress extends RaptorAccessEgress {
    * locations visited inside the access. For egress, this is a list starting at the egress stop
    * ending at the destination split at the via locations visited inside the egress.
    */
-  List<State> getLastStates();
+  List<State> getFinalStates();
 
   /**
    * Return true if all edges are traversed on foot.

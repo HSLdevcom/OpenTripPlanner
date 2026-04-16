@@ -46,7 +46,7 @@ public class RideHailingAccessShifter {
       .map(ae -> {
         // only time-shift access legs on a car
         // (there could be walk-only accesses if you're close to the stop)
-        if (isAccess && ae.getLastStates().stream().allMatch(State::containsModeCar)) {
+        if (isAccess && ae.getFinalStates().stream().allMatch(State::containsModeCar)) {
           var duration = fetchArrivalDelay(services, request, now);
           if (duration.isSuccess()) {
             return new RideHailingAccessAdapter(ae, duration.successValue());

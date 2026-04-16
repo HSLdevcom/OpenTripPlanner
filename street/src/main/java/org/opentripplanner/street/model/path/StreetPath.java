@@ -72,7 +72,8 @@ public class StreetPath {
   }
 
   public LineString geometry() {
-    var geometries = edges.stream()
+    var geometries = edges
+      .stream()
       .filter(Edge::includeGeometryInPath)
       .map(Edge::getGeometry)
       .filter(Objects::nonNull)
@@ -85,7 +86,6 @@ public class StreetPath {
   public List<State> states() {
     return states;
   }
-
 
   /// Get the last state in the patn
   public State lastState() {

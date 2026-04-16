@@ -180,9 +180,8 @@ public class ViaAccessEgressRouter extends AccessEgressRouter {
     while (i < paths.size() && durationLeft.isPositive()) {
       var path = paths.get(i);
       accumulatedDistance += path.distanceMeters();
-      accumulatedEdges.addAll(path.edges());
-      // TODO try to get rid of this reverse since now the state is reversed three times in total
-      accumulatedLastStates.add(path.lastState().reverse());
+      accumulatedEdges.addAll(path.edges().reversed());
+      accumulatedLastStates.add(path.lastState());
       durationLeft = durationLeft.minus(path.duration());
       var via = vias.get(i);
       var vertices = linkingContext.findVertices(via);
@@ -195,9 +194,14 @@ public class ViaAccessEgressRouter extends AccessEgressRouter {
         .findNearbyStops(vertices, viaRequest, streetMode, true);
       for (NearbyStop nearbyStop : stopsFromVia) {
         var distance = accumulatedDistance + nearbyStop.distance;
-        var edges = ListUtils.combine(nearbyStop.edges, accumulatedEdges);
+        var edges = ListUtils.combine(accumulatedEdges, nearbyStop.edges.reversed());
         var lastStates = ListUtils.combine(accumulatedLastStates, nearbyStop.lastStates);
-        var adjustedStop = new NearbyStop(nearbyStop.stop, distance, edges, lastStates);
+        var adjustedStop = new NearbyStop(
+          nearbyStop.stop,
+          distance,
+          edges.reversed(),
+          lastStates.reversed()
+        );
         nearbyStops.add(adjustedStop);
       }
       i += 1;

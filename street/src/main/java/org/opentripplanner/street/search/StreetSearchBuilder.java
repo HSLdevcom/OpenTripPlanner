@@ -81,8 +81,6 @@ public class StreetSearchBuilder extends AStarBuilder<State, Edge, Vertex, Stree
 
   /// Run the street search, returning all paths found
   public Optional<StreetPath> getPathToTarget() {
-    return build()
-      .getPathToTarget()
-      .map(StreetPath::new);
+    return build().getPathToTarget().map(StreetPath::new);
   }
 }

@@ -8,6 +8,7 @@ import org.opentripplanner.street.model.vertex.Vertex;
 import org.opentripplanner.street.search.state.State;
 
 public class TestEdge extends Edge {
+
   private final double weight;
   private final double distanceMeters;
   private final int durationSeconds;
@@ -63,6 +64,7 @@ public class TestEdge extends Edge {
   }
 
   public static class TestEdgeBuilder {
+
     Vertex from;
     Vertex to;
     double weight = 100;

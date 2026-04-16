@@ -10,6 +10,17 @@ import org.opentripplanner.utils.collection.ListUtils;
 
 /**
  * Default implementation of the RaptorAccessEgress interface.
+ * <p>
+ * Implementation note: As stated in the RoutingAccessEgress interface contract {@link RoutingAccessEgress#getFinalStates()},
+ * this class exposes the final A* state in search order, not in chronological order. For egress searches this State is
+ * unreversed ({@code request.arriveBy() == true}) — reversal is deferred to
+ * {@link org.opentripplanner.astar.model.GraphPath} construction, which only happens for
+ * winning paths during itinerary mapping. This avoids the cost of cloning and reversing the entire State
+ * chain for every egress candidate.
+ * <p>
+ * The scalar values extracted below ({@code getElapsedTimeSeconds}, {@code getWeight},
+ * {@code containsOnlyWalkMode}) are direction-independent and produce identical results on
+ * both reversed and unreversed State chains.
  */
 public class DefaultAccessEgress implements RoutingAccessEgress {
 
@@ -26,7 +37,7 @@ public class DefaultAccessEgress implements RoutingAccessEgress {
    * locations visited inside the access. For egress, this is a list starting at the egress stop
    * ending at the destination split at the via locations visited inside the egress.
    */
-  private final List<State> lastStates;
+  private final List<State> finalStates;
 
   /**
    * This is public to allow unit-tests full control over the field values.
@@ -36,14 +47,14 @@ public class DefaultAccessEgress implements RoutingAccessEgress {
     int durationInSeconds,
     int generalizedCost,
     TimeAndCost penalty,
-    List<State> lastStates
+    List<State> finalStates
   ) {
     this.stop = stop;
     this.durationInSeconds = durationInSeconds;
     this.generalizedCost = generalizedCost;
     this.timePenalty = penalty.isZero() ? RaptorConstants.TIME_NOT_SET : penalty.timeInSeconds();
     this.penalty = penalty;
-    this.lastStates = ListUtils.requireAtLeastNElements(lastStates, 1);
+    this.finalStates = ListUtils.requireAtLeastNElements(finalStates, 1);
   }
 
   public DefaultAccessEgress(int stop, List<State> lastStates) {
@@ -71,7 +82,7 @@ public class DefaultAccessEgress implements RoutingAccessEgress {
       other.durationInSeconds(),
       other.c1() + penalty.cost().toCentiSeconds(),
       penalty,
-      other.getLastStates()
+      other.getFinalStates()
     );
     if (other.penalty() != TimeAndCost.ZERO) {
       throw new IllegalStateException("Can not add penalty twice...");
@@ -103,14 +114,25 @@ public class DefaultAccessEgress implements RoutingAccessEgress {
     return false;
   }
 
+  /**
+   * The final state from the access/egress street search. For egress searches this State is
+   * unreversed ({@code request.arriveBy() == true}) — reversal is deferred to
+   * {@link org.opentripplanner.astar.model.GraphPath} construction, which only happens for
+   * winning paths during itinerary mapping. This avoids the cost of cloning and reversing the entire State
+   * chain for every egress candidate.
+   * <p>
+   * The scalar values extracted below ({@code getElapsedTimeSeconds}, {@code getWeight},
+   * {@code containsOnlyWalkMode}) are direction-independent and produce identical results on
+   * both reversed and unreversed State chains.
+   */
   @Override
-  public List<State> getLastStates() {
-    return lastStates;
+  public List<State> getFinalStates() {
+    return finalStates;
   }
 
   @Override
   public boolean isWalkOnly() {
-    return lastStates.stream().allMatch(State::containsOnlyWalkMode);
+    return finalStates.stream().allMatch(State::containsOnlyWalkMode);
   }
 
   @Override
@@ -140,7 +162,7 @@ public class DefaultAccessEgress implements RoutingAccessEgress {
 
   @Override
   public int numberOfViaLocationsVisited() {
-    return Math.max(0, lastStates.size() - 1);
+    return Math.max(0, finalStates.size() - 1);
   }
 
   @Override
