@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.core.model.basic.Cost;
 import org.opentripplanner.framework.model.TimeAndCost;
@@ -62,8 +63,8 @@ class DefaultAccessEgressTest {
   }
 
   @Test
-  void getFinalState() {
-    assertEquals(FINAL_STATE, subject.getFinalState());
+  void getFinalStates() {
+    assertEquals(List.of(FINAL_STATE), subject.getFinalStates());
   }
 
   @Test

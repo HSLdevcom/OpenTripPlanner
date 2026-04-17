@@ -119,7 +119,7 @@ public class CarpoolAccessEgress implements RoutingAccessEgress {
     It is never used for instances of CarpoolAccessEgress, but this might change in the future.
    */
   @Override
-  public State getFinalState() {
+  public List<State> getFinalStates() {
     throw new UnsupportedOperationException(
       "Fetching last state of CarpoolAccessEgress is not yet implemented"
     );
