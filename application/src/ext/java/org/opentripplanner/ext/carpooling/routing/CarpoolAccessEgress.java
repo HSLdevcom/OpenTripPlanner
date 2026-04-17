@@ -197,7 +197,7 @@ public class CarpoolAccessEgress implements RoutingAccessEgress {
    * @throws UnsupportedOperationException always.
    */
   @Override
-  public State getFinalState() {
+  public List<State> getFinalStates() {
     throw new UnsupportedOperationException(
       "Fetching last state of CarpoolAccessEgress is not yet implemented"
     );
