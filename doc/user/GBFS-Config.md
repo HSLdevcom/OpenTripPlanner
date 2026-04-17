@@ -30,7 +30,7 @@ Furthermore, support is limited to the following form factors:
 | [network](#u_1_network)                                                               |     `string`    | The name of the network to override the one derived from the source data.                                                                                      | *Optional* |               |  1.5  |
 | overloadingAllowed                                                                    |    `boolean`    | Allow leaving vehicles at a station even though there are no free slots.                                                                                       | *Optional* | `false`       |  2.2  |
 | [sourceType](#u_1_sourceType)                                                         |      `enum`     | What source of vehicle rental updater to use.                                                                                                                  | *Required* |               |  1.5  |
-| [startupRetryPeriod](#u_1_startupRetryPeriod)                                         |    `duration`   | How long to retry loading the vehicle rental data source on startup if it initially fails.                                                                     | *Optional* | `"PT15S"`     |  2.10 |
+| [startupRetryPeriod](#u_1_startupRetryPeriod)                                         |    `duration`   | How long to retry loading the vehicle rental data source on startup if it initially fails.                                                                     | *Optional* | `"PT0S"`      |  2.10 |
 | url                                                                                   |     `string`    | The URL to download the data from.                                                                                                                             | *Required* |               |  1.5  |
 | [headers](#u_1_headers)                                                               | `map of string` | HTTP headers to add to the request. Any header key, value can be inserted.                                                                                     | *Optional* |               |  1.5  |
 | [rentalPickupTypes](#u_1_rentalPickupTypes)                                           |    `enum set`   | This is temporary and will be removed in a future version of OTP. Use this to specify the type of rental data that is allowed to be read from the data source. | *Optional* |               |  2.7  |
@@ -87,7 +87,7 @@ What source of vehicle rental updater to use.
 
 <h4 id="u_1_startupRetryPeriod">startupRetryPeriod</h4>
 
-**Since version:** `2.10` ∙ **Type:** `duration` ∙ **Cardinality:** `Optional` ∙ **Default value:** `"PT15S"`   
+**Since version:** `2.10` ∙ **Type:** `duration` ∙ **Cardinality:** `Optional` ∙ **Default value:** `"PT0S"`   
 **Path:** /updaters/[1] 
 
 How long to retry loading the vehicle rental data source on startup if it initially fails.

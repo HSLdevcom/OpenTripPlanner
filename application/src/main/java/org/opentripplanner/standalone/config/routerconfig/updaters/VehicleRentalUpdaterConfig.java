@@ -37,7 +37,7 @@ public class VehicleRentalUpdaterConfig {
           OTP startup. Set to `PT0S` to disable retries.
           """
         )
-        .asDuration(Duration.ofSeconds(15)),
+        .asDuration(Duration.ZERO),
       VehicleRentalSourceFactory.create(sourceType, c)
     );
   }
