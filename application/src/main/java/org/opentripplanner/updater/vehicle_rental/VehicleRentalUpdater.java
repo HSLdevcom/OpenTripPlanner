@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.framework.retry.OtpRetry;
 import org.opentripplanner.framework.retry.OtpRetryBuilder;
+import org.opentripplanner.framework.retry.OtpRetryException;
 import org.opentripplanner.service.vehiclerental.VehicleRentalRepository;
 import org.opentripplanner.service.vehiclerental.model.GeofencingZone;
 import org.opentripplanner.service.vehiclerental.model.VehicleRentalPlace;
@@ -99,6 +100,9 @@ public class VehicleRentalUpdater extends PollingGraphUpdater {
       // Do any setup if needed
       retry.execute(source::setup);
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      LOG.warn("Updater setup interrupted: {}", nameForLogging, e);
+    } catch (OtpRetryException e) {
       LOG.warn("Unable to setup updater: {}", nameForLogging, e);
     }
 
