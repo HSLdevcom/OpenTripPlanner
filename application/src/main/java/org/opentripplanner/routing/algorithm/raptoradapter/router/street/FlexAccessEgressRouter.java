@@ -23,6 +23,7 @@ public class FlexAccessEgressRouter {
   public static Collection<FlexAccessEgress> routeAccessEgress(
     RouteRequest request,
     OtpServerRequestContext serverContext,
+    AccessEgressRouter accessEgressRouter,
     AdditionalSearchDays searchDays,
     FlexParameters config,
     Collection<ExtensionRequestContext> extensionRequestContexts,
@@ -34,26 +35,28 @@ public class FlexAccessEgressRouter {
     TransitService transitService = serverContext.transitService();
 
     Collection<NearbyStop> accessStops = accessOrEgress.isAccess()
-      ? AccessEgressRouter.findAccessEgresses(
+      ? accessEgressRouter.findAccessEgresses(
           request,
           StreetMode.WALK,
           extensionRequestContexts,
           AccessEgressType.ACCESS,
           serverContext.flexParameters().maxAccessWalkDuration(),
           0,
-          linkingContext
+          linkingContext,
+          serverContext.streetLimitationParametersService().maxCarSpeed()
         )
       : List.of();
 
     Collection<NearbyStop> egressStops = accessOrEgress.isEgress()
-      ? AccessEgressRouter.findAccessEgresses(
+      ? accessEgressRouter.findAccessEgresses(
           request,
           StreetMode.WALK,
           extensionRequestContexts,
           AccessEgressType.EGRESS,
           serverContext.flexParameters().maxEgressWalkDuration(),
           0,
-          linkingContext
+          linkingContext,
+          serverContext.streetLimitationParametersService().maxCarSpeed()
         )
       : List.of();
 
