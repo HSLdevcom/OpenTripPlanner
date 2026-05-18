@@ -23,7 +23,7 @@ import org.opentripplanner.model.GenericLocation;
 import org.opentripplanner.model.plan.Itinerary;
 import org.opentripplanner.model.plan.leg.StreetLeg;
 import org.opentripplanner.model.plan.walkstep.WalkStep;
-import org.opentripplanner.routing.algorithm.raptoradapter.router.street.DirectStreetRouter;
+import org.opentripplanner.routing.algorithm.raptoradapter.router.street.DefaultDirectStreetRouter;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.RouteRequestBuilder;
 import org.opentripplanner.routing.api.request.request.StreetRequest;
@@ -194,7 +194,8 @@ public class BarrierRoutingTest {
     var linkingContext = linkingContextFactory.create(temporaryVerticesContainer, linkingRequest);
     var ctx = TestServerContext.ofGraph(graph);
 
-    var itineraries = DirectStreetRouter.route(ctx, request, linkingContext);
+    var router = new DefaultDirectStreetRouter();
+    var itineraries = router.route(ctx, request, linkingContext);
 
     assertAll(assertions.apply(itineraries));
 
