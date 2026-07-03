@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.opentripplanner.datastore.api.CompositeDataSource;
 import org.opentripplanner.datastore.api.DataSource;
@@ -101,8 +100,16 @@ public class OtpDataStore {
     addAll(localRepository.listExistingSources(CONFIG));
     addAll(findMultipleSources(config.osmFiles(), OSM));
     addAll(findMultipleSources(config.demFiles(), DEM));
-    addAll(findMultipleCompositeSources(config.gtfsFiles(), GTFS));
-    addAll(findMultipleCompositeSources(config.netexFiles(), NETEX));
+    addAll(
+      findMultipleCompositeSources(config.gtfsFiles(), GTFS, config.forceTransitFeedAutoDiscovery())
+    );
+    addAll(
+      findMultipleCompositeSources(
+        config.netexFiles(),
+        NETEX,
+        config.forceTransitFeedAutoDiscovery()
+      )
+    );
     addAll(findMultipleSources(config.emissionFiles(), EMISSION));
     addAll(findMultipleCompositeSources(config.empiricalDelayFiles(), EMPIRICAL_DATA));
     addAll(findMultipleSources(config.cacheFiles(), CACHE));
@@ -145,7 +152,7 @@ public class OtpDataStore {
    */
   public Collection<DataSource> listExistingSourcesFor(FileType type) {
     assertDataStoreIsOpened();
-    return sources.get(type).stream().filter(DataSource::exists).collect(Collectors.toList());
+    return sources.get(type).stream().filter(DataSource::exists).toList();
   }
 
   public DataSource getStreetGraph() {
@@ -248,17 +255,33 @@ public class OtpDataStore {
     Collection<URI> uris,
     FileType type
   ) {
+    return findMultipleCompositeSources(uris, type, false);
+  }
+
+  private List<CompositeDataSource> findMultipleCompositeSources(
+    Collection<URI> uris,
+    FileType type,
+    boolean forceAutoDiscovery
+  ) {
     if (uris.isEmpty()) {
       return localRepository
         .listExistingSources(type)
         .stream()
         .map(it -> (CompositeDataSource) it)
-        .collect(Collectors.toList());
+        .toList();
     }
     List<CompositeDataSource> result = new ArrayList<>();
     for (URI uri : uris) {
       CompositeDataSource res = findSourceUsingAllRepos(it -> it.findCompositeSource(uri, type));
       result.add(res);
+    }
+    if (forceAutoDiscovery) {
+      localRepository
+        .listExistingSources(type)
+        .stream()
+        .map(it -> (CompositeDataSource) it)
+        .filter(s -> result.stream().noneMatch(r -> r.uri().equals(s.uri())))
+        .forEach(result::add);
     }
     return result;
   }

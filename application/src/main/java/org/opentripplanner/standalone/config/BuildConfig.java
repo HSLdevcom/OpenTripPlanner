@@ -120,6 +120,8 @@ public class BuildConfig implements OtpDataStoreConfig {
 
   public final boolean embedRouterConfig;
 
+  public final boolean forceTransitFeedAutoDiscovery;
+
   public final boolean areaVisibility;
 
   public final boolean platformEntriesLinking;
@@ -248,6 +250,23 @@ public class BuildConfig implements OtpDataStoreConfig {
           "configured over the wire."
       )
       .asBoolean(true);
+    forceTransitFeedAutoDiscovery = root
+      .of("forceTransitFeedAutoDiscovery")
+      .since(V2_10)
+      .summary("Enable auto-discovery of transit feeds even when `transitFeeds` is configured.")
+      .description(
+        """
+        When set to `true`, OTP will auto-discover all transit feeds in the base directory regardless
+        of whether entries are present in `transitFeeds`. Any feed explicitly listed in `transitFeeds`
+        will also be loaded (useful for feeds outside the base directory, e.g. cloud storage). Feeds
+        whose resolved URI matches a `transitFeeds` entry will have that entry's configuration applied
+        as an override; all other auto-discovered feeds use the default settings.
+
+        When set to `false` (the default), the existing behavior is preserved: if any `transitFeeds`
+        entry of a given type (GTFS or NeTEx) is present, auto-discovery for that type is disabled.
+        """
+      )
+      .asBoolean(false);
     includeEllipsoidToGeoidDifference = root
       .of("includeEllipsoidToGeoidDifference")
       .since(V2_0)
@@ -633,6 +652,11 @@ public class BuildConfig implements OtpDataStoreConfig {
   @Override
   public List<URI> netexFiles() {
     return transitFeeds.netexFiles();
+  }
+
+  @Override
+  public boolean forceTransitFeedAutoDiscovery() {
+    return forceTransitFeedAutoDiscovery;
   }
 
   @Override

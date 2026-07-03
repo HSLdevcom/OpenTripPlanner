@@ -30,6 +30,12 @@ public class TransitFeedConfig {
 
         When a feed of a particular type (`netex` or `gtfs`) is specified in the transitFeeds
         section, auto-scanning in the base directory for this feed type will be disabled.
+
+        Set `forceTransitFeedAutoDiscovery` to `true` if you want to keep auto-discovery while still
+        providing per-feed configuration for specific feeds. In that mode feeds listed here are used
+        as configuration overrides (matched by source URI) on top of the auto-discovered set. Feeds
+        with a source URI that points outside the base directory (e.g. cloud storage) are also loaded
+        as additional sources.
         """
       )
       .asObjects(node -> TransitFeedConfig.mapTransitFeed(node, netexDefaults, gtfsDefaults));

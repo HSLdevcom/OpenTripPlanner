@@ -75,6 +75,13 @@ OTP2 will still scan the base directory for all other types such as DEM files. S
 array for a particular file type will ensure that no inputs of that type are loaded, including by
 local directory scanning.
 
+If you want to keep auto-discovery of feeds in the base directory while still supplying
+per-feed configuration options for specific feeds, set `forceTransitFeedAutoDiscovery: true`.
+OTP will then auto-discover all transit feeds as usual, and any feed listed in `transitFeeds`
+whose `source` URI matches an auto-discovered feed will have that entry's configuration applied as
+an override. Feeds listed in `transitFeeds` whose `source` URI is not in the base directory (e.g.
+a cloud storage URI) are loaded in addition to the auto-discovered set.
+
 
 <h2 id="limit-transit-service-period">Limit the transit service period</h2>
 

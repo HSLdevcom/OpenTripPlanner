@@ -26,6 +26,7 @@ Sections follow that describe particular settings in more depth.
 | [distanceBetweenElevationSamples](#distanceBetweenElevationSamples)                         |       `double`       | The distance between elevation samples in meters.                                                                                                              | *Optional* | `10.0`                            |  2.0  |
 | [elevationTileCacheSizeMB](#elevationTileCacheSizeMB)                                       |       `integer`      | Memory budget in megabytes for the Imagen tile cache used during elevation processing.                                                                         | *Optional* | `100`                             |  2.10 |
 | embedRouterConfig                                                                           |       `boolean`      | Embed the Router config in the graph, which allows it to be sent to a server fully configured over the wire.                                                   | *Optional* | `true`                            |  2.0  |
+| [forceTransitFeedAutoDiscovery](#forceTransitFeedAutoDiscovery)                             |       `boolean`      | Enable auto-discovery of transit feeds even when `transitFeeds` is configured.                                                                                 | *Optional* | `false`                           |  2.10 |
 | [graph](#graph)                                                                             |         `uri`        | URI to the graph object file for reading and writing.                                                                                                          | *Optional* |                                   |  2.0  |
 | [includeEllipsoidToGeoidDifference](#includeEllipsoidToGeoidDifference)                     |       `boolean`      | Include the Ellipsoid to Geoid difference in the calculations of every point along every StreetWithElevationEdge.                                              | *Optional* | `false`                           |  2.0  |
 | includeInclinedEdgeLevelInfo                                                                |       `boolean`      | Whether level info for inclined edges should be stored in the graph for use during runtime.                                                                    | *Optional* | `false`                           |  2.9  |
@@ -191,6 +192,13 @@ file type. So in the above configuration, GTFS and OSM will be loaded from Googl
 OTP2 will still scan the base directory for all other types such as DEM files. Supplying an empty
 array for a particular file type will ensure that no inputs of that type are loaded, including by
 local directory scanning.
+
+If you want to keep auto-discovery of feeds in the base directory while still supplying
+per-feed configuration options for specific feeds, set `forceTransitFeedAutoDiscovery: true`.
+OTP will then auto-discover all transit feeds as usual, and any feed listed in `transitFeeds`
+whose `source` URI matches an auto-discovered feed will have that entry's configuration applied as
+an override. Feeds listed in `transitFeeds` whose `source` URI is not in the base directory (e.g.
+a cloud storage URI) are loaded in addition to the auto-discovered set.
 
 
 <h2 id="limit-transit-service-period">Limit the transit service period</h2>
@@ -464,6 +472,23 @@ Elevation sampling reads pixels from a tiled DEM through Imagen's tile cache. Si
 cache to fit the DEM working set turns repeated tile decompressions into cache hits.
 Increase for large DEMs, lower for memory-constrained environments. The cache lives
 inside the JVM heap and must fit inside `-Xmx`.
+
+
+<h3 id="forceTransitFeedAutoDiscovery">forceTransitFeedAutoDiscovery</h3>
+
+**Since version:** `2.10` ∙ **Type:** `boolean` ∙ **Cardinality:** `Optional` ∙ **Default value:** `false`   
+**Path:** / 
+
+Enable auto-discovery of transit feeds even when `transitFeeds` is configured.
+
+When set to `true`, OTP will auto-discover all transit feeds in the base directory regardless
+of whether entries are present in `transitFeeds`. Any feed explicitly listed in `transitFeeds`
+will also be loaded (useful for feeds outside the base directory, e.g. cloud storage). Feeds
+whose resolved URI matches a `transitFeeds` entry will have that entry's configuration applied
+as an override; all other auto-discovered feeds use the default settings.
+
+When set to `false` (the default), the existing behavior is preserved: if any `transitFeeds`
+entry of a given type (GTFS or NeTEx) is present, auto-discovery for that type is disabled.
 
 
 <h3 id="graph">graph</h3>
@@ -1157,6 +1182,12 @@ or at various different locations around the local filesystem.
 
 When a feed of a particular type (`netex` or `gtfs`) is specified in the transitFeeds
 section, auto-scanning in the base directory for this feed type will be disabled.
+
+Set `forceTransitFeedAutoDiscovery` to `true` if you want to keep auto-discovery while still
+providing per-feed configuration for specific feeds. In that mode feeds listed here are used
+as configuration overrides (matched by source URI) on top of the auto-discovered set. Feeds
+with a source URI that points outside the base directory (e.g. cloud storage) are also loaded
+as additional sources.
 
 
 <h3 id="tf_0_discardMinTransferTimes">discardMinTransferTimes</h3>

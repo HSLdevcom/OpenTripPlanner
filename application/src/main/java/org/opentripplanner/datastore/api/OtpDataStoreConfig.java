@@ -51,6 +51,12 @@ public interface OtpDataStoreConfig {
   List<URI> netexFiles();
 
   /**
+   * When {@code true}, transit feeds in the base directory are always auto-discovered even when
+   * explicit feed URIs are configured in {@link #gtfsFiles()} / {@link #netexFiles()}.
+   */
+  boolean forceTransitFeedAutoDiscovery();
+
+  /**
    * List of URIs to Emission data files. This does not include emission files inside a
    * GTFS bundle, only configured emission feed files.
    */
