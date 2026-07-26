@@ -272,6 +272,11 @@ class WalkableAreaBuilder {
     List<PerRingData> perRingData = new ArrayList<>();
 
     GeometryFactory geometryFactory = GeometryUtils.getGeometryFactory();
+
+    // Currently one relation generates a single areaGroup, which may contain disconnected
+    // areas, such as railway station platforms.
+    // It would be more efficient - both in area processing and also in vertex linking - to
+    // split such relations to multiple fully connected areaGroups.
     for (Ring ring : group.outermostRings) {
       Polygon polygon = ring.jtsPolygon;
       AreaGroup areaGroup = new AreaGroup(polygon);
@@ -282,6 +287,7 @@ class WalkableAreaBuilder {
       for (OsmArea area : group.areas) {
         OsmEntity areaEntity = area.parent;
 
+        // this test could be removed if areaGroup contains only one connected polygon
         if (!group.isSimpleAreaGroup() && !polygon.contains(area.jtsMultiPolygon.getGeometry())) {
           continue;
         }
@@ -439,6 +445,8 @@ class WalkableAreaBuilder {
           if (shouldSkipEdge(vertex1, vertex2, ringData.alreadyAddedEdges())) {
             continue;
           }
+          // Area group / PerRingData can be convex and without holes,
+          // in which case 'contains' test can be skipped
           var line = LineStringShrinker.shrink(vertex1.getCoordinate(), vertex2.getCoordinate());
           if (ringData.polygon().contains(line)) {
             boolean platformLinked =
@@ -467,6 +475,7 @@ class WalkableAreaBuilder {
         pair.to(),
         group.areas,
         pair.areaGroup(),
+        // Note: if convex + no holes + single area -> no need for intersection testing
         true
       );
       allEdges.addAll(segments);
@@ -629,6 +638,8 @@ class WalkableAreaBuilder {
       // vertex1 and vertex2 are in the same position
       return Set.of();
     }
+    // create both exact line and shrunk line if needed for testing.
+    // Otherwise edge geometry will be slightly too short
     var line = LineStringShrinker.shrink(vertex1.getCoordinate(), vertex2.getCoordinate());
 
     OsmEntity parent = null;
@@ -667,6 +678,7 @@ class WalkableAreaBuilder {
     AreaEdgeBuilder streetEdgeBuilder = new AreaEdgeBuilder()
       .withFromVertex(vertex1)
       .withToVertex(vertex2)
+      // note: shrunk line is currently used here
       .withGeometry(line)
       .withName(name)
       .withMeterLength(length)
@@ -703,11 +715,14 @@ class WalkableAreaBuilder {
   private void createAreas(AreaGroup areaGroup, Ring ring, Collection<OsmArea> areas) {
     Polygon containingArea = ring.jtsPolygon;
     for (OsmArea area : areas) {
+      // this test could be removed if areaGroup contains only one connected polygon
       // intersects is a quick filter to remove candidates
       if (!area.jtsMultiPolygon.intersects(containingArea)) {
         continue;
       }
       // here we compute the exact intersection (slow) only if we need it
+      // Most likely unnecessary: it does not seem possible that area is not fully
+      // included in containingArea. Intersection is area itselt.
       Geometry intersection = containingArea.intersection(area.jtsMultiPolygon.getGeometry());
       Area namedArea = new Area();
       OsmEntity areaEntity = area.parent;
