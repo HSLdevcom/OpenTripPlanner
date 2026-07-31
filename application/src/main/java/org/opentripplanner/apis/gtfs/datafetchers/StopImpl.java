@@ -476,7 +476,7 @@ public class StopImpl implements GraphQLDataFetchers.GraphQLStop {
                 transfer.to.getId(),
                 transfer.getDistanceMeters(),
                 transfer.getEdges(),
-                null
+                List.of()
               )
             )
             .collect(Collectors.toList());

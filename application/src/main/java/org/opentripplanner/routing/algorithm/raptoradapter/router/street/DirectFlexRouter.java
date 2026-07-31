@@ -27,24 +27,29 @@ public class DirectFlexRouter {
       return Collections.emptyList();
     }
     OTPRequestTimeoutException.checkForTimeout();
+    var accessEgressRouter = new DefaultAccessEgressRouter();
     // Prepare access/egress transfers
-    Collection<NearbyStop> accessStops = AccessEgressRouter.findAccessEgresses(
+    Collection<NearbyStop> accessStops = accessEgressRouter.findAccessEgresses(
       request,
       request.journey().direct().mode(),
       serverContext.listExtensionRequestContexts(request),
       AccessEgressType.ACCESS,
       serverContext.flexParameters().maxAccessWalkDuration(),
       0,
-      linkingContext
+      linkingContext,
+      serverContext.streetLimitationParametersService(),
+      serverContext.vehicleRentalService()
     );
-    Collection<NearbyStop> egressStops = AccessEgressRouter.findAccessEgresses(
+    Collection<NearbyStop> egressStops = accessEgressRouter.findAccessEgresses(
       request,
       request.journey().direct().mode(),
       serverContext.listExtensionRequestContexts(request),
       AccessEgressType.EGRESS,
       serverContext.flexParameters().maxEgressWalkDuration(),
       0,
-      linkingContext
+      linkingContext,
+      serverContext.streetLimitationParametersService(),
+      serverContext.vehicleRentalService()
     );
 
     var flexRouter = new FlexRouter(

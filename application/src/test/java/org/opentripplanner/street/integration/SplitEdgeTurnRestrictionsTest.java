@@ -14,7 +14,7 @@ import org.opentripplanner._support.time.ZoneIds;
 import org.opentripplanner.api.model.geometry.EncodedPolyline;
 import org.opentripplanner.model.GenericLocation;
 import org.opentripplanner.model.plan.leg.StreetLeg;
-import org.opentripplanner.routing.algorithm.raptoradapter.router.street.DirectStreetRouter;
+import org.opentripplanner.routing.algorithm.raptoradapter.router.street.DefaultDirectStreetRouter;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.request.StreetRequest;
 import org.opentripplanner.routing.linking.LinkingContextFactory;
@@ -177,7 +177,8 @@ public class SplitEdgeTurnRestrictionsTest {
       var linkingContext = linkingContextFactory.create(temporaryVerticesContainer, linkingRequest);
       var ctx = TestServerContext.ofGraph(graph);
 
-      var itineraries = DirectStreetRouter.route(ctx, request, linkingContext);
+      var router = new DefaultDirectStreetRouter();
+      var itineraries = router.route(ctx, request, linkingContext);
 
       // make sure that we only get CAR legs
       itineraries.forEach(i ->

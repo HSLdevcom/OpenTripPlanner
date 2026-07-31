@@ -229,6 +229,15 @@ public class TestServerContext {
     );
   }
 
+  public static OtpServerRequestContext of() {
+    return createServerContext(
+      new Graph(),
+      new TimetableRepository(),
+      new DefaultTransferRepository(new TransferIndex()),
+      new DefaultFareService()
+    );
+  }
+
   private static VertexLinker createVertexLinker(Graph graph) {
     return VertexLinkerTestFactory.of(graph);
   }
