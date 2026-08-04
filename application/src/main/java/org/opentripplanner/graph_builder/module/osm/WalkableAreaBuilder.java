@@ -288,6 +288,8 @@ class WalkableAreaBuilder {
         OsmEntity areaEntity = area.parent;
 
         // this test could be removed if areaGroup contains only one connected polygon
+	// note that outermostRings are single continuous polygons,
+	// and a genuine multipolygon area never passes this test
         if (!group.isSimpleAreaGroup() && !polygon.contains(area.jtsMultiPolygon.getGeometry())) {
           continue;
         }
@@ -318,7 +320,8 @@ class WalkableAreaBuilder {
               linkPointsAdded = true;
             }
           }
-
+	  // note: this loop adds also interior points of merged areas as visibility points
+	  // graph gets unnecessary complex and detours occur
           for (int i = 0; i < outerRing.nodes.size(); ++i) {
             OsmNode node = outerRing.nodes.get(i);
             Set<AreaEdge> newEdges = createEdgesForRingSegment(
@@ -445,8 +448,9 @@ class WalkableAreaBuilder {
           if (shouldSkipEdge(vertex1, vertex2, ringData.alreadyAddedEdges())) {
             continue;
           }
-          // Area group / PerRingData can be convex and without holes,
-          // in which case 'contains' test can be skipped
+          // Area group / PerRingData can be convex and without holes -> 'contains' test can be skipped
+	  // walkable area builder already checks convexity of all outer ring points so there is no penalty
+          // convexity can be stored to created AreaGroups to use it in vertex linking
           var line = LineStringShrinker.shrink(vertex1.getCoordinate(), vertex2.getCoordinate());
           if (ringData.polygon().contains(line)) {
             boolean platformLinked =
@@ -721,8 +725,8 @@ class WalkableAreaBuilder {
         continue;
       }
       // here we compute the exact intersection (slow) only if we need it
-      // Most likely unnecessary: it does not seem possible that area is not fully
-      // included in containingArea. Intersection is area itselt.
+      // could be skipped if both OsmAreaGroup and OsmArea had a single outer ring
+      // splitting chould be done in OsmArea and OsmAreaGroup construction
       Geometry intersection = containingArea.intersection(area.jtsMultiPolygon.getGeometry());
       Area namedArea = new Area();
       OsmEntity areaEntity = area.parent;
