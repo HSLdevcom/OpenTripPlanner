@@ -17,9 +17,11 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
+import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.updater.TransitRealTimeUpdateContext;
 import org.opentripplanner.updater.spi.GraphUpdater;
 import org.opentripplanner.updater.spi.UpdateResult;
@@ -29,6 +31,7 @@ import org.opentripplanner.updater.trip.UpdateIncrementality;
 import org.opentripplanner.updater.trip.gtfs.GtfsRealTimeTripUpdateAdapter;
 import org.opentripplanner.updater.trip.gtfs.interpolation.BackwardsDelayPropagationType;
 import org.opentripplanner.updater.trip.gtfs.interpolation.ForwardsDelayPropagationType;
+import org.opentripplanner.updater.trip.gtfs.model.RealtimeShapes;
 import org.opentripplanner.updater.trip.gtfs.updater.TripUpdateGraphWriterRunnable;
 import org.opentripplanner.updater.trip.metrics.TripUpdateMetrics;
 import org.opentripplanner.utils.tostring.ToStringBuilder;
@@ -168,6 +171,7 @@ public class MqttGtfsRealtimeUpdater implements GraphUpdater<TransitRealTimeUpda
 
   private void onMessage(Mqtt5Publish message) {
     List<GtfsRealtime.TripUpdate> updates = null;
+    Map<String, LineString> shapesByShapeId = Map.of();
     UpdateIncrementality updateIncrementality = FULL_DATASET;
     try {
       // Decode message
@@ -195,6 +199,7 @@ public class MqttGtfsRealtimeUpdater implements GraphUpdater<TransitRealTimeUpda
           updates.add(feedEntity.getTripUpdate());
         }
       }
+      shapesByShapeId = RealtimeShapes.fromFeedEntities(feedEntityList);
     } catch (InvalidProtocolBufferException e) {
       LOG.error("Could not decode gtfs-rt message:", e);
     }
@@ -209,6 +214,7 @@ public class MqttGtfsRealtimeUpdater implements GraphUpdater<TransitRealTimeUpda
           backwardsDelayPropagationType,
           updateIncrementality,
           updates,
+          shapesByShapeId,
           feedId,
           recordMetrics
         )

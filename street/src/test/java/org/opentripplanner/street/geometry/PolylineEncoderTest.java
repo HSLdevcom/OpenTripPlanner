@@ -43,4 +43,45 @@ public class PolylineEncoderTest {
 
     assertEquals("_gjaR_gjaR", polyline.points());
   }
+
+  @Test
+  public void testDecodeKnownEncoding() {
+    // taken from https://developers.google.com/maps/documentation/utilities/polylinealgorithm
+    var decoded = PolylineEncoder.decode("_p~iF~ps|U_ulLnnqC_mqNvxq`@");
+    var expected = List.of(
+      new Coordinate(-120.2, 38.5),
+      new Coordinate(-120.95, 40.7),
+      new Coordinate(-126.453, 43.252)
+    );
+    assertEquals(expected.size(), decoded.size());
+    for (int i = 0; i < expected.size(); i++) {
+      assertEquals(expected.get(i).x, decoded.get(i).x, 1e-4);
+      assertEquals(expected.get(i).y, decoded.get(i).y, 1e-4);
+    }
+  }
+
+  @Test
+  public void testDecodeIsInverseOfEncode() {
+    List<Coordinate> points = new ArrayList<>();
+    points.add(new Coordinate(-73.85062, 40.903125));
+    points.add(new Coordinate(-73.85136, 40.902261));
+    points.add(new Coordinate(-73.85151, 40.902066));
+    var encoded = PolylineEncoder.encodeCoordinates(points.toArray(new Coordinate[0]));
+
+    var decoded = PolylineEncoder.decode(encoded.points());
+
+    assertEquals(points.size(), decoded.size());
+    for (int i = 0; i < points.size(); i++) {
+      assertEquals(points.get(i).x, decoded.get(i).x, 1e-4);
+      assertEquals(points.get(i).y, decoded.get(i).y, 1e-4);
+    }
+  }
+
+  @Test
+  public void testDecodeMalformedInputThrows() {
+    // valid latitude only, no matching longitude
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () ->
+      PolylineEncoder.decode("_p~iF")
+    );
+  }
 }

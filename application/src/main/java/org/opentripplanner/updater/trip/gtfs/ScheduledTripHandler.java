@@ -6,6 +6,7 @@ import static org.opentripplanner.updater.spi.UpdateErrorType.TRIP_NOT_FOUND;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.transit.model.network.StopPattern;
 import org.opentripplanner.transit.model.network.TripPattern;
@@ -20,6 +21,7 @@ import org.opentripplanner.updater.trip.TripUpdateApplier;
 import org.opentripplanner.updater.trip.gtfs.interpolation.BackwardsDelayPropagationType;
 import org.opentripplanner.updater.trip.gtfs.interpolation.ForwardsDelayPropagationType;
 import org.opentripplanner.updater.trip.gtfs.model.TripUpdate;
+import org.opentripplanner.updater.trip.patterncache.RealtimeShapeReference;
 import org.opentripplanner.updater.trip.patterncache.TripPatternCache;
 
 /**
@@ -49,7 +51,8 @@ class ScheduledTripHandler {
   UpdateSuccess handle(
     TripUpdate tripUpdate,
     ForwardsDelayPropagationType forwardsDelayPropagationType,
-    BackwardsDelayPropagationType backwardsDelayPropagationType
+    BackwardsDelayPropagationType backwardsDelayPropagationType,
+    Optional<RealtimeShapeReference> resolvedShape
   ) throws UpdateException {
     final TripPattern pattern = getPatternForTripId(tripUpdate.tripId());
 
@@ -102,7 +105,27 @@ class ScheduledTripHandler {
       final TripPattern newPattern = tripPatternCache.getOrCreateTripPattern(
         newStopPattern,
         trip,
-        pattern
+        pattern,
+        resolvedShape
+      );
+
+      return TripUpdateApplier.apply(
+        buffer,
+        RealTimeTripUpdate.of(newPattern, updatedTripTimes, tripUpdate.startDate())
+          .withRevertPreviousRealTimeUpdates(true)
+          .withHideTripInScheduledPattern(pattern)
+          .build()
+      );
+    } else if (resolvedShape.isPresent()) {
+      // The stop pattern itself is unchanged, but a shape override was resolved for this trip;
+      // route through the pattern cache so the trip gets its own (possibly shared) pattern with
+      // the resolved hop geometries instead of reusing the unmodified scheduled pattern.
+      final Trip trip = transitService.getTrip(tripUpdate.tripId());
+      final TripPattern newPattern = tripPatternCache.getOrCreateTripPattern(
+        pattern.getStopPattern(),
+        trip,
+        pattern,
+        resolvedShape
       );
 
       return TripUpdateApplier.apply(

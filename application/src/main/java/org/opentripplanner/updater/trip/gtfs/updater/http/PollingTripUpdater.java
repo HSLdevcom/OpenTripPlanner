@@ -80,6 +80,7 @@ public class PollingTripUpdater extends PollingGraphUpdater<TransitRealTimeUpdat
     // Get update lists from update source
     List<TripUpdate> updates = updateSource.getUpdates();
     var incrementality = updateSource.incrementalityOfLastUpdates();
+    var shapesByShapeId = updateSource.shapesByShapeIdOfLastUpdates();
 
     if (updates != null) {
       // Handle trip updates via graph writer runnable
@@ -90,6 +91,7 @@ public class PollingTripUpdater extends PollingGraphUpdater<TransitRealTimeUpdat
         backwardsDelayPropagationType,
         incrementality,
         updates,
+        shapesByShapeId,
         feedId,
         recordMetrics
       );

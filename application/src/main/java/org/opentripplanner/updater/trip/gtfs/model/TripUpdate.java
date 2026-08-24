@@ -67,6 +67,17 @@ public final class TripUpdate {
       .map(p -> p.getTripShortName());
   }
 
+  /**
+   * The {@code shape_id} from {@code TripUpdate.TripProperties}, if present. May refer either to
+   * a shape defined in static GTFS {@code shapes.txt}, or to a {@code Shape} FeedEntity in the
+   * same real-time message (resolved separately by the caller against the batch's shape map).
+   */
+  public Optional<String> shapeId() {
+    return tripProperties()
+      .filter(p -> p.hasShapeId())
+      .map(p -> p.getShapeId());
+  }
+
   public Optional<Accessibility> wheelchairAccessibility() {
     return vehicle()
       .filter(d -> d.hasWheelchairAccessible())

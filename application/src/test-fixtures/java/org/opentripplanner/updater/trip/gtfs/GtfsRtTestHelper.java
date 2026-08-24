@@ -5,7 +5,9 @@ import static org.opentripplanner.updater.trip.UpdateIncrementality.FULL_DATASET
 import com.google.transit.realtime.GtfsRealtime;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.core.framework.deduplicator.DeduplicatorService;
 import org.opentripplanner.transit.model.TransitTestEnvironment;
 import org.opentripplanner.updater.spi.UpdateResult;
@@ -82,6 +84,19 @@ public class GtfsRtTestHelper {
     List<GtfsRealtime.TripUpdate> updates,
     UpdateIncrementality incrementality
   ) {
+    return applyTripUpdates(updates, incrementality, Map.of());
+  }
+
+  /**
+   * Apply trip updates together with a map of standalone GTFS-RT {@code Shape} FeedEntities
+   * (keyed by their {@code shape_id}) that trip updates may reference via
+   * {@code TripProperties.shape_id}.
+   */
+  public UpdateResult applyTripUpdates(
+    List<GtfsRealtime.TripUpdate> updates,
+    UpdateIncrementality incrementality,
+    Map<String, LineString> shapesByShapeId
+  ) {
     var resultRef = new AtomicReference<UpdateResult>();
     try {
       transitTestEnvironment
@@ -97,6 +112,7 @@ public class GtfsRtTestHelper {
                 BackwardsDelayPropagationType.REQUIRED_NO_DATA,
                 incrementality,
                 updates,
+                shapesByShapeId,
                 transitTestEnvironment.feedId()
               )
           );

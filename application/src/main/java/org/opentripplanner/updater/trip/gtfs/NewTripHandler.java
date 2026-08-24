@@ -11,6 +11,7 @@ import static org.opentripplanner.updater.spi.UpdateErrorType.UNKNOWN_STOP;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.transit.model.network.StopPattern;
@@ -26,6 +27,7 @@ import org.opentripplanner.updater.spi.UpdateSuccess;
 import org.opentripplanner.updater.trip.TripUpdateApplier;
 import org.opentripplanner.updater.trip.gtfs.model.StopTimeUpdate;
 import org.opentripplanner.updater.trip.gtfs.model.TripUpdate;
+import org.opentripplanner.updater.trip.patterncache.RealtimeShapeReference;
 import org.opentripplanner.updater.trip.patterncache.TripPatternCache;
 
 /**
@@ -55,7 +57,10 @@ class NewTripHandler {
   /**
    * Validate and handle GTFS-RT TripUpdate message containing a NEW trip.
    */
-  UpdateSuccess handleNew(final TripUpdate tripUpdate) throws UpdateException {
+  UpdateSuccess handleNew(
+    final TripUpdate tripUpdate,
+    Optional<RealtimeShapeReference> resolvedShape
+  ) throws UpdateException {
     if (transitService.getScheduledTrip(tripUpdate.tripId()) != null) {
       throw UpdateException.of(tripUpdate.tripId(), TRIP_ALREADY_EXISTS);
     }
@@ -76,13 +81,23 @@ class NewTripHandler {
 
     Trip trip = tripBuilder.build();
 
-    return handleNewOrReplacementTrip(trip, tripUpdate, true, false, result.newRouteCreated());
+    return handleNewOrReplacementTrip(
+      trip,
+      tripUpdate,
+      true,
+      false,
+      result.newRouteCreated(),
+      resolvedShape
+    );
   }
 
   /**
    * Validate and handle GTFS-RT TripUpdate message containing a REPLACEMENT trip.
    */
-  UpdateSuccess handleReplacement(TripUpdate tripUpdate) throws UpdateException {
+  UpdateSuccess handleReplacement(
+    TripUpdate tripUpdate,
+    Optional<RealtimeShapeReference> resolvedShape
+  ) throws UpdateException {
     Trip trip = transitService.getTrip(tripUpdate.tripId());
 
     if (trip == null) {
@@ -97,7 +112,7 @@ class NewTripHandler {
       throw UpdateException.of(tripUpdate.tripId(), NO_SERVICE_ON_DATE);
     }
 
-    return handleNewOrReplacementTrip(trip, tripUpdate, false, true, false);
+    return handleNewOrReplacementTrip(trip, tripUpdate, false, true, false, resolvedShape);
   }
 
   /**
@@ -108,7 +123,8 @@ class NewTripHandler {
     TripUpdate tripUpdate,
     boolean added,
     boolean modified,
-    boolean hasANewRouteBeenCreated
+    boolean hasANewRouteBeenCreated,
+    Optional<RealtimeShapeReference> resolvedShape
   ) throws UpdateException {
     FeedScopedId tripId = trip.getId();
     var stopTimeUpdates = tripUpdate.stopTimeUpdates();
@@ -133,7 +149,8 @@ class NewTripHandler {
       tripUpdate.startDate(),
       added,
       modified,
-      hasANewRouteBeenCreated
+      hasANewRouteBeenCreated,
+      resolvedShape
     );
   }
 
@@ -145,7 +162,8 @@ class NewTripHandler {
     final LocalDate serviceDate,
     final boolean added,
     final boolean modified,
-    final boolean hasANewRouteBeenCreated
+    final boolean hasANewRouteBeenCreated,
+    final Optional<RealtimeShapeReference> resolvedShape
   ) throws UpdateException {
     RealTimeTripTimes tripTimes = tripTimesWithStopPattern.tripTimes();
     Trip trip = tripTimes.getTrip();
@@ -154,7 +172,8 @@ class NewTripHandler {
     final TripPattern pattern = tripPatternCache.getOrCreateTripPattern(
       stopPattern,
       trip,
-      transitService.findPattern(trip)
+      transitService.findPattern(trip),
+      resolvedShape
     );
 
     TripPattern hideTripInScheduledPattern = null;

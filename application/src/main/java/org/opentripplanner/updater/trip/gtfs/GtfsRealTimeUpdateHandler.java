@@ -7,8 +7,11 @@ import com.google.transit.realtime.GtfsRealtime;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
+import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.transit.model.framework.DataValidationException;
 import org.opentripplanner.transit.repository.TimetableRepository;
 import org.opentripplanner.updater.spi.DataValidationExceptionMapper;
@@ -21,6 +24,7 @@ import org.opentripplanner.updater.trip.UpdateIncrementality;
 import org.opentripplanner.updater.trip.gtfs.interpolation.BackwardsDelayPropagationType;
 import org.opentripplanner.updater.trip.gtfs.interpolation.ForwardsDelayPropagationType;
 import org.opentripplanner.updater.trip.gtfs.model.TripUpdate;
+import org.opentripplanner.updater.trip.patterncache.RealtimeShapeReference;
 
 /**
  * Update-scoped object produced by {@link GtfsRealTimeTripUpdateAdapter#forUpdate}. Holds the
@@ -73,6 +77,43 @@ public class GtfsRealTimeUpdateHandler {
     List<GtfsRealtime.TripUpdate> updates,
     String feedId
   ) {
+    return applyTripUpdates(
+      fuzzyTripMatcher,
+      forwardsDelayPropagationType,
+      backwardsDelayPropagationType,
+      updateIncrementality,
+      updates,
+      Map.of(),
+      feedId
+    );
+  }
+
+  /**
+   * Method to apply a trip update list to the most recent version of the timetable snapshot. A
+   * GTFS-RT feed is always applied against a single static feed (indicated by feedId).
+   * <p>
+   * However, multi-feed support is not completed, and we currently assume there is only one static
+   * feed when matching IDs.
+   *
+   * @param backwardsDelayPropagationType Defines when delays are propagated to previous stops and
+   *                                      if these stops are given the NO_DATA flag.
+   * @param updateIncrementality          Determines the incrementality of the updates. FULL updates clear the buffer
+   *                                      of all previous updates for the given feed id.
+   * @param updates                       GTFS-RT TripUpdate's that should be applied atomically
+   * @param shapesByShapeId               standalone GTFS-RT {@code Shape} FeedEntities carried in
+   *                                      the same message as {@code updates}, keyed by their
+   *                                      {@code shape_id}, used to resolve
+   *                                      {@code TripProperties.shape_id} references
+   */
+  public UpdateResult applyTripUpdates(
+    @Nullable GtfsRealtimeFuzzyTripMatcher fuzzyTripMatcher,
+    ForwardsDelayPropagationType forwardsDelayPropagationType,
+    BackwardsDelayPropagationType backwardsDelayPropagationType,
+    UpdateIncrementality updateIncrementality,
+    List<GtfsRealtime.TripUpdate> updates,
+    Map<String, LineString> shapesByShapeId,
+    String feedId
+  ) {
     List<UpdateSuccess> successes = new ArrayList<>();
     List<UpdateError> errors = new ArrayList<>();
 
@@ -96,7 +137,8 @@ public class GtfsRealTimeUpdateHandler {
           tripUpdate,
           updateIncrementality,
           backwardsDelayPropagationType,
-          forwardsDelayPropagationType
+          forwardsDelayPropagationType,
+          shapesByShapeId
         );
         successes.add(result);
       } catch (DataValidationException e) {
@@ -118,7 +160,8 @@ public class GtfsRealTimeUpdateHandler {
     TripUpdate tripUpdate,
     UpdateIncrementality updateIncrementality,
     BackwardsDelayPropagationType backwardsDelayPropagationType,
-    ForwardsDelayPropagationType forwardsDelayPropagationType
+    ForwardsDelayPropagationType forwardsDelayPropagationType,
+    Map<String, LineString> shapesByShapeId
   ) throws UpdateException {
     // The GTFS-RT TripDescriptor.schedule_relationship field is a protobuf optional enum,
     // so a single TripUpdate message carries exactly one value — it is structurally impossible
@@ -126,17 +169,29 @@ public class GtfsRealTimeUpdateHandler {
     // Cancelling a previously-added trip therefore always arrives as a second, separate feed
     // entity carrying only CANCELED or DELETED. This is why the RealTimeTripTimesBuilder never
     // needs to hold both added=true and canceled=true simultaneously for a GTFS-RT source.
+    Optional<RealtimeShapeReference> resolvedShape = tripUpdate
+      .shapeId()
+      .flatMap(shapeId ->
+        Optional.ofNullable(shapesByShapeId.get(shapeId)).map(geometry ->
+          new RealtimeShapeReference(shapeId, geometry)
+        )
+      );
     return switch (tripUpdate.scheduleRelationship()) {
       case SCHEDULED -> scheduledTripHandler.handle(
         tripUpdate,
         forwardsDelayPropagationType,
-        backwardsDelayPropagationType
+        backwardsDelayPropagationType,
+        resolvedShape
       );
-      case NEW, ADDED -> addedTripHandler.handleNew(tripUpdate);
+      case NEW, ADDED -> addedTripHandler.handleNew(tripUpdate, resolvedShape);
       case CANCELED -> canceledTripHandler.cancel(tripUpdate, updateIncrementality);
       case DELETED -> canceledTripHandler.delete(tripUpdate, updateIncrementality);
-      case DUPLICATED -> duplicatedTripHandler.handleDuplicated(tripUpdate, updateIncrementality);
-      case REPLACEMENT -> addedTripHandler.handleReplacement(tripUpdate);
+      case DUPLICATED -> duplicatedTripHandler.handleDuplicated(
+        tripUpdate,
+        updateIncrementality,
+        resolvedShape
+      );
+      case REPLACEMENT -> addedTripHandler.handleReplacement(tripUpdate, resolvedShape);
       case UNSCHEDULED -> throw UpdateException.of(
         tripUpdate.tripId(),
         NOT_IMPLEMENTED_UNSCHEDULED

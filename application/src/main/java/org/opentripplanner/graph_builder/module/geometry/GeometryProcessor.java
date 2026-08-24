@@ -3,8 +3,6 @@ package org.opentripplanner.graph_builder.module.geometry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,6 +25,7 @@ import org.opentripplanner.model.ShapePoint;
 import org.opentripplanner.model.StopTime;
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
 import org.opentripplanner.street.geometry.GeometryUtils;
+import org.opentripplanner.street.geometry.ShapeHopGeometrySlicer;
 import org.opentripplanner.street.geometry.SphericalDistanceLibrary;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.model.timetable.Trip;
@@ -132,8 +131,18 @@ public class GeometryProcessor {
       return createStraightLineHopGeometries(stopTimes);
     }
 
-    List<LinearLocation> locations = getLinearLocations(stopTimes, shapeLineString);
-    if (locations == null) {
+    var isFlexTrip = FlexTrip.containsFlexStops(stopTimes);
+    List<Coordinate> stopCoordinates = stopTimes
+      .stream()
+      .map(st -> st.getStop().getCoordinate().asJtsCoordinate())
+      .toList();
+    List<LineString> hopGeometries = ShapeHopGeometrySlicer.sliceIntoHopGeometries(
+      shapeLineString,
+      stopCoordinates,
+      maxStopToShapeSnapDistance,
+      isFlexTrip
+    );
+    if (hopGeometries == null) {
       // this only happens on shape which have points very far from
       // their stop sequence. So we'll fall back to trivial stop-to-stop
       // linking, even though theoretically we could do better.
@@ -141,138 +150,12 @@ public class GeometryProcessor {
       return createStraightLineHopGeometries(stopTimes);
     }
 
-    return getGeometriesByShape(stopTimes, shapeId, shapeLineString, locations);
+    return hopGeometries.toArray(new LineString[0]);
   }
 
   private boolean hasShapeDist(FeedScopedId shapeId, List<StopTime> stopTimes) {
     StopTime st0 = stopTimes.get(0);
     return st0.isShapeDistTraveledSet() && getDistanceForShapeId(shapeId) != null;
-  }
-
-  private LineString[] getGeometriesByShape(
-    List<StopTime> stopTimes,
-    FeedScopedId shapeId,
-    LineString shape,
-    List<LinearLocation> locations
-  ) {
-    LineString[] geoms = new LineString[stopTimes.size() - 1];
-    Iterator<LinearLocation> locationIt = locations.iterator();
-    LinearLocation endLocation = locationIt.next();
-    double distanceSoFar = 0;
-    int last = 0;
-    for (int i = 0; i < stopTimes.size() - 1; ++i) {
-      LinearLocation startLocation = endLocation;
-      endLocation = locationIt.next();
-
-      //convert from LinearLocation to distance
-      //advance distanceSoFar up to start of segment containing startLocation;
-      //it does not matter at all if this is accurate so long as it is consistent
-      for (int j = last; j < startLocation.getSegmentIndex(); ++j) {
-        Coordinate from = shape.getCoordinateN(j);
-        Coordinate to = shape.getCoordinateN(j + 1);
-        double xd = from.x - to.x;
-        double yd = from.y - to.y;
-        distanceSoFar += Math.sqrt(xd * xd + yd * yd);
-      }
-      last = startLocation.getSegmentIndex();
-
-      double startIndex =
-        distanceSoFar + startLocation.getSegmentFraction() * startLocation.getSegmentLength(shape);
-      //advance distanceSoFar up to start of segment containing endLocation
-      for (int j = last; j < endLocation.getSegmentIndex(); ++j) {
-        Coordinate from = shape.getCoordinateN(j);
-        Coordinate to = shape.getCoordinateN(j + 1);
-        double xd = from.x - to.x;
-        double yd = from.y - to.y;
-        distanceSoFar += Math.sqrt(xd * xd + yd * yd);
-      }
-      last = startLocation.getSegmentIndex();
-      double endIndex =
-        distanceSoFar + endLocation.getSegmentFraction() * endLocation.getSegmentLength(shape);
-
-      ShapeSegmentKey key = new ShapeSegmentKey(shapeId, startIndex, endIndex);
-      LineString geometry = geometriesByShapeSegmentKey.get(key);
-
-      if (geometry == null) {
-        LocationIndexedLine locationIndexed = new LocationIndexedLine(shape);
-        geometry = (LineString) locationIndexed.extractLine(startLocation, endLocation);
-
-        // Pack the resulting line string
-        CoordinateSequence sequence = new PackedCoordinateSequence.Double(
-          geometry.getCoordinates(),
-          2
-        );
-        geometry = GEOMETRY_FACTORY.createLineString(sequence);
-      }
-      geoms[i] = geometry;
-    }
-    return geoms;
-  }
-
-  private List<LinearLocation> getLinearLocations(List<StopTime> stopTimes, LineString shape) {
-    var isFlexTrip = FlexTrip.containsFlexStops(stopTimes);
-    // This trip does not have shape_dist in stop_times, but does have an associated shape.
-    ArrayList<IndexedLineSegment> segments = new ArrayList<>();
-    for (int i = 0; i < shape.getNumPoints() - 1; ++i) {
-      segments.add(new IndexedLineSegment(i, shape.getCoordinateN(i), shape.getCoordinateN(i + 1)));
-    }
-    // Find possible segment matches for each stop.
-    List<List<IndexedLineSegment>> possibleSegmentsForStop = new ArrayList<>();
-    int minSegmentIndex = 0;
-    for (int i = 0; i < stopTimes.size(); ++i) {
-      StopLocation stop = stopTimes.get(i).getStop();
-      Coordinate coord = stop.getCoordinate().asJtsCoordinate();
-      List<IndexedLineSegment> stopSegments = new ArrayList<>();
-      double bestDistance = Double.MAX_VALUE;
-      IndexedLineSegment bestSegment = null;
-      int maxSegmentIndex = -1;
-      int index = -1;
-      int minSegmentIndexForThisStop = -1;
-      for (IndexedLineSegment segment : segments) {
-        index++;
-        if (segment.index < minSegmentIndex) {
-          continue;
-        }
-        double distance = segment.distance(coord);
-        if (distance < maxStopToShapeSnapDistance || isFlexTrip) {
-          stopSegments.add(segment);
-          maxSegmentIndex = index;
-          if (minSegmentIndexForThisStop == -1) {
-            minSegmentIndexForThisStop = index;
-          }
-        } else if (distance < bestDistance) {
-          bestDistance = distance;
-          bestSegment = segment;
-          if (maxSegmentIndex != -1) {
-            maxSegmentIndex = index;
-          }
-        }
-      }
-      if (stopSegments.size() == 0 && bestSegment != null) {
-        //no segments within 150m
-        //fall back to nearest segment
-        stopSegments.add(bestSegment);
-        minSegmentIndex = bestSegment.index;
-      } else {
-        minSegmentIndex = minSegmentIndexForThisStop;
-      }
-
-      for (int j = i - 1; j >= 0; j--) {
-        for (
-          Iterator<IndexedLineSegment> it = possibleSegmentsForStop.get(j).iterator();
-          it.hasNext();
-
-        ) {
-          IndexedLineSegment segment = it.next();
-          if (segment.index > maxSegmentIndex) {
-            it.remove();
-          }
-        }
-      }
-      possibleSegmentsForStop.add(stopSegments);
-    }
-
-    return getStopLocations(possibleSegmentsForStop, stopTimes);
   }
 
   private LineString[] createStraightLineHopGeometries(List<StopTime> stopTimes) {
@@ -302,97 +185,6 @@ public class GeometryProcessor {
       }
     }
     return geoms;
-  }
-
-  /**
-   * Find a consistent, increasing list of LinearLocations along a shape for a set of stops. Handles
-   * loops routes.
-   */
-  private List<LinearLocation> getStopLocations(
-    List<List<IndexedLineSegment>> possibleSegmentsForStop,
-    List<StopTime> stopTimes
-  ) {
-    IndexedLineSegment prevSegment = null;
-    var prevSegmentFraction = 0.0;
-    List<LinearLocation> locations = new ArrayList<>(stopTimes.size());
-    for (
-      var stopPositionInPattern = 0;
-      stopPositionInPattern < stopTimes.size();
-      ++stopPositionInPattern
-    ) {
-      StopTime st = stopTimes.get(stopPositionInPattern);
-      StopLocation stop = st.getStop();
-      Coordinate stopCoord = stop.getCoordinate().asJtsCoordinate();
-
-      // Arrange segments into list of continuous segments
-      // we assume that the first time a shape passes through within 150 m of the stop, it will match
-      // the stop. Therefore, we choose the best segment within the first list of continuous
-      // segments, rather than trying from the best segment globally.
-      // This is to avoid exponential complexity for routes with multiple double-backs with multiple
-      // stops within the double-backs.
-      //
-      // An exception is that, if the discontinuity appears before the minimum possible segment
-      // for the next stop, the discontinuity is joined together. This is avoid a simple edge case
-      // of a bus first passing within 150 m of a stop, exit the 150 m radius to a turning circle,
-      // then call at the stop at the opposite side of the road.
-      List<List<IndexedLineSegment>> continuousSegments = new LinkedList<>();
-      for (IndexedLineSegment segment : possibleSegmentsForStop.get(stopPositionInPattern)) {
-        //can't go backwards along line
-        if (prevSegment == null || segment.index >= prevSegment.index) {
-          // can't go backwards in the same segment
-          if (prevSegment != null && segment.index == prevSegment.index) {
-            var splitX = segment.start.x + (segment.end.x - segment.start.x) * prevSegmentFraction;
-            var splitY = segment.start.y + (segment.end.y - segment.start.y) * prevSegmentFraction;
-            var splitZ = segment.start.z + (segment.end.z - segment.start.z) * prevSegmentFraction;
-            segment = new IndexedLineSegment(
-              segment.index,
-              new Coordinate(splitX, splitY, splitZ),
-              segment.end
-            );
-          }
-          boolean shouldStartNewSegment;
-          if (continuousSegments.isEmpty()) {
-            shouldStartNewSegment = true;
-          } else if (stopPositionInPattern + 1 == stopTimes.size()) {
-            shouldStartNewSegment = false;
-          } else {
-            var lastSegment = continuousSegments.getLast().getLast();
-            var segmentsForNextStop = possibleSegmentsForStop.get(stopPositionInPattern + 1);
-            var s = segment;
-            shouldStartNewSegment = segmentsForNextStop
-              .stream()
-              .anyMatch(item -> item.index > lastSegment.index && item.index < s.index);
-          }
-          if (shouldStartNewSegment) {
-            // start a new continuous segment
-            continuousSegments.add(new LinkedList<>());
-          }
-          continuousSegments.getLast().add(segment);
-        }
-      }
-      // choose the best match from the first list
-      if (continuousSegments.isEmpty()) {
-        return null;
-      }
-      List<IndexedLineSegment> firstContinuousSegments = continuousSegments.getFirst();
-      var bestMatch = firstContinuousSegments.getFirst();
-      for (var segment : firstContinuousSegments) {
-        if (segment.distance(stopCoord) < bestMatch.distance(stopCoord)) {
-          bestMatch = segment;
-        }
-      }
-      // we found one!
-      // best match may be the split segment with the previous stop, in this case we need to load the full segment
-      IndexedLineSegment matchedSegment = prevSegment != null &&
-        bestMatch.index == prevSegment.index
-        ? prevSegment
-        : bestMatch;
-      prevSegmentFraction = matchedSegment.fraction(stopCoord);
-      LinearLocation location = new LinearLocation(0, bestMatch.index, prevSegmentFraction);
-      locations.add(location);
-      prevSegment = matchedSegment;
-    }
-    return locations;
   }
 
   private LineString getHopGeometryViaShapeDistTraveled(

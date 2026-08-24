@@ -2,6 +2,7 @@ package org.opentripplanner.graph_builder.module.geometry;
 
 import java.util.Comparator;
 import org.locationtech.jts.geom.Coordinate;
+import org.opentripplanner.street.geometry.IndexedLineSegment;
 
 class IndexedLineSegmentComparator implements Comparator<IndexedLineSegment> {
 

@@ -1,5 +1,7 @@
 package org.opentripplanner.street.geometry;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.CoordinateSequence;
 import org.locationtech.jts.geom.Geometry;
@@ -109,6 +111,59 @@ public class PolylineEncoder {
     }
 
     return new PolylineEncoderResult(encodedPoints.toString(), seq.size());
+  }
+
+  /**
+   * Decodes a Google Polyline-encoded string back into a list of {@link Coordinate}s.
+   * <p>
+   * This is the inverse of {@link #encodeCoordinates(Coordinate[])}: each coordinate is
+   * reconstructed by accumulating signed deltas decoded from consecutive 5-bit ASCII chunks.
+   *
+   * @param encoded the Google Polyline-encoded string
+   * @return the decoded coordinates, in order
+   * @throws IllegalArgumentException if the encoded string is malformed (e.g. truncated, or
+   *     containing a longitude with no matching latitude)
+   */
+  public static List<Coordinate> decode(String encoded) {
+    List<Coordinate> coordinates = new ArrayList<>();
+    int[] index = { 0 };
+    int length = encoded.length();
+    int lat = 0;
+    int lng = 0;
+
+    while (index[0] < length) {
+      lat += decodeSignedNumber(encoded, index);
+      if (index[0] >= length) {
+        throw new IllegalArgumentException(
+          "Malformed encoded polyline: longitude missing for last coordinate"
+        );
+      }
+      lng += decodeSignedNumber(encoded, index);
+
+      coordinates.add(new Coordinate(lng * 1e-5, lat * 1e-5));
+    }
+
+    return coordinates;
+  }
+
+  /**
+   * Decodes one signed, delta-encoded number starting at {@code index[0]}, advancing
+   * {@code index[0]} past the consumed characters.
+   */
+  private static int decodeSignedNumber(String encoded, int[] index) {
+    int result = 0;
+    int shift = 0;
+    int b;
+    do {
+      if (index[0] >= encoded.length()) {
+        throw new IllegalArgumentException("Malformed encoded polyline: unexpected end of input");
+      }
+      b = encoded.charAt(index[0]++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+
+    return ((result & 1) != 0) ? ~(result >> 1) : (result >> 1);
   }
 
   /**

@@ -51,7 +51,7 @@ public class GtfsRealTimeTripUpdateAdapter {
       new ScheduledTripHandler(transitService, buffer, tripTimesUpdater, tripPatternCache),
       new NewTripHandler(transitService, buffer, tripTimesUpdater, tripPatternCache),
       new CanceledTripHandler(transitService, buffer),
-      new DuplicatedTripHandler(transitService, buffer, deduplicator)
+      new DuplicatedTripHandler(transitService, buffer, deduplicator, tripPatternCache)
     );
   }
 }

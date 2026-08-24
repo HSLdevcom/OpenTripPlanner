@@ -169,6 +169,18 @@ HTTP headers to add to the request. Any header key, value can be inserted.
 
 <!-- stop-time-updater END -->
 
+##### `TripProperties.shape_id` support
+
+OTP resolves `TripUpdate.TripProperties.shape_id` against standalone `Shape` FeedEntities carried
+in the same GTFS-RT message (matched by the `Shape`'s own `shape_id` field, not the enclosing
+`FeedEntity.id`), for trip updates of any `schedule_relationship` (`SCHEDULED`, `NEW`, `ADDED`,
+`REPLACEMENT`, `DUPLICATED`). The referenced shape is decoded from its `encoded_polyline` and used
+to build the pattern's hop geometries.
+
+Resolving `shape_id` against shapes already defined in the feed's static `shapes.txt` is not yet
+supported. If a `shape_id` cannot be resolved, OTP falls back to the default hop geometries
+(straight lines between stops for a newly created pattern).
+
 ## Streaming TripUpdates via MQTT
 
 This updater connects to an MQTT broker and processes TripUpdates in a streaming fashion. This means

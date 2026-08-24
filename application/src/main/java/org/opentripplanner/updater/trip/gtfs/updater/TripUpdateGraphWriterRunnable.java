@@ -2,8 +2,10 @@ package org.opentripplanner.updater.trip.gtfs.updater;
 
 import com.google.transit.realtime.GtfsRealtime.TripUpdate;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.updater.GraphWriterRunnable;
 import org.opentripplanner.updater.TransitRealTimeUpdateContext;
 import org.opentripplanner.updater.spi.UpdateResult;
@@ -22,6 +24,12 @@ public class TripUpdateGraphWriterRunnable
    */
   private final List<TripUpdate> updates;
 
+  /**
+   * Standalone GTFS-RT {@code Shape} FeedEntities from the same message as {@link #updates},
+   * keyed by {@code shape_id}.
+   */
+  private final Map<String, LineString> shapesByShapeId;
+
   private final boolean fuzzyTripMatching;
 
   private final ForwardsDelayPropagationType forwardsDelayPropagationType;
@@ -38,6 +46,7 @@ public class TripUpdateGraphWriterRunnable
     BackwardsDelayPropagationType backwardsDelayPropagationType,
     UpdateIncrementality updateIncrementality,
     List<TripUpdate> updates,
+    Map<String, LineString> shapesByShapeId,
     String feedId,
     Consumer<UpdateResult> sendMetrics
   ) {
@@ -47,6 +56,7 @@ public class TripUpdateGraphWriterRunnable
     this.backwardsDelayPropagationType = backwardsDelayPropagationType;
     this.updateIncrementality = updateIncrementality;
     this.updates = Objects.requireNonNull(updates);
+    this.shapesByShapeId = Objects.requireNonNullElse(shapesByShapeId, Map.of());
     this.feedId = Objects.requireNonNull(feedId);
     this.sendMetrics = sendMetrics;
   }
@@ -61,6 +71,7 @@ public class TripUpdateGraphWriterRunnable
         backwardsDelayPropagationType,
         updateIncrementality,
         updates,
+        shapesByShapeId,
         feedId
       );
     sendMetrics.accept(result);

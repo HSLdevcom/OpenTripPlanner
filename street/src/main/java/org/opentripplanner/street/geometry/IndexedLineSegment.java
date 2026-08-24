@@ -1,16 +1,15 @@
-package org.opentripplanner.graph_builder.module.geometry;
+package org.opentripplanner.street.geometry;
 
 import org.locationtech.jts.geom.Coordinate;
-import org.opentripplanner.street.geometry.SphericalDistanceLibrary;
 
 /** TODO Move this stuff into the geometry library */
-class IndexedLineSegment {
+public class IndexedLineSegment {
 
   private static final double RADIUS = SphericalDistanceLibrary.RADIUS_OF_EARTH_IN_M;
   private final double lineLength;
-  int index;
-  Coordinate start;
-  Coordinate end;
+  public int index;
+  public Coordinate start;
+  public Coordinate end;
 
   public IndexedLineSegment(int index, Coordinate start, Coordinate end) {
     this.index = index;
@@ -58,7 +57,7 @@ class IndexedLineSegment {
     );
   }
 
-  double distance(Coordinate coord) {
+  public double distance(Coordinate coord) {
     double cte = crossTrackError(coord);
     double atd = alongTrackDistance(coord, cte);
     double inverseAtd = inverseAlongTrackDistance(coord, -cte);

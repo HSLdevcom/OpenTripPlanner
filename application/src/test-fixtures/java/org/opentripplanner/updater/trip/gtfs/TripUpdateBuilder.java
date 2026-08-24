@@ -543,4 +543,13 @@ public class TripUpdateBuilder {
     );
     return this;
   }
+
+  /**
+   * Set {@code TripProperties.shape_id}, referencing either a static GTFS shape or a standalone
+   * {@code Shape} FeedEntity carried in the same message.
+   */
+  public TripUpdateBuilder withShapeId(String shapeId) {
+    tripUpdateBuilder.getTripPropertiesBuilder().setShapeId(shapeId);
+    return this;
+  }
 }

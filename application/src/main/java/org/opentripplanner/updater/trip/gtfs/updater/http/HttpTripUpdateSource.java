@@ -12,10 +12,13 @@ import de.mfdz.MfdzRealtimeExtensions;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.framework.io.HttpHeaders;
 import org.opentripplanner.framework.io.OtpHttpClient;
 import org.opentripplanner.framework.io.OtpHttpClientFactory;
 import org.opentripplanner.updater.trip.UpdateIncrementality;
+import org.opentripplanner.updater.trip.gtfs.model.RealtimeShapes;
 import org.opentripplanner.utils.tostring.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +33,7 @@ class HttpTripUpdateSource {
   private final String url;
   private final HttpHeaders headers;
   private UpdateIncrementality updateIncrementality = FULL_DATASET;
+  private Map<String, LineString> shapesByShapeId = Map.of();
   private final ExtensionRegistry registry = ExtensionRegistry.newInstance();
   private final OtpHttpClient otpHttpClient;
 
@@ -72,6 +76,7 @@ class HttpTripUpdateSource {
           updates.add(feedEntity.getTripUpdate());
         }
       }
+      shapesByShapeId = RealtimeShapes.fromFeedEntities(feedEntityList);
     } catch (Exception e) {
       LOG.error("Failed to process GTFS-RT TripUpdates feed from {}", url, e);
     }
@@ -92,5 +97,14 @@ class HttpTripUpdateSource {
    */
   public UpdateIncrementality incrementalityOfLastUpdates() {
     return updateIncrementality;
+  }
+
+  /**
+   * @return the standalone {@code Shape} FeedEntities from the last fetched message, keyed by
+   * their {@code shape_id}. Only valid for the same batch as the most recent {@link #getUpdates()}
+   * call.
+   */
+  public Map<String, LineString> shapesByShapeIdOfLastUpdates() {
+    return shapesByShapeId;
   }
 }

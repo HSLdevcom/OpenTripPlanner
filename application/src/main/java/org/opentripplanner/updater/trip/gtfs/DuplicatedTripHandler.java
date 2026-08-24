@@ -4,6 +4,7 @@ import static org.opentripplanner.updater.spi.UpdateErrorType.NOT_IMPLEMENTED_DI
 import static org.opentripplanner.updater.spi.UpdateErrorType.OUTSIDE_SERVICE_PERIOD;
 import static org.opentripplanner.updater.spi.UpdateErrorType.TRIP_NOT_FOUND;
 
+import java.util.Optional;
 import org.opentripplanner.core.framework.deduplicator.DeduplicatorService;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.transit.model.timetable.RealTimeTripUpdate;
@@ -17,6 +18,8 @@ import org.opentripplanner.updater.spi.UpdateSuccess;
 import org.opentripplanner.updater.trip.TripUpdateApplier;
 import org.opentripplanner.updater.trip.UpdateIncrementality;
 import org.opentripplanner.updater.trip.gtfs.model.TripUpdate;
+import org.opentripplanner.updater.trip.patterncache.RealtimeShapeReference;
+import org.opentripplanner.updater.trip.patterncache.TripPatternCache;
 
 /// Handles GTFS-RT TripUpdates for trips with schedule relationship `DUPLICATED`.
 /// Creates a copy of a scheduled trip shifted to a new start time (and service date).
@@ -25,19 +28,25 @@ class DuplicatedTripHandler {
   private final TransitService transitService;
   private final TimetableRepository buffer;
   private final DeduplicatorService deduplicator;
+  private final TripPatternCache tripPatternCache;
 
   DuplicatedTripHandler(
     TransitService transitService,
     TimetableRepository buffer,
-    DeduplicatorService deduplicator
+    DeduplicatorService deduplicator,
+    TripPatternCache tripPatternCache
   ) {
     this.transitService = transitService;
     this.buffer = buffer;
     this.deduplicator = deduplicator;
+    this.tripPatternCache = tripPatternCache;
   }
 
-  UpdateSuccess handleDuplicated(TripUpdate tripUpdate, UpdateIncrementality updateIncrementality)
-    throws UpdateException {
+  UpdateSuccess handleDuplicated(
+    TripUpdate tripUpdate,
+    UpdateIncrementality updateIncrementality,
+    Optional<RealtimeShapeReference> resolvedShape
+  ) throws UpdateException {
     // out of precaution we don't allow the combination of differential and DUPLICATED
     // it's not clear what the semantics of this would be and particular how cancellation of a
     // duplicated trip would work.
@@ -98,7 +107,17 @@ class DuplicatedTripHandler {
       .withServiceDate(tripUpdate.startDate())
       .build();
 
-    var update = RealTimeTripUpdate.of(originalPattern, newTripTimes, tripUpdate.startDate())
+    // The DUPLICATED trip shares the original's stop pattern; if a shape override was resolved,
+    // route through the pattern cache to get a pattern with the resolved hop geometries instead
+    // of always reusing the original (unmodified) pattern.
+    var pattern = tripPatternCache.getOrCreateTripPattern(
+      originalPattern.getStopPattern(),
+      newTrip,
+      originalPattern,
+      resolvedShape
+    );
+
+    var update = RealTimeTripUpdate.of(pattern, newTripTimes, tripUpdate.startDate())
       .withTripCreation(true)
       .withAddedTripOnServiceDate(tripOnServiceDate)
       .build();
