@@ -82,8 +82,8 @@ public class StreetPathToLegsMapper {
   public static boolean isFloatingRentalDropoff(State state) {
     return (
       !state.isRentingVehicle() &&
-      (state.getBackState() != null &&
-        state.getBackState().getVehicleRentalState() == RENTING_FLOATING)
+      state.getBackState() != null &&
+      state.getBackState().getVehicleRentalState() == RENTING_FLOATING
     );
   }
 
@@ -200,28 +200,30 @@ public class StreetPathToLegsMapper {
    * @param states The states that go with the leg
    */
   private static TraverseMode resolveMode(List<State> states) {
-    return states
-      .stream()
-      // The first state is part of the previous leg
-      .skip(1)
-      .map(state -> {
-        var mode = state.currentMode();
+    return (
+      states
+        .stream()
+        // The first state is part of the previous leg
+        .skip(1)
+        .map(state -> {
+          var mode = state.currentMode();
 
-        if (mode != null) {
-          // Resolve correct mode if renting vehicle
-          if (state.isRentingVehicle()) {
-            return state.stateData.rentalVehicleFormFactor.traverseMode;
-          } else {
-            return mode;
+          if (mode != null) {
+            // Resolve correct mode if renting vehicle
+            if (state.isRentingVehicle()) {
+              return state.stateData.rentalVehicleFormFactor.traverseMode;
+            } else {
+              return mode;
+            }
           }
-        }
 
-        return null;
-      })
-      .filter(Objects::nonNull)
-      .findFirst()
-      // Fallback to walking
-      .orElse(TraverseMode.WALK);
+          return null;
+        })
+        .filter(Objects::nonNull)
+        .findFirst()
+        // Fallback to walking
+        .orElse(TraverseMode.WALK)
+    );
   }
 
   /**

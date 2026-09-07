@@ -480,6 +480,12 @@ public class EnumTypes {
         "flexible transportation, ride to an eligible drop-off area and then walk the rest of " +
         "the way."
     )
+    .value(
+      "taxi",
+      StreetMode.TAXI,
+      "Traveling by taxi. This can include walking before being picked up and/or after being " +
+        "dropped off."
+    )
     .build();
 
   public static final GraphQLEnumType TRANSPORT_MODE = GraphQLEnumType.newEnum()
@@ -506,14 +512,15 @@ public class EnumTypes {
     TransmodelTransportSubmode::getValue
   );
 
-  public static final GraphQLEnumType VERTEX_TYPE = GraphQLEnumType.newEnum()
-    .name("VertexType")
-    .value("normal", VertexType.NORMAL)
-    .value("transit", VertexType.TRANSIT)
-    .value("bikePark", VertexType.VEHICLEPARKING)
-    .value("bikeShare", VertexType.VEHICLERENTAL)
-    //TODO QL: .value("parkAndRide", VertexType.PARKANDRIDE)
-    .build();
+  public static final GraphQLEnumType VERTEX_TYPE =
+    GraphQLEnumType.newEnum()
+      .name("VertexType")
+      .value("normal", VertexType.NORMAL)
+      .value("transit", VertexType.TRANSIT)
+      .value("bikePark", VertexType.VEHICLEPARKING)
+      .value("bikeShare", VertexType.VEHICLERENTAL)
+      //TODO QL: .value("parkAndRide", VertexType.PARKANDRIDE)
+      .build();
 
   public static final GraphQLEnumType VIA_LOCATION_TYPE = GraphQLEnumType.newEnum()
     .name("ViaLocationType")

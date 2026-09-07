@@ -22,6 +22,7 @@ import org.opentripplanner.ext.carpooling.model.CarpoolLeg;
 import org.opentripplanner.ext.fares.ItineraryFareDataLoader;
 import org.opentripplanner.ext.ridehailing.model.RideEstimate;
 import org.opentripplanner.ext.ridehailing.model.RideHailingLeg;
+import org.opentripplanner.ext.taxizone.model.TaxiZoneLeg;
 import org.opentripplanner.framework.graphql.GraphQLUtils;
 import org.opentripplanner.model.TripTimeOnDate;
 import org.opentripplanner.model.fare.FareOffer;
@@ -124,23 +125,21 @@ public class LegImpl implements GraphQLDataFetchers.GraphQLLeg {
         return List.of();
       }
       Leg leg = getSource(environment);
-      return loader
-        .load(itinerary)
-        .thenApply(fare -> {
-          if (fare == null || fare.isEmpty()) {
-            return List.<FareOffer>of();
-          }
-          var legOffers = new ArrayList<>(fare.getLegProducts().get(leg));
-          // Itinerary-level products (e.g. day passes) only apply to transit legs
-          var itineraryOffers = leg.isTransitLeg()
-            ? fare
-                .getItineraryProducts()
-                .stream()
-                .map(fp -> FareOffer.of(itinerary.legs().getFirst().startTime(), fp))
-                .toList()
-            : List.<FareOffer>of();
-          return (Iterable<FareOffer>) ListUtils.combine(itineraryOffers, legOffers);
-        });
+      return loader.load(itinerary).thenApply(fare -> {
+        if (fare == null || fare.isEmpty()) {
+          return List.<FareOffer>of();
+        }
+        var legOffers = new ArrayList<>(fare.getLegProducts().get(leg));
+        // Itinerary-level products (e.g. day passes) only apply to transit legs
+        var itineraryOffers = leg.isTransitLeg()
+          ? fare
+              .getItineraryProducts()
+              .stream()
+              .map(fp -> FareOffer.of(itinerary.legs().getFirst().startTime(), fp))
+              .toList()
+          : List.<FareOffer>of();
+        return (Iterable<FareOffer>) ListUtils.combine(itineraryOffers, legOffers);
+      });
     };
     return (DataFetcher<Iterable<FareOffer>>) fetcher;
   }
@@ -222,6 +221,9 @@ public class LegImpl implements GraphQLDataFetchers.GraphQLLeg {
       }
       if (leg instanceof CarpoolLeg cl) {
         return cl.mode().name();
+      }
+      if (leg instanceof TaxiZoneLeg tzl) {
+        return tzl.mode().name();
       }
       throw new IllegalStateException("Unhandled leg type: " + leg);
     };
@@ -376,19 +378,19 @@ public class LegImpl implements GraphQLDataFetchers.GraphQLLeg {
 
         boolean limitToExactOriginStop =
           originModesWithParentStation == null ||
-          !(originModesWithParentStation
-              .stream()
-              .map(GraphQLTypes.GraphQLTransitMode::toString)
-              .toList()
-              .contains(originalLeg.mode().name()));
+          !originModesWithParentStation
+            .stream()
+            .map(GraphQLTypes.GraphQLTransitMode::toString)
+            .toList()
+            .contains(originalLeg.mode().name());
 
         boolean limitToExactDestinationStop =
           destinationModesWithParentStation == null ||
-          !(destinationModesWithParentStation
-              .stream()
-              .map(GraphQLTypes.GraphQLTransitMode::toString)
-              .toList()
-              .contains(originalLeg.mode().name()));
+          !destinationModesWithParentStation
+            .stream()
+            .map(GraphQLTypes.GraphQLTransitMode::toString)
+            .toList()
+            .contains(originalLeg.mode().name());
 
         var res = AlternativeLegs.getAlternativeLegs(
           environment.getSource(),

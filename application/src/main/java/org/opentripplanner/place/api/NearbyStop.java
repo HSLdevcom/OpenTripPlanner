@@ -74,11 +74,11 @@ public class NearbyStop implements Comparable<NearbyStop> {
 
   @Override
   public int compareTo(NearbyStop that) {
-    var weightDifference = (int) (this.weight()) - (int) (that.weight());
+    var weightDifference = (int) this.weight() - (int) that.weight();
     if (weightDifference != 0) {
       return weightDifference;
     }
-    return (int) (this.distance) - (int) (that.distance);
+    return (int) this.distance - (int) that.distance;
   }
 
   /**

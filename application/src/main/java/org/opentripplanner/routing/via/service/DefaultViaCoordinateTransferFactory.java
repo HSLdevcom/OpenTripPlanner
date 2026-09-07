@@ -60,7 +60,7 @@ public class DefaultViaCoordinateTransferFactory implements ViaCoordinateTransfe
             transitService.getStopLocation(to.stopId).getIndex(),
             from.edges,
             to.edges,
-            (int) (from.duration().plus(to.duration()).getSeconds()),
+            (int) from.duration().plus(to.duration()).getSeconds(),
             from.weight() + to.weight()
           )
         );
