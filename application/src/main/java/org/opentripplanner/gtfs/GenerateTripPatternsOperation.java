@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.core.framework.deduplicator.DeduplicatorService;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.ext.flex.trip.FlexTrip;
@@ -19,16 +20,19 @@ import org.opentripplanner.graph_builder.module.geometry.GeometryProcessor;
 import org.opentripplanner.model.Frequency;
 import org.opentripplanner.model.StopTime;
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
+import org.opentripplanner.street.geometry.CompactLineStringSequence;
 import org.opentripplanner.transit.model.framework.DataValidationException;
 import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.network.StopPattern;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.network.TripPatternBuilder;
+import org.opentripplanner.transit.model.network.TripPatternGeometryFactory;
 import org.opentripplanner.transit.model.timetable.Direction;
 import org.opentripplanner.transit.model.timetable.FrequencyEntry;
 import org.opentripplanner.transit.model.timetable.ScheduledTripTimes;
 import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.model.timetable.TripTimesFactory;
+import org.opentripplanner.transit.service.TripPatternGeometryRepository;
 import org.opentripplanner.utils.logging.ProgressTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,12 +51,19 @@ public class GenerateTripPatternsOperation {
   private final DeduplicatorService deduplicator;
   private final Set<FeedScopedId> calendarServiceIds;
   private final GeometryProcessor geometryProcessor;
+  private final TripPatternGeometryRepository tripPatternGeometryRepository;
 
   // TODO the linked hashset configuration ensures that TripPatterns are created in the same order
   //  as Trips are imported, as a workaround for issue #6067
   private final Multimap<StopPattern, TripPatternBuilder> tripPatternBuilders =
     MultimapBuilder.linkedHashKeys().linkedHashSetValues().build();
   private final ListMultimap<Trip, Frequency> frequenciesForTrip = ArrayListMultimap.create();
+
+  // The hop geometries used to seed each pattern's default geometry - the shape of the first
+  // trip to create a pattern. Kept here (rather than on TripPatternBuilder) so later trips
+  // sharing the same pattern can be compared against it to detect a genuinely different shape.
+  private final Map<TripPatternBuilder, List<LineString>> defaultHopGeometriesByPattern =
+    new HashMap<>();
 
   private int freqCount = 0;
   private int scheduledCount = 0;
@@ -62,13 +73,15 @@ public class GenerateTripPatternsOperation {
     DataImportIssueStore issueStore,
     DeduplicatorService deduplicator,
     Set<FeedScopedId> calendarServiceIds,
-    GeometryProcessor geometryProcessor
+    GeometryProcessor geometryProcessor,
+    TripPatternGeometryRepository tripPatternGeometryRepository
   ) {
     this.transitServiceBuilder = builder;
     this.issueStore = issueStore;
     this.deduplicator = deduplicator;
     this.calendarServiceIds = calendarServiceIds;
     this.geometryProcessor = geometryProcessor;
+    this.tripPatternGeometryRepository = tripPatternGeometryRepository;
   }
 
   public void run() {
@@ -89,13 +102,20 @@ public class GenerateTripPatternsOperation {
       }
     }
 
-    tripPatternBuilders
-      .values()
-      .stream()
-      .map(TripPatternBuilder::build)
-      .forEach(tripPattern ->
-        transitServiceBuilder.getTripPatterns().put(tripPattern.getStopPattern(), tripPattern)
+    for (TripPatternBuilder tripPatternBuilder : tripPatternBuilders.values()) {
+      TripPattern tripPattern = tripPatternBuilder.build();
+      transitServiceBuilder.getTripPatterns().put(tripPattern.getStopPattern(), tripPattern);
+      List<LineString> defaultHopGeometries = defaultHopGeometriesByPattern.get(
+        tripPatternBuilder
       );
+      tripPatternGeometryRepository.setPatternGeometry(
+        tripPattern.getId(),
+        TripPatternGeometryFactory.buildHopGeometries(
+          tripPattern.getStopPattern(),
+          defaultHopGeometries
+        )
+      );
+    }
 
     LOG.info(progressLogger.completeMessage());
     LOG.info(
@@ -148,6 +168,7 @@ public class GenerateTripPatternsOperation {
     StopPattern stopPattern = new StopPattern(stopTimes);
 
     TripPatternBuilder tripPatternBuilder = findOrCreateTripPattern(stopPattern, trip);
+    registerTripGeometry(trip, stopPattern, tripPatternBuilder);
 
     // Create a TripTimes object for this list of stoptimes, which form one trip.
     ScheduledTripTimes tripTimes = TripTimesFactory.tripTimes(trip, stopTimes, deduplicator);
@@ -187,10 +208,45 @@ public class GenerateTripPatternsOperation {
       .withRoute(route)
       .withStopPattern(stopPattern)
       .withMode(trip.getMode())
-      .withNetexSubmode(trip.getNetexSubMode())
-      .withHopGeometries(geometryProcessor.createHopGeometries(trip));
+      .withNetexSubmode(trip.getNetexSubMode());
     tripPatternBuilders.put(stopPattern, tripPatternBuilder);
     return tripPatternBuilder;
+  }
+
+  /**
+   * Computes the trip's own hop geometries and either seeds the pattern's default geometry (the
+   * first trip to use a pattern) or, if the trip's shape genuinely differs from the pattern's
+   * already-registered default (e.g. GTFS trips sharing a stop pattern/route/direction/mode but
+   * referencing a different {@code shape_id}), registers a per-trip override. Trips whose shape
+   * matches the pattern default store nothing extra, keeping memory use low.
+   */
+  private void registerTripGeometry(
+    Trip trip,
+    StopPattern stopPattern,
+    TripPatternBuilder tripPatternBuilder
+  ) {
+    List<LineString> hopGeometries = geometryProcessor.createHopGeometries(trip);
+    List<LineString> defaultHopGeometries = defaultHopGeometriesByPattern.get(tripPatternBuilder);
+    if (defaultHopGeometries == null) {
+      defaultHopGeometriesByPattern.put(tripPatternBuilder, hopGeometries);
+    } else if (!sameHopGeometries(defaultHopGeometries, hopGeometries)) {
+      tripPatternGeometryRepository.setTripGeometryOverride(
+        trip.getId(),
+        TripPatternGeometryFactory.buildHopGeometries(stopPattern, hopGeometries)
+      );
+    }
+  }
+
+  private static boolean sameHopGeometries(List<LineString> a, List<LineString> b) {
+    if (a.size() != b.size()) {
+      return false;
+    }
+    for (int i = 0; i < a.size(); i++) {
+      if (!a.get(i).equalsExact(b.get(i))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**

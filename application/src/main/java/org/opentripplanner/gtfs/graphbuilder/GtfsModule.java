@@ -253,7 +253,8 @@ public class GtfsModule implements GraphBuilderModule {
       issueStore,
       deduplicator,
       calServiceIds,
-      geometryProcessor
+      geometryProcessor,
+      transitRepository.getTripPatternGeometryRepository()
     );
     buildTPOp.run();
     transitRepository.setHasFrequencyService(

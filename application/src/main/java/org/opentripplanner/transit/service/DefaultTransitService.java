@@ -775,6 +775,11 @@ public class DefaultTransitService implements TransitService {
   }
 
   @Override
+  public TripPatternGeometryService getTripPatternGeometryService() {
+    return transitRepository.getTripPatternGeometryService();
+  }
+
+  @Override
   public boolean transitFeedCovers(Instant dateTime) {
     return transitRepository.transitFeedCovers(dateTime);
   }

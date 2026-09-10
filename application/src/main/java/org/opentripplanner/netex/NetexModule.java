@@ -85,7 +85,11 @@ public class NetexModule implements GraphBuilderModule {
         var netexBundle = netexBundles.poll();
         netexBundle.checkInputs();
 
-        TransitDataImportBuilder transitBuilder = netexBundle.loadBundle(deduplicator, issueStore);
+        TransitDataImportBuilder transitBuilder = netexBundle.loadBundle(
+          deduplicator,
+          issueStore,
+          transitRepository.getTripPatternGeometryRepository()
+        );
         transitBuilder.limitServiceDays(transitPeriodLimit);
         calendarServiceData.add(transitBuilder.buildCalendarServiceData());
 

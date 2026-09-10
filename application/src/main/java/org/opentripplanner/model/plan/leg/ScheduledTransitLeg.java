@@ -35,6 +35,7 @@ import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.model.timetable.TripOnServiceDate;
 import org.opentripplanner.transit.model.timetable.TripTimes;
 import org.opentripplanner.transit.model.timetable.booking.BookingInfo;
+import org.opentripplanner.transit.service.TripPatternGeometryService;
 import org.opentripplanner.utils.lang.IntUtils;
 import org.opentripplanner.utils.lang.Sandbox;
 import org.opentripplanner.utils.time.ServiceDateUtils;
@@ -57,6 +58,7 @@ public class ScheduledTransitLeg implements TransitLeg {
   ).thenComparing(FareOffer::uniqueId);
   private final TripTimes tripTimes;
   private final TripPattern tripPattern;
+  private final TripPatternGeometryService tripPatternGeometryService;
 
   private final ZonedDateTime startTime;
   private final ZonedDateTime endTime;
@@ -86,6 +88,7 @@ public class ScheduledTransitLeg implements TransitLeg {
   protected ScheduledTransitLeg(ScheduledTransitLegBuilder<?> builder) {
     this.tripTimes = Objects.requireNonNull(builder.tripTimes());
     this.tripPattern = Objects.requireNonNull(builder.tripPattern());
+    this.tripPatternGeometryService = Objects.requireNonNull(builder.tripPatternGeometryService());
 
     int maxStopPosInPatternLimit = tripPattern.numberOfStops() - 1;
     this.boardStopPosInPattern = IntUtils.requireInRange(
@@ -113,7 +116,9 @@ public class ScheduledTransitLeg implements TransitLeg {
 
     this.generalizedCost = builder.generalizedCost();
 
-    this.distanceMeters = tripPattern.distanceBetween(
+    this.distanceMeters = tripPatternGeometryService.distanceBetween(
+      tripPattern,
+      tripTimes.getTrip(),
       boardStopPosInPattern,
       alightStopPosInPattern
     );
@@ -145,6 +150,10 @@ public class ScheduledTransitLeg implements TransitLeg {
 
   public TripPattern tripPattern() {
     return tripPattern;
+  }
+
+  public TripPatternGeometryService tripPatternGeometryService() {
+    return tripPatternGeometryService;
   }
 
   public Instant serviceDateMidnight() {
@@ -302,12 +311,17 @@ public class ScheduledTransitLeg implements TransitLeg {
   }
 
   /**
-   * The leg geometry is built lazily by concatenating the trip pattern's hop geometries between
-   * the board and alight stops. It is not cached: each call recomputes it.
+   * The leg geometry is built lazily by resolving the trip's (or its pattern's default)
+   * geometry between the board and alight stops. It is not cached: each call recomputes it.
    */
   @Override
   public LineString legGeometry() {
-    return tripPattern.geometryBetween(boardStopPosInPattern, alightStopPosInPattern);
+    return tripPatternGeometryService.geometryBetween(
+      tripPattern,
+      tripTimes.getTrip(),
+      boardStopPosInPattern,
+      alightStopPosInPattern
+    );
   }
 
   @Override

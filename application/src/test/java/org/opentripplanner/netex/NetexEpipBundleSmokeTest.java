@@ -22,6 +22,7 @@ import org.opentripplanner.model.calendar.CalendarServiceData;
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
 import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.framework.Deduplicator;
+import org.opentripplanner.transit.service.TripPatternGeometryRepository;
 import org.opentripplanner.transit.model.network.BikeAccess;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.organization.Agency;
@@ -52,7 +53,10 @@ class NetexEpipBundleSmokeTest {
       netexBundle.checkInputs();
 
       // When
-      transitBuilder = netexBundle.loadBundle(new Deduplicator(), DataImportIssueStore.NOOP);
+      transitBuilder = netexBundle.loadBundle(new Deduplicator(),
+        DataImportIssueStore.NOOP,
+        new TripPatternGeometryRepository()
+      );
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

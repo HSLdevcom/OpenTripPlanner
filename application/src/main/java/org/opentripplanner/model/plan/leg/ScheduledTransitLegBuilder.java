@@ -14,6 +14,7 @@ import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.timetable.TripOnServiceDate;
 import org.opentripplanner.transit.model.timetable.TripTimes;
+import org.opentripplanner.transit.service.TripPatternGeometryService;
 
 public class ScheduledTransitLegBuilder<B extends ScheduledTransitLegBuilder<B>> {
 
@@ -38,6 +39,7 @@ public class ScheduledTransitLegBuilder<B extends ScheduledTransitLegBuilder<B>>
   private Set<TransitAlert> alerts = Set.of();
   private ViaLocationType fromViaLocationType;
   private ViaLocationType toViaLocationType;
+  private TripPatternGeometryService tripPatternGeometryService = TripPatternGeometryService.noop();
 
   // Sandbox fields
   private Float accessibilityScore;
@@ -63,6 +65,7 @@ public class ScheduledTransitLegBuilder<B extends ScheduledTransitLegBuilder<B>>
     fareOffers = original.fareOffers();
     fromViaLocationType = original.fromViaLocationType();
     toViaLocationType = original.toViaLocationType();
+    tripPatternGeometryService = original.tripPatternGeometryService();
 
     // Sandbox fields
     accessibilityScore = original.accessibilityScore();
@@ -231,6 +234,20 @@ public class ScheduledTransitLegBuilder<B extends ScheduledTransitLegBuilder<B>>
   @Nullable
   public ViaLocationType toViaLocationType() {
     return toViaLocationType;
+  }
+
+  /**
+   * The service used to resolve the trip pattern's (and, when a per-trip override exists, the
+   * specific trip's) stop-to-stop geometry. Defaults to {@link TripPatternGeometryService#noop()}
+   * when not explicitly set, which always synthesizes straight-line geometry between stops.
+   */
+  public B withTripPatternGeometryService(TripPatternGeometryService tripPatternGeometryService) {
+    this.tripPatternGeometryService = Objects.requireNonNull(tripPatternGeometryService);
+    return instance();
+  }
+
+  public TripPatternGeometryService tripPatternGeometryService() {
+    return tripPatternGeometryService;
   }
 
   public ScheduledTransitLeg build() {

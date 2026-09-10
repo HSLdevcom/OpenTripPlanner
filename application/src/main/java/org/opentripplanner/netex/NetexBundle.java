@@ -21,6 +21,7 @@ import org.opentripplanner.netex.loader.NetexXmlParser;
 import org.opentripplanner.netex.loader.parser.NetexDocumentParser;
 import org.opentripplanner.netex.mapping.NetexMapper;
 import org.opentripplanner.netex.validation.Validator;
+import org.opentripplanner.transit.service.TripPatternGeometryRepository;
 import org.rutebanken.netex.model.PublicationDeliveryStructure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +84,8 @@ public class NetexBundle implements Closeable {
   /** load the bundle, map it to the OTP transit model and return */
   public TransitDataImportBuilder loadBundle(
     DeduplicatorService deduplicator,
-    DataImportIssueStore issueStore
+    DataImportIssueStore issueStore,
+    TripPatternGeometryRepository tripPatternGeometryRepository
   ) {
     LOG.info("Reading {}", hierarchy.description());
 
@@ -99,7 +101,8 @@ public class NetexBundle implements Closeable {
       ferryIdsNotAllowedForBicycle,
       routeToCentroidStopPlaceIds,
       maxStopToShapeSnapDistance,
-      noTransfersOnIsolatedStops
+      noTransfersOnIsolatedStops,
+      tripPatternGeometryRepository
     );
 
     // Load data

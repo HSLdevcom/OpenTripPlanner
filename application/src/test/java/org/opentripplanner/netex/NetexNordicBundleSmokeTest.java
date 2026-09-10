@@ -27,6 +27,7 @@ import org.opentripplanner.model.impl.TransitDataImportBuilder;
 import org.opentripplanner.transit.model.basic.Notice;
 import org.opentripplanner.transit.model.framework.AbstractTransitEntity;
 import org.opentripplanner.transit.model.framework.Deduplicator;
+import org.opentripplanner.transit.service.TripPatternGeometryRepository;
 import org.opentripplanner.transit.model.network.BikeAccess;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.organization.Agency;
@@ -62,7 +63,8 @@ public class NetexNordicBundleSmokeTest {
     // When
     TransitDataImportBuilder transitBuilder = netexBundle.loadBundle(
       new Deduplicator(),
-      DataImportIssueStore.NOOP
+      DataImportIssueStore.NOOP,
+      new TripPatternGeometryRepository()
     );
 
     // Then - smoke test model

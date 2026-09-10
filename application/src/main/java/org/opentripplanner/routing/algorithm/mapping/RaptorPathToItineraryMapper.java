@@ -234,6 +234,7 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
       return new FrequencyTransitLegBuilder()
         .withTripTimes(tripSchedule.getOriginalTripTimes())
         .withTripPattern(tripSchedule.getOriginalTripPattern())
+        .withTripPatternGeometryService(transitService.getTripPatternGeometryService())
         .withBoardStopIndexInPattern(boardStopIndexInPattern)
         .withAlightStopIndexInPattern(alightStopIndexInPattern)
         .withStartTime(createZonedDateTime(pathLeg.fromTime() + frequencyHeadwayInSeconds))

@@ -365,6 +365,12 @@ public interface TransitService {
 
   ConstrainedTransferService getConstrainedTransferService();
 
+  /**
+   * Provides read access to the stop-to-stop geometry of trip patterns, with the possibility of a
+   * per-trip override.
+   */
+  TripPatternGeometryService getTripPatternGeometryService();
+
   boolean transitFeedCovers(Instant dateTime);
 
   Collection<RegularStop> findRegularStopsByBoundingBox(Envelope envelope);

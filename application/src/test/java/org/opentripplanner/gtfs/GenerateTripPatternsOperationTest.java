@@ -28,6 +28,7 @@ import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.timetable.Direction;
 import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.service.SiteRepository;
+import org.opentripplanner.transit.service.TripPatternGeometryRepository;
 
 class GenerateTripPatternsOperationTest {
 
@@ -48,6 +49,7 @@ class GenerateTripPatternsOperationTest {
   private DataImportIssueStore issueStore;
   private TransitDataImportBuilder transitServiceBuilder;
   private GeometryProcessor geometryProcessor;
+  private TripPatternGeometryRepository tripPatternGeometryRepository;
 
   @BeforeAll
   static void setupClass() {
@@ -128,6 +130,7 @@ class GenerateTripPatternsOperationTest {
       maxStopToShapeSnapDistance,
       issueStore
     );
+    tripPatternGeometryRepository = new TripPatternGeometryRepository();
   }
 
   @Test
@@ -138,7 +141,8 @@ class GenerateTripPatternsOperationTest {
       issueStore,
       deduplicator,
       calendarServiceIds,
-      geometryProcessor
+      geometryProcessor,
+      tripPatternGeometryRepository
     );
     generateTripPatternsOperation.run();
 
@@ -156,7 +160,8 @@ class GenerateTripPatternsOperationTest {
       issueStore,
       deduplicator,
       calendarServiceIds,
-      geometryProcessor
+      geometryProcessor,
+      tripPatternGeometryRepository
     );
     generateTripPatternsOperation.run();
 
@@ -175,7 +180,8 @@ class GenerateTripPatternsOperationTest {
       issueStore,
       deduplicator,
       calendarServiceIds,
-      geometryProcessor
+      geometryProcessor,
+      tripPatternGeometryRepository
     );
     generateTripPatternsOperation.run();
 
@@ -196,7 +202,8 @@ class GenerateTripPatternsOperationTest {
       issueStore,
       deduplicator,
       calendarServiceIds,
-      geometryProcessor
+      geometryProcessor,
+      tripPatternGeometryRepository
     );
     generateTripPatternsOperation.run();
 
@@ -220,7 +227,8 @@ class GenerateTripPatternsOperationTest {
       issueStore,
       deduplicator,
       calendarServiceIds,
-      geometryProcessor
+      geometryProcessor,
+      tripPatternGeometryRepository
     );
     generateTripPatternsOperation.run();
 
@@ -257,7 +265,8 @@ class GenerateTripPatternsOperationTest {
       issueStore,
       deduplicator,
       calendarServiceIds,
-      geometryProcessor
+      geometryProcessor,
+      tripPatternGeometryRepository
     );
     generateTripPatternsOperation.run();
 
@@ -293,7 +302,8 @@ class GenerateTripPatternsOperationTest {
       issueStore,
       deduplicator,
       calendarServiceIds,
-      geometryProcessor
+      geometryProcessor,
+      tripPatternGeometryRepository
     );
     generateTripPatternsOperation.run();
 

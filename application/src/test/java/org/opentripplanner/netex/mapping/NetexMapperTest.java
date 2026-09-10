@@ -13,6 +13,7 @@ import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.transit.model.framework.Deduplicator;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.service.SiteRepository;
+import org.opentripplanner.transit.service.TripPatternGeometryRepository;
 import org.rutebanken.netex.model.Quay;
 
 class NetexMapperTest {
@@ -40,7 +41,8 @@ class NetexMapperTest {
       Set.of(),
       Set.of(),
       10,
-      false
+      false,
+      new TripPatternGeometryRepository()
     );
 
     var index = new NetexEntityIndex();
@@ -66,7 +68,8 @@ class NetexMapperTest {
       Set.of(),
       Set.of(),
       10,
-      false
+      false,
+      new TripPatternGeometryRepository()
     );
 
     var index = new NetexEntityIndex();

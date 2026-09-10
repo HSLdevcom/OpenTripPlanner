@@ -21,6 +21,7 @@ import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.model.timetable.TripAlteration;
 import org.opentripplanner.transit.model.timetable.TripOnServiceDate;
 import org.opentripplanner.transit.model.timetable.TripTimes;
+import org.opentripplanner.transit.service.TripPatternGeometryRepository;
 import org.rutebanken.netex.model.DatedServiceJourney;
 import org.rutebanken.netex.model.DatedServiceJourneyRefStructure;
 import org.rutebanken.netex.model.OperatingDay;
@@ -55,7 +56,8 @@ class TripPatternMapperTest {
       ArrayListMultimap.create(),
       Map.of(NetexTestDataSample.SERVICE_JOURNEY_ID, SERVICE_ID),
       new Deduplicator(),
-      150
+      150,
+      new TripPatternGeometryRepository()
     );
 
     Optional<TripPatternMapperResult> res = tripPatternMapper.mapTripPattern(
@@ -193,7 +195,8 @@ class TripPatternMapperTest {
       sample.getDatedServiceJourneyBySjId(),
       Map.of(NetexTestDataSample.SERVICE_JOURNEY_ID, SERVICE_ID),
       new Deduplicator(),
-      150
+      150,
+      new TripPatternGeometryRepository()
     );
 
     Optional<TripPatternMapperResult> res = tripPatternMapper.mapTripPattern(

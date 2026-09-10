@@ -15,6 +15,7 @@ import org.opentripplanner.model.impl.TransitDataImportBuilder;
 import org.opentripplanner.transit.model.framework.Deduplicator;
 import org.opentripplanner.transit.model.site.StopTransferPriority;
 import org.opentripplanner.transit.service.SiteRepository;
+import org.opentripplanner.transit.service.TripPatternGeometryRepository;
 
 /**
  * This class helps building GtfsContext and post process the GtfsDao by repairing
@@ -26,6 +27,8 @@ public class GtfsContextBuilder {
   private final String feedId;
 
   private final TransitDataImportBuilder transitBuilder;
+  private final TripPatternGeometryRepository tripPatternGeometryRepository =
+    new TripPatternGeometryRepository();
   private CalendarService calendarService = null;
   private DataImportIssueStore issueStore = null;
   private Deduplicator deduplicator;
@@ -63,6 +66,10 @@ public class GtfsContextBuilder {
 
   public TransitDataImportBuilder getTransitBuilder() {
     return transitBuilder;
+  }
+
+  public TripPatternGeometryRepository getTripPatternGeometryRepository() {
+    return tripPatternGeometryRepository;
   }
 
   public GtfsContextBuilder withDataImportIssueStore(DataImportIssueStore issueStore) {
@@ -127,7 +134,8 @@ public class GtfsContextBuilder {
       issueStore,
       deduplicator(),
       calendarService().getServiceIds(),
-      new GeometryProcessor(transitBuilder, 150, issueStore)
+      new GeometryProcessor(transitBuilder, 150, issueStore),
+      tripPatternGeometryRepository
     ).run();
   }
 

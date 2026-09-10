@@ -30,6 +30,7 @@ import org.opentripplanner.transit.model.site.AreaStop;
 import org.opentripplanner.transit.model.site.GroupStop;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.model.timetable.Trip;
+import org.opentripplanner.transit.service.TripPatternGeometryRepository;
 import org.rutebanken.netex.model.Authority;
 import org.rutebanken.netex.model.Branding;
 import org.rutebanken.netex.model.FlexibleLine;
@@ -69,6 +70,7 @@ public class NetexMapper {
   private final Set<FeedScopedId> routeToCentroidStopPlaceIds;
   private final double maxStopToShapeSnapDistance;
   private final boolean noTransfersOnIsolatedStops;
+  private final TripPatternGeometryRepository tripPatternGeometryRepository;
 
   /** Map entries that cross reference entities within a group/operator, for example Interchanges. */
   private GroupNetexMapper groupMapper;
@@ -96,7 +98,8 @@ public class NetexMapper {
     Set<String> ferryIdsNotAllowedForBicycle,
     Collection<FeedScopedId> routeToCentroidStopPlaceIds,
     double maxStopToShapeSnapDistance,
-    boolean noTransfersOnIsolatedStops
+    boolean noTransfersOnIsolatedStops,
+    TripPatternGeometryRepository tripPatternGeometryRepository
   ) {
     this.transitBuilder = transitBuilder;
     this.deduplicator = deduplicator;
@@ -106,6 +109,7 @@ public class NetexMapper {
     this.routeToCentroidStopPlaceIds = Set.copyOf(routeToCentroidStopPlaceIds);
     this.noTransfersOnIsolatedStops = noTransfersOnIsolatedStops;
     this.maxStopToShapeSnapDistance = maxStopToShapeSnapDistance;
+    this.tripPatternGeometryRepository = tripPatternGeometryRepository;
     this.calendarServiceBuilder = new CalendarServiceBuilder(idFactory);
     this.tripCalendarBuilder = new TripCalendarBuilder(this.calendarServiceBuilder, issueStore);
   }
@@ -463,7 +467,8 @@ public class NetexMapper {
       currentMapperIndexes.getDatedServiceJourneysBySjId(),
       serviceIds,
       deduplicator,
-      maxStopToShapeSnapDistance
+      maxStopToShapeSnapDistance,
+      tripPatternGeometryRepository
     );
 
     for (JourneyPattern_VersionStructure journeyPattern : currentNetexIndex

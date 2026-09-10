@@ -26,6 +26,7 @@ import org.opentripplanner.transit.model.framework.EntityById;
 import org.opentripplanner.transit.model.framework.ImmutableEntityById;
 import org.opentripplanner.transit.model.network.StopPattern;
 import org.opentripplanner.transit.model.network.TripPattern;
+import org.opentripplanner.transit.model.network.TripPatternGeometryFactory;
 import org.opentripplanner.transit.model.organization.Operator;
 import org.opentripplanner.transit.model.site.AreaStop;
 import org.opentripplanner.transit.model.site.GroupStop;
@@ -34,6 +35,7 @@ import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.model.timetable.TripOnServiceDate;
 import org.opentripplanner.transit.model.timetable.TripTimes;
 import org.opentripplanner.transit.model.timetable.TripTimesFactory;
+import org.opentripplanner.transit.service.TripPatternGeometryRepository;
 import org.rutebanken.netex.model.DatedServiceJourney;
 import org.rutebanken.netex.model.DatedServiceJourneyRefStructure;
 import org.rutebanken.netex.model.DestinationDisplay;
@@ -86,6 +88,8 @@ class TripPatternMapper {
 
   private final DeduplicatorService deduplicator;
 
+  private final TripPatternGeometryRepository tripPatternGeometryRepository;
+
   TripPatternMapper(
     DataImportIssueStore issueStore,
     FeedScopedIdFactory idFactory,
@@ -107,7 +111,8 @@ class TripPatternMapper {
     Multimap<String, DatedServiceJourney> datedServiceJourneysBySJId,
     Map<String, FeedScopedId> serviceIds,
     DeduplicatorService deduplicator,
-    double maxStopToShapeSnapDistance
+    double maxStopToShapeSnapDistance,
+    TripPatternGeometryRepository tripPatternGeometryRepository
   ) {
     this.issueStore = issueStore;
     this.idFactory = idFactory;
@@ -145,6 +150,7 @@ class TripPatternMapper {
       maxStopToShapeSnapDistance
     );
     this.deduplicator = deduplicator;
+    this.tripPatternGeometryRepository = tripPatternGeometryRepository;
 
     this.datedServiceJourneyById = datedServiceJourneyById;
     this.serviceJourneyById = serviceJourneyById;
@@ -249,13 +255,18 @@ class TripPatternMapper {
       .withNetexSubmode(trips.get(0).getNetexSubMode())
       .withContainsMultipleModes(hasMultipleModes || hasMultipleSubmodes)
       .withName(journeyPattern.getName() == null ? "" : journeyPattern.getName().getValue())
-      .withHopGeometries(
-        serviceLinkMapper.getGeometriesByJourneyPattern(journeyPattern, stopPattern)
-      )
       .withScheduledTimeTableBuilder(builder ->
         builder.addAllTripTimes(createTripTimes(trips, tripStopTimes))
       )
       .build();
+
+    tripPatternGeometryRepository.setPatternGeometry(
+      tripPattern.getId(),
+      TripPatternGeometryFactory.buildHopGeometries(
+        stopPattern,
+        serviceLinkMapper.getGeometriesByJourneyPattern(journeyPattern, stopPattern)
+      )
+    );
 
     return Optional.of(
       new TripPatternMapperResult(

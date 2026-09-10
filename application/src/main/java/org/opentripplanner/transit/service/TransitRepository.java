@@ -87,6 +87,20 @@ public class TransitRepository implements Serializable {
   private final ConstrainedTransferService constrainedTransferService =
     new DefaultConstrainedTransferService();
 
+  /**
+   * Stores the stop-to-stop geometry of trip patterns (and, optionally, per-trip overrides).
+   * Deliberately not subject to {@link #assertModificationsAllowed()}: unlike most of this
+   * repository's contents, geometry may legitimately be registered both at graph build time (the
+   * pattern defaults) and after the repository is frozen, by real-time updaters that create new
+   * trip patterns (see {@link org.opentripplanner.updater.trip.patterncache.TripPatternCache}) or
+   * that may in the future set per-trip override geometries (see
+   * <a href="https://github.com/google/transit/issues/653">google/transit#653</a>).
+   */
+  private final TripPatternGeometryRepository tripPatternGeometryRepository =
+    new TripPatternGeometryRepository();
+  private final TripPatternGeometryService tripPatternGeometryService =
+    new DefaultTripPatternGeometryService(tripPatternGeometryRepository);
+
   private SiteRepository siteRepository;
 
   /**
@@ -168,6 +182,14 @@ public class TransitRepository implements Serializable {
 
   public ConstrainedTransferService getConstrainedTransferService() {
     return constrainedTransferService;
+  }
+
+  public TripPatternGeometryRepository getTripPatternGeometryRepository() {
+    return tripPatternGeometryRepository;
+  }
+
+  public TripPatternGeometryService getTripPatternGeometryService() {
+    return tripPatternGeometryService;
   }
 
   /**
