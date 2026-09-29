@@ -6,8 +6,6 @@ import static org.opentripplanner.core.model.id.FeedScopedIdForTestFactory.id;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.function.UnaryOperator;
-import javax.annotation.Nullable;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.core.model.time.TimePeriod;
@@ -17,110 +15,113 @@ import org.opentripplanner.routing.alertpatch.AlertEffect;
 import org.opentripplanner.routing.alertpatch.AlertSeverity;
 import org.opentripplanner.routing.alertpatch.EntitySelector;
 import org.opentripplanner.routing.alertpatch.TransitAlert;
-import org.opentripplanner.transit.api.request.TransitAlertRequest;
-import org.opentripplanner.transit.model.filter.selector.FilterRequest;
 
 class TransitAlertMatcherFactoryTest {
 
   private static final FeedScopedId ROUTE_ID = id("F:R1");
-  private static final FeedScopedId STOP_ID = id("F:S1");
 
-  private TransitAlert alert() {
-    return TransitAlert.of(id("F:A1"))
-      .addEntity(new EntitySelector.Route(ROUTE_ID))
-      .addEntity(new EntitySelector.Stop(STOP_ID))
-      .withSeverity(AlertSeverity.SEVERE)
-      .withCause(AlertCause.WEATHER)
-      .withEffect(AlertEffect.NO_SERVICE)
-      .withCalendar(
-        AlertCalendar.of(TimePeriod.of(Instant.ofEpochSecond(0), Instant.ofEpochSecond(1_000)))
+  private static final TransitAlert ALERT = TransitAlert.of(id("F:A1"))
+    .addEntity(new EntitySelector.Route(ROUTE_ID))
+    .withSeverity(AlertSeverity.SEVERE)
+    .withCause(AlertCause.WEATHER)
+    .withEffect(AlertEffect.NO_SERVICE)
+    .withCalendar(
+      AlertCalendar.of(TimePeriod.of(Instant.ofEpochSecond(0), Instant.ofEpochSecond(1_000)))
+    )
+    .build();
+
+  @Test
+  void feed() {
+    assertTrue(matches(TransitAlertSelectRequest.of().withFeeds(List.of("F"))));
+    assertFalse(matches(TransitAlertSelectRequest.of().withFeeds(List.of("OTHER"))));
+  }
+
+  @Test
+  void severity() {
+    assertTrue(
+      matches(TransitAlertSelectRequest.of().withSeverityLevels(List.of(AlertSeverity.SEVERE)))
+    );
+    assertFalse(
+      matches(TransitAlertSelectRequest.of().withSeverityLevels(List.of(AlertSeverity.INFO)))
+    );
+  }
+
+  @Test
+  void cause() {
+    assertTrue(matches(TransitAlertSelectRequest.of().withCauses(List.of(AlertCause.WEATHER))));
+    assertFalse(matches(TransitAlertSelectRequest.of().withCauses(List.of(AlertCause.ACCIDENT))));
+  }
+
+  @Test
+  void effect() {
+    assertTrue(
+      matches(TransitAlertSelectRequest.of().withEffects(List.of(AlertEffect.NO_SERVICE)))
+    );
+    assertFalse(matches(TransitAlertSelectRequest.of().withEffects(List.of(AlertEffect.DETOUR))));
+  }
+
+  @Test
+  void timePeriod() {
+    var overlapping = TimePeriod.of(Instant.ofEpochSecond(500), Instant.ofEpochSecond(2_000));
+    var later = TimePeriod.of(Instant.ofEpochSecond(2_000), Instant.ofEpochSecond(3_000));
+
+    assertTrue(matches(TransitAlertSelectRequest.of().withTimePeriods(List.of(overlapping))));
+    assertFalse(matches(TransitAlertSelectRequest.of().withTimePeriods(List.of(later))));
+  }
+
+  @Test
+  void valuesOfADimensionAreCombinedWithOr() {
+    assertTrue(
+      matches(
+        TransitAlertSelectRequest.of().withCauses(List.of(AlertCause.ACCIDENT, AlertCause.WEATHER))
       )
-      .build();
+    );
   }
 
   @Test
-  void selectFeedMatches() {
-    var request = request(select -> select.withFeeds(List.of("F")), null);
-    assertTrue(TransitAlertMatcherFactory.of(request).match(alert()));
-  }
-
-  @Test
-  void selectFeedRejects() {
-    var request = request(select -> select.withFeeds(List.of("OTHER")), null);
-    assertFalse(TransitAlertMatcherFactory.of(request).match(alert()));
-  }
-
-  @Test
-  void notCauseRejects() {
-    var request = request(null, select -> select.withCauses(List.of(AlertCause.WEATHER)));
-    assertFalse(TransitAlertMatcherFactory.of(request).match(alert()));
-  }
-
-  @Test
-  void dimensionsWithinASelectorAreCombinedWithAnd() {
-    var matching = request(
-      select ->
-        select
+  void dimensionsAreCombinedWithAnd() {
+    assertTrue(
+      matches(
+        TransitAlertSelectRequest.of()
           .withSeverityLevels(List.of(AlertSeverity.SEVERE))
           .withCauses(List.of(AlertCause.WEATHER))
-          .withEffects(List.of(AlertEffect.NO_SERVICE)),
-      null
+          .withEffects(List.of(AlertEffect.NO_SERVICE))
+      )
     );
-    assertTrue(TransitAlertMatcherFactory.of(matching).match(alert()));
-
-    var notMatching = request(
-      select ->
-        select
+    assertFalse(
+      matches(
+        TransitAlertSelectRequest.of()
           .withSeverityLevels(List.of(AlertSeverity.SEVERE))
-          .withCauses(List.of(AlertCause.ACCIDENT)),
-      null
+          .withCauses(List.of(AlertCause.ACCIDENT))
+      )
     );
-    assertFalse(TransitAlertMatcherFactory.of(notMatching).match(alert()));
   }
 
   @Test
-  void selectorsAreCombinedWithOr() {
-    var request = TransitAlertRequest.of()
-      .withFilters(
+  void emptySelectorMatchesEverything() {
+    assertTrue(matches(TransitAlertSelectRequest.of()));
+  }
+
+  /**
+   * Entity criteria are resolved by the {@link TransitAlertEntityMatcherFactory}, so they don't
+   * affect the alert matcher.
+   */
+  @Test
+  void entityCriteriaAreIgnored() {
+    var otherRoute = TransitAlertEntitySelectRequest.of()
+      .withRoutes(
         List.of(
-          FilterRequest.<TransitAlertSelectRequest>of()
-            .addSelect(
-              TransitAlertSelectRequest.of().withCauses(List.of(AlertCause.ACCIDENT)).build()
-            )
-            .addSelect(
-              TransitAlertSelectRequest.of().withCauses(List.of(AlertCause.WEATHER)).build()
-            )
+          TransitAlertRouteSelectRequest.of()
+            .withIds(List.of(id("F:OTHER")))
             .build()
         )
       )
       .build();
-    assertTrue(TransitAlertMatcherFactory.of(request).match(alert()));
+
+    assertTrue(matches(TransitAlertSelectRequest.of().withEntities(List.of(otherRoute))));
   }
 
-  @Test
-  void timePeriodMatches() {
-    var range = TimePeriod.of(Instant.ofEpochSecond(0), Instant.ofEpochSecond(2_000));
-    var request = request(select -> select.withTimePeriods(List.of(range)), null);
-    assertTrue(TransitAlertMatcherFactory.of(request).match(alert()));
-  }
-
-  @Test
-  void emptyRequestMatchesEverything() {
-    var request = TransitAlertRequest.of().build();
-    assertTrue(TransitAlertMatcherFactory.of(request).match(alert()));
-  }
-
-  private static TransitAlertRequest request(
-    @Nullable UnaryOperator<TransitAlertSelectRequest.Builder> select,
-    @Nullable UnaryOperator<TransitAlertSelectRequest.Builder> not
-  ) {
-    var filter = FilterRequest.<TransitAlertSelectRequest>of();
-    if (select != null) {
-      filter.addSelect(select.apply(TransitAlertSelectRequest.of()).build());
-    }
-    if (not != null) {
-      filter.addNot(not.apply(TransitAlertSelectRequest.of()).build());
-    }
-    return TransitAlertRequest.of().withFilters(List.of(filter.build())).build();
+  private static boolean matches(TransitAlertSelectRequest.Builder selector) {
+    return TransitAlertMatcherFactory.of(selector.build()).match(ALERT);
   }
 }

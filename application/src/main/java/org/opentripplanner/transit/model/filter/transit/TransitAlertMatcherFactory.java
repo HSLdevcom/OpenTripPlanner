@@ -5,48 +5,25 @@ import org.opentripplanner.routing.alertpatch.AlertCause;
 import org.opentripplanner.routing.alertpatch.AlertEffect;
 import org.opentripplanner.routing.alertpatch.AlertSeverity;
 import org.opentripplanner.routing.alertpatch.TransitAlert;
-import org.opentripplanner.transit.api.request.TransitAlertRequest;
 import org.opentripplanner.transit.model.filter.expr.EqualityMatcher;
 import org.opentripplanner.transit.model.filter.expr.ExpressionBuilder;
 import org.opentripplanner.transit.model.filter.expr.GenericUnaryMatcher;
 import org.opentripplanner.transit.model.filter.expr.Matcher;
-import org.opentripplanner.transit.model.filter.selector.SelectorBasedMatcherFactory;
 
 /**
  * A factory for creating matchers for {@link TransitAlert}s.
  * <p>
- * This factory builds a matcher from a {@link TransitAlertRequest} that can be used to filter a
- * collection of {@link TransitAlert}s. The filters of the request are combined with OR logic, while
- * the criteria within a single selector are combined with AND logic.
+ * The matcher is built from the alert-level criteria of a single {@link TransitAlertSelectRequest},
+ * which are combined with AND logic. The entity criteria of the selector are not part of this
+ * matcher, as they are resolved from the entities which alerts affect, see
+ * {@link TransitAlertEntityMatcherFactory}.
  */
 public class TransitAlertMatcherFactory {
 
   /**
-   * Creates a matcher for {@link TransitAlert}s.
-   *
-   * @param request the criteria for filtering alerts.
-   * @return a matcher for filtering alerts.
+   * Creates a matcher for the alert-level criteria of the given selector.
    */
-  public static Matcher<TransitAlert> of(TransitAlertRequest request) {
-    ExpressionBuilder<TransitAlert> expr = ExpressionBuilder.of();
-
-    if (!request.filters().isEmpty()) {
-      expr.matches(
-        SelectorBasedMatcherFactory.of(
-          request.filters(),
-          TransitAlertMatcherFactory::buildSelectorMatcher
-        )
-      );
-    }
-
-    return expr.build();
-  }
-
-  /**
-   * Builds a matcher from a single {@link TransitAlertSelectRequest}, combining its dimensions with
-   * AND logic.
-   */
-  private static Matcher<TransitAlert> buildSelectorMatcher(TransitAlertSelectRequest selector) {
+  public static Matcher<TransitAlert> of(TransitAlertSelectRequest selector) {
     ExpressionBuilder<TransitAlert> expr = ExpressionBuilder.of();
 
     expr.atLeastOneMatch(selector.feeds(), TransitAlertMatcherFactory::feed);

@@ -2,13 +2,23 @@ package org.opentripplanner.routing.services;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.opentripplanner.core.model.id.FeedScopedId;
+import org.opentripplanner.routing.alertpatch.EntityKey;
 import org.opentripplanner.routing.alertpatch.StopCondition;
 import org.opentripplanner.routing.alertpatch.TransitAlert;
 import org.opentripplanner.transit.api.request.TransitAlertRequest;
+import org.opentripplanner.transit.model.filter.selector.SelectorBasedMatcherFactory;
+import org.opentripplanner.transit.model.filter.transit.TransitAlertEntityMatcherFactory;
+import org.opentripplanner.transit.model.filter.transit.TransitAlertEntityResolver;
 import org.opentripplanner.transit.model.filter.transit.TransitAlertMatcherFactory;
+import org.opentripplanner.transit.model.filter.transit.TransitAlertSelectRequest;
 import org.opentripplanner.transit.model.timetable.Direction;
 
 /**
@@ -35,15 +45,82 @@ public interface TransitAlertService {
   Collection<TransitAlert> getAllAlerts();
 
   /**
-   * Returns all alerts matching the given request. A request without filters matches all alerts.
+   * Returns the keys of all entities which have at least one alert.
    */
-  default Collection<TransitAlert> findAlerts(TransitAlertRequest request) {
-    var alerts = getAllAlerts();
+  Collection<EntityKey> listEntityKeys();
+
+  /**
+   * Returns the alerts of the given entities. The returned collection contains no duplicates, even
+   * if an alert affects several of the given entities.
+   */
+  Collection<TransitAlert> findAlerts(Collection<EntityKey> entityKeys);
+
+  /**
+   * Returns all alerts matching the given request. A request without filters matches all alerts.
+   * <p>
+   * Each selector of the request is resolved on its own: the entities which have alerts are
+   * filtered with the {@link TransitAlertEntityMatcherFactory}, the alerts of the selected entities
+   * are fetched, and those alerts are filtered with the {@link TransitAlertMatcherFactory}. The
+   * resulting alerts of the selectors are then combined with the select/not semantics of the
+   * filters.
+   *
+   * @param entityResolver resolves which entities are selected by the entity criteria.
+   */
+  default Collection<TransitAlert> findAlerts(
+    TransitAlertRequest request,
+    TransitAlertEntityResolver entityResolver
+  ) {
     if (request.filters().isEmpty()) {
-      return alerts;
+      return getAllAlerts();
     }
-    var matcher = TransitAlertMatcherFactory.of(request);
-    return alerts.stream().filter(matcher::match).toList();
+
+    Map<TransitAlertSelectRequest, Set<TransitAlert>> selectedAlerts = new HashMap<>();
+    for (var filter : request.filters()) {
+      Stream.of(filter.select(), filter.not())
+        .filter(Objects::nonNull)
+        .flatMap(Collection::stream)
+        .forEach(selector ->
+          selectedAlerts.computeIfAbsent(selector, s -> findSelectedAlerts(s, entityResolver))
+        );
+    }
+
+    var matcher = SelectorBasedMatcherFactory.<TransitAlert, TransitAlertSelectRequest>of(
+      request.filters(),
+      selector -> selectedAlerts.get(selector)::contains
+    );
+
+    // Only the alerts selected by the includes can match, unless a filter has no includes
+    Collection<TransitAlert> candidates = request
+      .filters()
+      .stream()
+      .allMatch(filter -> filter.select() != null)
+      ? request
+          .filters()
+          .stream()
+          .flatMap(filter -> filter.select().stream())
+          .flatMap(selector -> selectedAlerts.get(selector).stream())
+          .collect(Collectors.toSet())
+      : getAllAlerts();
+
+    return candidates.stream().filter(matcher::match).toList();
+  }
+
+  /**
+   * Returns the alerts selected by a single selector, without duplicates.
+   */
+  private Set<TransitAlert> findSelectedAlerts(
+    TransitAlertSelectRequest selector,
+    TransitAlertEntityResolver entityResolver
+  ) {
+    Collection<TransitAlert> entityAlerts;
+    if (selector.entities().includeEverything()) {
+      entityAlerts = getAllAlerts();
+    } else {
+      var entityMatcher = TransitAlertEntityMatcherFactory.of(selector, entityResolver);
+      entityAlerts = findAlerts(listEntityKeys().stream().filter(entityMatcher::match).toList());
+    }
+    var alertMatcher = TransitAlertMatcherFactory.of(selector);
+    return entityAlerts.stream().filter(alertMatcher::match).collect(Collectors.toSet());
   }
 
   TransitAlert getAlertById(FeedScopedId id);
