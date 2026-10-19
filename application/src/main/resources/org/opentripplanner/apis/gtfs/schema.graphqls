@@ -2687,7 +2687,7 @@ type Stop implements Node & PlaceInterface {
     radius of `maxDistance`.
     """
     maxDistance: Int
-  ): [stopAtDistance]
+  ): [stopAtDistance] @timingData
   url(
     """
     If translated url is found from gtfs translation.txt and wanted language is not same as
