@@ -54,10 +54,18 @@ public class RealTimeShapeResolver {
     if (repository.getTripPatternGeometry(pattern.getId()) != null) {
       return;
     }
-    repository.setTripPatternGeometry(
-      pattern.getId(),
-      createTripPatternGeometry(pattern, repository)
-    );
+    var geometry = createTripPatternGeometry(pattern, repository);
+    int expectedHops = Math.max(pattern.numberOfStops() - 1, 0);
+    if (geometry.size() != expectedHops) {
+      throw new IllegalStateException(
+        "Geometry of trip pattern %s has %d hops, expected %d".formatted(
+          pattern.getId(),
+          geometry.size(),
+          expectedHops
+        )
+      );
+    }
+    repository.setTripPatternGeometry(pattern.getId(), geometry);
   }
 
   private CompactLineStringSequence createTripPatternGeometry(
@@ -82,7 +90,6 @@ public class RealTimeShapeResolver {
         original.getStopPattern(),
         originalTripPatternGeometry
       ),
-      pattern.numberOfStops(),
       deduplicator
     );
   }

@@ -35,9 +35,9 @@ public final class CompactLineStringSequence implements Serializable {
   /**
    * Store the compacted (and possibly deduplicated) hops and the supplied cumulative
    * arc-length table. The caller is responsible for choosing how the cumulative distances are
-   * measured (e.g. planar sum vs. haversine) and must pass an array of length
-   * {@code geometries.size() + 1} where entry 0 is 0 and each subsequent entry is the meter
-   * distance from the start of the sequence up to that vertex position.
+   * measured (e.g. summed along the line's coordinates vs. stop to stop) and must pass an array
+   * of length {@code geometries.size() + 1} where entry 0 is 0 and each subsequent entry is the
+   * meter distance from the start of the sequence up to that vertex position.
    */
   static CompactLineStringSequence of(
     List<CompactLineString> geometries,

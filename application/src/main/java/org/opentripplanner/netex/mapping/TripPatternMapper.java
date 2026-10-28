@@ -260,7 +260,6 @@ class TripPatternMapper {
 
     var tripPatternGeometry = TripGeometryFactory.fromLineStrings(
       serviceLinkMapper.getGeometriesByJourneyPattern(journeyPattern, stopPattern),
-      stopPattern.getSize(),
       deduplicator
     );
 
