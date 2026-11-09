@@ -21,6 +21,7 @@ import org.opentripplanner.street.model.edge.Edge;
 import org.opentripplanner.street.model.edge.ExtensionRequestContext;
 import org.opentripplanner.street.search.state.State;
 import org.opentripplanner.street.service.StreetLimitationParametersService;
+import org.opentripplanner.transit.service.GenericLocationHelper;
 import org.opentripplanner.transit.service.TransitService;
 import org.opentripplanner.utils.collection.ListUtils;
 
@@ -80,7 +81,7 @@ public class ViaAccessEgressRouter extends AccessEgressRouter {
     if (
       taxiService != null &&
       streetMode == StreetMode.TAXI &&
-      !isTaxiSegmentCovered(request, accessOrEgress, taxiService)
+      !isTaxiSegmentCovered(request, accessOrEgress, transitService, taxiService)
     ) {
       return filteredStopsFromFirstLocation;
     }
@@ -296,12 +297,16 @@ public class ViaAccessEgressRouter extends AccessEgressRouter {
   private boolean isTaxiSegmentCovered(
     RouteRequest request,
     AccessEgressType type,
+    TransitService transitService,
     TaxiService taxiService
   ) {
     var vias = request.listViaLocations();
     var via = (VisitViaLocation) (type.isAccess() ? vias.getFirst() : vias.getLast());
     var viaCoordinate = via.coordinate().orElseThrow();
-    var endpoint = type.isAccess() ? request.from().wgsCoordinate() : request.to().wgsCoordinate();
+    var endpoint = GenericLocationHelper.findCoordinate(
+      transitService,
+      type.isAccess() ? request.from() : request.to()
+    );
     if (endpoint == null) {
       return false;
     }

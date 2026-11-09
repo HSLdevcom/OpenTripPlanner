@@ -7,11 +7,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.ext.taxi.TaxiService;
 import org.opentripplanner.model.GenericLocation;
 import org.opentripplanner.model.plan.Itinerary;
@@ -41,7 +41,8 @@ import org.opentripplanner.transit.service.TransitRepository;
 import org.opentripplanner.transit.service.TransitService;
 
 /**
- * The street network is a line: ORIGIN --2000m-- VIA --100m-- STOP --far-- FAR_AWAY. The distance
+ * The street network is a line: ORIGIN --2000m-- VIA --100m-- STOP --far-- FAR_AWAY.
+ * There is also a stop at the origin. The distance
  * between the origin and the via location is long enough for driving to be clearly faster than
  * walking.
  */
@@ -59,6 +60,7 @@ class ViaAccessEgressRouterTest extends GraphRoutingTest {
   );
 
   private Graph graph;
+  private FeedScopedId originStopId;
   private TransitRepository transitRepository;
   private TimetableDataImport timetableDataImport;
 
@@ -79,6 +81,10 @@ class ViaAccessEgressRouterTest extends GraphRoutingTest {
 
           var stop = stop("S", b -> b.withCoordinate(STOP));
           biLink(c, stop);
+
+          var originStop = stop("O", b -> b.withCoordinate(ORIGIN));
+          biLink(origin, originStop);
+          originStopId = originStop.getId();
         }
       }
     );
@@ -152,6 +158,26 @@ class ViaAccessEgressRouterTest extends GraphRoutingTest {
   }
 
   @Test
+  void viaAccessIsFoundWhenTheOriginIsAStopWithoutACoordinate() {
+    var request = request(
+      GenericLocation.fromStopId(originStopId),
+      location(FAR_AWAY),
+      StreetMode.TAXI,
+      StreetMode.WALK
+    );
+
+    var accesses = find(
+      request,
+      StreetMode.TAXI,
+      AccessEgressType.ACCESS,
+      new CoverageTaxiService(true)
+    );
+
+    var viaAccess = findViaAccessEgress(accesses);
+    assertThat(modes(viaAccess.finalStates.get(0))).contains(TraverseMode.CAR);
+  }
+
+  @Test
   void viaAccessIsDroppedWhenTaxiDoesNotCoverTheOriginAndTheViaLocation() {
     var request = request(location(ORIGIN), location(FAR_AWAY), StreetMode.TAXI, StreetMode.WALK);
 
@@ -184,7 +210,7 @@ class ViaAccessEgressRouterTest extends GraphRoutingTest {
   private static NearbyStop findViaAccessEgress(Collection<NearbyStop> accessEgresses) {
     var viaAccessEgresses = accessEgresses
       .stream()
-      .filter(it -> it.finalStates.size() == 2)
+      .filter(it -> it.finalStates.size() == 2 && it.stopId().getId().equals("S"))
       .toList();
     assertThat(viaAccessEgresses).hasSize(1);
     return viaAccessEgresses.getFirst();
@@ -237,11 +263,7 @@ class ViaAccessEgressRouterTest extends GraphRoutingTest {
       var linkingContextFactory = new LinkingContextFactory(
         graph,
         vertexCreationService,
-        transitService::findStopOrChildIds,
-        id ->
-          Optional.ofNullable(transitService.getStopLocationsGroup(id)).map(group ->
-            group.getCoordinate()
-          )
+        transitService
       );
       var linkingContext = linkingContextFactory.create(
         verticesContainer,

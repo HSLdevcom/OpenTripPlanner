@@ -56,6 +56,7 @@ import org.opentripplanner.transfer.regular.model.DefaultRaptorTransfer;
 import org.opentripplanner.transfer.regular.model.PathTransfer;
 import org.opentripplanner.transit.model.timetable.TripIdAndServiceDate;
 import org.opentripplanner.transit.model.timetable.TripOnServiceDate;
+import org.opentripplanner.transit.service.GenericLocationHelper;
 import org.opentripplanner.transit.service.TransitService;
 import org.opentripplanner.transit.service.TransitServiceResolver;
 import org.opentripplanner.utils.collection.ListUtils;
@@ -225,7 +226,11 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
         accessPathLeg.access().numberOfViaLocationsVisited() > 0
           ? viaCoordinate(request.listViaLocations().getFirst())
           : raptorTransitData.getStopByIndex(accessPathLeg.access().stop()).getCoordinate();
-      return taxiService.decorateAccessEgressLegs(legs, request.from().wgsCoordinate(), dropoff);
+      return taxiService.decorateAccessEgressLegs(
+        legs,
+        GenericLocationHelper.findCoordinate(transitService, request.from()),
+        dropoff
+      );
     }
     return legs;
   }
@@ -381,7 +386,11 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
         egressPathLeg.egress().numberOfViaLocationsVisited() > 0
           ? viaCoordinate(request.listViaLocations().getLast())
           : raptorTransitData.getStopByIndex(egressPathLeg.egress().stop()).getCoordinate();
-      return taxiService.decorateAccessEgressLegs(legs, pickup, request.to().wgsCoordinate());
+      return taxiService.decorateAccessEgressLegs(
+        legs,
+        pickup,
+        GenericLocationHelper.findCoordinate(transitService, request.to())
+      );
     }
     return legs;
   }
