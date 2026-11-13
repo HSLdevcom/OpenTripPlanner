@@ -2575,7 +2575,7 @@ type Stop implements Node & PlaceInterface {
     timeRanges: [OffsetDateTimeRangeInput!]
   ): [StopCallOnTripOnServiceDate!]!
   "The cluster which this stop is part of"
-  cluster: Cluster @deprecated(reason : "Not implemented")
+  cluster: Cluster @deprecated(reason : "Not implemented") @timingData
   "Stop code which is visible at the stop"
   code: String
   "Description of the stop, usually a street name"
