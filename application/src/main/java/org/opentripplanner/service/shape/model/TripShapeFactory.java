@@ -10,9 +10,10 @@ import org.opentripplanner.street.geometry.WgsCoordinate;
 import org.opentripplanner.transit.model.network.StopPattern;
 
 /**
- * Builds a {@link CompactLineStringSequence}, i.e. the hop shapes of a trip pattern and the
- * cumulative arc-length table, from plain geometry input. Identical hops (and identical cumulative
- * tables) are deduplicated through the {@link DeduplicatorService}, so they share one instance.
+ * Builds a {@link CompactLineStringSequence}, i.e. the hop shapes of a trip or trip pattern and the
+ * cumulative arc-length table, from plain geometry input. Identical hops, identical cumulative
+ * tables and identical sequences are deduplicated through the {@link DeduplicatorService}, so they
+ * share one instance.
  * <p>
  * Distances are accumulated in {@code double} and rounded to the nearest meter only when writing
  * each entry of the cumulative table. This bounds the rounding error of any
@@ -80,6 +81,9 @@ public final class TripShapeFactory {
     for (int i = 0; i < cumulativeLength; i++) {
       cumulativeMeters[i] = (int) Math.round(cumulativeMetersDouble[i]);
     }
-    return CompactLineStringSequence.of(hops, deduplicator.deduplicateIntArray(cumulativeMeters));
+    return deduplicator.deduplicateObject(
+      CompactLineStringSequence.class,
+      CompactLineStringSequence.of(hops, deduplicator.deduplicateIntArray(cumulativeMeters))
+    );
   }
 }
