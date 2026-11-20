@@ -1,6 +1,7 @@
 package org.opentripplanner.service.shape.model;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.List;
 import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.street.geometry.GeometryUtils;
@@ -138,5 +139,22 @@ public final class CompactLineStringSequence implements Serializable {
       );
     }
     return GeometryUtils.makeLineString(out);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    return (
+      o instanceof CompactLineStringSequence other &&
+      Arrays.equals(cumulativeDistanceMeters, other.cumulativeDistanceMeters) &&
+      Arrays.equals(geometries, other.geometries)
+    );
+  }
+
+  @Override
+  public int hashCode() {
+    return 31 * Arrays.hashCode(geometries) + Arrays.hashCode(cumulativeDistanceMeters);
   }
 }

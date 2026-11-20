@@ -254,4 +254,13 @@ class TripShapeFactoryTest {
     assertSame(second.getCompact(1), first.getCompact(1));
     assertNotSame(first.getCompact(1), first.getCompact(0));
   }
+
+  @Test
+  void identicalSequencesShareOneInstanceWhenDeduplicated() {
+    var deduplicator = new Deduplicator();
+    var first = TripShapeFactory.fromLineStrings(HOP_GEOMETRIES, deduplicator);
+    var second = TripShapeFactory.fromLineStrings(HOP_GEOMETRIES, deduplicator);
+
+    assertSame(first, second);
+  }
 }
