@@ -26,7 +26,7 @@ public class ScheduledTransitLegBuilder<B extends ScheduledTransitLegBuilder<B>>
 
   private TripTimes<?> tripTimes;
   private TripPattern tripPattern;
-  private CompactLineStringSequence tripPatternShape;
+  private CompactLineStringSequence tripShape;
   private int boardStopIndexInPattern = POS_NOT_SET;
   private int alightStopIndexInPattern = POS_NOT_SET;
   private ZonedDateTime startTime;
@@ -51,7 +51,7 @@ public class ScheduledTransitLegBuilder<B extends ScheduledTransitLegBuilder<B>>
   public ScheduledTransitLegBuilder(ScheduledTransitLeg original) {
     tripTimes = original.tripTimes();
     tripPattern = original.tripPattern();
-    tripPatternShape = original.tripPatternShape();
+    tripShape = original.tripShape();
     boardStopIndexInPattern = original.boardStopPosInPattern();
     alightStopIndexInPattern = original.alightStopPosInPattern();
     startTime = original.startTime();
@@ -90,13 +90,13 @@ public class ScheduledTransitLegBuilder<B extends ScheduledTransitLegBuilder<B>>
     return tripPattern;
   }
 
-  public B withTripPatternShape(CompactLineStringSequence tripPatternShape) {
-    this.tripPatternShape = tripPatternShape;
+  public B withTripShape(CompactLineStringSequence tripShape) {
+    this.tripShape = tripShape;
     return instance();
   }
 
-  public CompactLineStringSequence tripPatternShape() {
-    return tripPatternShape;
+  public CompactLineStringSequence tripShape() {
+    return tripShape;
   }
 
   public B withBoardStopIndexInPattern(int boardStopIndexInPattern) {

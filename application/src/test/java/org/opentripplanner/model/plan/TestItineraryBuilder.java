@@ -557,7 +557,7 @@ public class TestItineraryBuilder implements PlanTestConstants {
       .withStopPattern(stopPattern)
       .withScheduledTimeTableBuilder(builder -> builder.addTripTimes(tripTimes))
       .build();
-    var tripPatternShape = TripShapeFactory.straightLines(
+    var tripShape = TripShapeFactory.straightLines(
       tripPattern.getStopPattern(),
       DeduplicatorService.NOOP
     );
@@ -568,7 +568,7 @@ public class TestItineraryBuilder implements PlanTestConstants {
       leg = new FrequencyTransitLegBuilder()
         .withTripTimes(tripTimes)
         .withTripPattern(tripPattern)
-        .withTripPatternShape(tripPatternShape)
+        .withTripShape(tripShape)
         .withBoardStopIndexInPattern(fromStopIndex)
         .withAlightStopIndexInPattern(toStopIndex)
         .withStartTime(newTime(start))
@@ -584,7 +584,7 @@ public class TestItineraryBuilder implements PlanTestConstants {
       leg = new ScheduledTransitLegBuilder()
         .withTripTimes(tripTimes)
         .withTripPattern(tripPattern)
-        .withTripPatternShape(tripPatternShape)
+        .withTripShape(tripShape)
         .withBoardStopIndexInPattern(fromStopIndex)
         .withAlightStopIndexInPattern(toStopIndex)
         .withStartTime(newTime(start))

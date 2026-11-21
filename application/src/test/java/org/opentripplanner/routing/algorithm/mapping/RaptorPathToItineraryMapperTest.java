@@ -310,7 +310,7 @@ public class RaptorPathToItineraryMapperTest {
     var itinerary = mapper.createItinerary(path);
 
     var leg = (ScheduledTransitLeg) itinerary.legs().getFirst();
-    assertEquals(tripShape, leg.tripPatternShape());
+    assertEquals(tripShape, leg.tripShape());
   }
 
   private TripTimes<?> buildTripTimes(TripPattern originalPattern) {

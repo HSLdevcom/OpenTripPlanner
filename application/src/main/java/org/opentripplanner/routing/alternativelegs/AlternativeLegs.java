@@ -69,7 +69,7 @@ public class AlternativeLegs {
    * @param numberLegs           The number of alternative legs requested. If fewer legs are found,
    *                             only the found legs are returned.
    * @param transitService       The transit service used for the search
-   * @param shapeService         The shape service used to look up the pattern geometry of the legs
+   * @param shapeService         The shape service used to look up the trip geometry of the legs
    * @param direction            Indicating whether the alternative legs should depart before or
    *                             after than the original.
    * @param filter               AlternativeLegsFilter indicating which properties of the original
@@ -252,7 +252,7 @@ public class AlternativeLegs {
     return new ScheduledTransitLegBuilder<>()
       .withTripTimes(tripTimes)
       .withTripPattern(pattern)
-      .withTripPatternShape(shapeService.getTripShape(pattern.getId(), tripTimes.getTrip().getId()))
+      .withTripShape(shapeService.getTripShape(pattern.getId(), tripTimes.getTrip().getId()))
       .withBoardStopIndexInPattern(boardingPosition)
       .withAlightStopIndexInPattern(alightingPosition)
       .withStartTime(boardingTime)
