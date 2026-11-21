@@ -16,11 +16,10 @@ import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issues.TripDegenerate;
 import org.opentripplanner.graph_builder.issues.TripUndefinedService;
 import org.opentripplanner.graph_builder.module.geometry.GeometryProcessor;
+import org.opentripplanner.gtfs.shape.TripShapeCollector;
 import org.opentripplanner.model.Frequency;
 import org.opentripplanner.model.StopTime;
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
-import org.opentripplanner.service.shape.model.CompactLineStringSequence;
-import org.opentripplanner.service.shape.model.TripShapeFactory;
 import org.opentripplanner.transit.model.framework.DataValidationException;
 import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.network.StopPattern;
@@ -44,19 +43,17 @@ public class GenerateTripPatternsOperation {
 
   private final Map<String, Integer> tripPatternIdCounters = new HashMap<>();
 
-  private final TransitDataImportBuilder transitServiceBuilder;
+  private final TransitDataImportBuilder transitDataImportBuilder;
   private final DataImportIssueStore issueStore;
   private final DeduplicatorService deduplicator;
   private final Set<FeedScopedId> calendarServiceIds;
-  private final GeometryProcessor geometryProcessor;
+  private final TripShapeCollector tripShapeCollector;
 
   // TODO the linked hashset configuration ensures that TripPatterns are created in the same order
   //  as Trips are imported, as a workaround for issue #6067
   private final Multimap<StopPattern, TripPatternBuilder> tripPatternBuilders =
     MultimapBuilder.linkedHashKeys().linkedHashSetValues().build();
   private final ListMultimap<Trip, Frequency> frequenciesForTrip = ArrayListMultimap.create();
-  private final Map<FeedScopedId, CompactLineStringSequence> geometriesByTripPattern =
-    new HashMap<>();
 
   private int freqCount = 0;
   private int scheduledCount = 0;
@@ -68,17 +65,17 @@ public class GenerateTripPatternsOperation {
     Set<FeedScopedId> calendarServiceIds,
     GeometryProcessor geometryProcessor
   ) {
-    this.transitServiceBuilder = builder;
+    this.transitDataImportBuilder = builder;
     this.issueStore = issueStore;
     this.deduplicator = deduplicator;
     this.calendarServiceIds = calendarServiceIds;
-    this.geometryProcessor = geometryProcessor;
+    this.tripShapeCollector = new TripShapeCollector(geometryProcessor, deduplicator);
   }
 
   public void run() {
     collectFrequencyByTrip();
 
-    final Collection<Trip> trips = transitServiceBuilder.getTripsById().values();
+    final Collection<Trip> trips = transitDataImportBuilder.getTripsById().values();
     var progressLogger = ProgressTracker.track("build trip patterns", 50_000, trips.size());
     LOG.info(progressLogger.startMessage());
 
@@ -103,6 +100,18 @@ public class GenerateTripPatternsOperation {
       freqCount,
       scheduledCount
     );
+    LOG.info(
+      "{} of {} trips in {} of {} trip patterns follow a different shape than their trip pattern.",
+      tripShapeCollector.numberOfTripsWithDifferentShape(),
+      trips.size(),
+      tripShapeCollector.numberOfTripPatternsWithDifferentTripShapes(),
+      tripPatternBuilders.size()
+    );
+    LOG.info(
+      "Computed {} trip shapes for {} trips (before deduplication for storage).",
+      tripShapeCollector.numberOfComputedTripShapes(),
+      trips.size()
+    );
   }
 
   public boolean hasFrequencyBasedTrips() {
@@ -119,7 +128,7 @@ public class GenerateTripPatternsOperation {
    * the same trip can be added at once to the same Timetable/TripPattern.
    */
   private void collectFrequencyByTrip() {
-    for (Frequency freq : transitServiceBuilder.getFrequencies()) {
+    for (Frequency freq : transitDataImportBuilder.getFrequencies()) {
       frequenciesForTrip.put(freq.trip(), freq);
     }
   }
@@ -132,7 +141,7 @@ public class GenerateTripPatternsOperation {
       return;
     }
 
-    List<StopTime> stopTimes = transitServiceBuilder.getStopTimesSortedByTrip().get(trip);
+    List<StopTime> stopTimes = transitDataImportBuilder.getStopTimesSortedByTrip().get(trip);
 
     // If after filtering this trip does not contain at least 2 stoptimes, it does not serve any purpose.
     var staticTripWithFewerThan2Stops =
@@ -148,6 +157,9 @@ public class GenerateTripPatternsOperation {
     StopPattern stopPattern = new StopPattern(stopTimes);
 
     TripPatternBuilder tripPatternBuilder = findOrCreateTripPattern(stopPattern, trip);
+
+    // Add the trip before its trip times are validated, so every trip pattern has a trip shape.
+    tripShapeCollector.addTrip(tripPatternBuilder.getId(), trip, stopPattern, stopTimes);
 
     // Create a TripTimes object for this list of stoptimes, which form one trip.
     ScheduledTripTimes tripTimes = TripTimesFactory.tripTimes(trip, stopTimes, deduplicator);
@@ -188,20 +200,13 @@ public class GenerateTripPatternsOperation {
       .withStopPattern(stopPattern)
       .withMode(trip.getMode())
       .withNetexSubmode(trip.getNetexSubMode());
-    CompactLineStringSequence tripPatternShape = TripShapeFactory.fromLineStrings(
-      geometryProcessor.createHopGeometries(trip),
-      deduplicator
-    );
-    geometriesByTripPattern.put(patternId, tripPatternShape);
     tripPatternBuilders.put(stopPattern, tripPatternBuilder);
     return tripPatternBuilder;
   }
 
   private void registerTripPattern(TripPattern tripPattern) {
-    transitServiceBuilder.getTripPatterns().put(tripPattern.getStopPattern(), tripPattern);
-    transitServiceBuilder
-      .getGeometriesByTripPattern()
-      .put(tripPattern.getId(), geometriesByTripPattern.get(tripPattern.getId()));
+    transitDataImportBuilder.getTripPatterns().put(tripPattern.getStopPattern(), tripPattern);
+    tripShapeCollector.addShapesToDataImport(tripPattern, transitDataImportBuilder);
   }
 
   /**
