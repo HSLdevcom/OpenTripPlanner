@@ -109,9 +109,9 @@ public class GeometryProcessor {
    * entire trip and tripPattern, but given the complexity of the existing code for generating hop
    * geometries, we will create the full-trip geometry by simply concatenating the hop shapes.
    * <p>
-   * This geometry will in fact be used for an entire set of trips in a trip pattern. Technically
-   * one of the trips with exactly the same sequence of stops could follow a different route on the
-   * streets, but that's very uncommon.
+   * Trips of one trip pattern can follow different shapes. The shape of the pattern and the shapes
+   * of the trips that differ from it are chosen by
+   * {@link org.opentripplanner.gtfs.shape.TripShapeCollector}.
    */
   private LineString[] createGeometry(FeedScopedId shapeId, List<StopTime> stopTimes) {
     if (hasShapeDist(shapeId, stopTimes)) {
