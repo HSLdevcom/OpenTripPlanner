@@ -25,7 +25,7 @@ class ScheduledShapeDataTest {
   void ofCopiesTheMapAndSharesTheGeometry() {
     var geometriesByTripPattern = new HashMap<>(Map.of(id("A"), TRIP_PATTERN_GEOMETRY));
 
-    var data = ScheduledShapeData.of(geometriesByTripPattern);
+    var data = ScheduledShapeData.of(geometriesByTripPattern, Map.of());
     geometriesByTripPattern.put(id("B"), TRIP_PATTERN_GEOMETRY);
 
     assertSame(TRIP_PATTERN_GEOMETRY, data.getTripPatternShape(id("A")));

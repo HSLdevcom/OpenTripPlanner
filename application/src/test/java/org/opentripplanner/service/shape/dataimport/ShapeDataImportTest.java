@@ -54,6 +54,21 @@ class ShapeDataImportTest {
   }
 
   @Test
+  void storesTripShapeAndConvertsItToScheduledData() {
+    var subject = new ShapeDataImport();
+    assertNull(subject.getTripShape(id("A"), id("trip")));
+
+    subject.setTripShape(PATTERN, id("trip"), TRIP_PATTERN_GEOMETRY);
+
+    assertEquals(TRIP_PATTERN_GEOMETRY, subject.getTripShape(id("A"), id("trip")));
+    assertNull(subject.getTripShape(id("other"), id("trip")));
+    assertEquals(
+      TRIP_PATTERN_GEOMETRY,
+      subject.toScheduledShapeData().getTripShape(id("A"), id("trip"))
+    );
+  }
+
+  @Test
   void modificationsAfterConversionFail() {
     var subject = new ShapeDataImport();
     subject.toScheduledShapeData();
@@ -88,5 +103,20 @@ class ShapeDataImportTest {
     );
     assertThat(exception).hasMessageThat().contains("2 hops, expected 1");
     assertNull(subject.getTripPatternShape(id("A")));
+  }
+
+  @Test
+  void rejectATripShapeWithTheWrongNumberOfHops() {
+    var subject = new ShapeDataImport();
+    var twoHops = TripShapeFactory.fromLineStrings(
+      List.of(makeLineString(10.0, 59.0, 10.1, 59.1), makeLineString(10.1, 59.1, 10.2, 59.0)),
+      DeduplicatorService.NOOP
+    );
+
+    var exception = assertThrows(IllegalArgumentException.class, () ->
+      subject.setTripShape(PATTERN, id("trip"), twoHops)
+    );
+    assertThat(exception).hasMessageThat().contains("2 hops, expected 1");
+    assertNull(subject.getTripShape(id("A"), id("trip")));
   }
 }

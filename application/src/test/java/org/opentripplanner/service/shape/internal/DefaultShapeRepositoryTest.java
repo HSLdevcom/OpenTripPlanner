@@ -71,7 +71,7 @@ class DefaultShapeRepositoryTest {
     ShapeTestFactory.straightLine(62.0);
 
   private final DefaultShapeRepository repository = new DefaultShapeRepository(
-    ScheduledShapeData.of(Map.of(SCHEDULED.getId(), SCHEDULED_TRIP_PATTERN_GEOMETRY))
+    ScheduledShapeData.of(Map.of(SCHEDULED.getId(), SCHEDULED_TRIP_PATTERN_GEOMETRY), Map.of())
   );
 
   @Test

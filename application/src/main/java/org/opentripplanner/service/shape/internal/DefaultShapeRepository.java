@@ -95,6 +95,15 @@ public class DefaultShapeRepository implements ShapeRepository {
   }
 
   @Override
+  @Nullable
+  public CompactLineStringSequence getScheduledTripShape(
+    FeedScopedId tripPatternId,
+    FeedScopedId tripId
+  ) {
+    return scheduledShapeData.getTripShape(tripPatternId, tripId);
+  }
+
+  @Override
   public ShapeRepositorySnapshot createSnapshot() {
     for (String feedId : copiedFeeds) {
       realTimeGeometries.put(feedId, Collections.unmodifiableMap(realTimeGeometries.get(feedId)));

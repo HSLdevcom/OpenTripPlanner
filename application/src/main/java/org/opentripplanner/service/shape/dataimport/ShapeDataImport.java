@@ -25,6 +25,10 @@ public class ShapeDataImport implements Serializable {
 
   private final Map<FeedScopedId, CompactLineStringSequence> geometriesByTripPattern =
     new HashMap<>();
+  private final Map<
+    FeedScopedId,
+    Map<FeedScopedId, CompactLineStringSequence>
+  > geometriesByTripByTripPattern = new HashMap<>();
 
   /**
    * Set when the content is converted to {@link ScheduledShapeData}. Not serialized, so a
@@ -51,9 +55,41 @@ public class ShapeDataImport implements Serializable {
     geometriesByTripPattern.put(tripPattern.getId(), tripPatternShape);
   }
 
+  /**
+   * Store the shape of a trip whose shape differs from the shape of its trip pattern.
+   *
+   * @throws IllegalArgumentException if the shape does not have one hop per pair of stops of the
+   *                                  pattern, see {@link TripShapeValidator}
+   * @throws IllegalStateException    if the data import is already frozen
+   */
+  public void setTripShape(
+    TripPattern tripPattern,
+    FeedScopedId tripId,
+    CompactLineStringSequence tripShape
+  ) {
+    assertModificationsAllowed();
+    TripShapeValidator.validate(tripPattern, tripShape);
+    geometriesByTripByTripPattern
+      .computeIfAbsent(tripPattern.getId(), id -> new HashMap<>())
+      .put(tripId, tripShape);
+  }
+
   @Nullable
   public CompactLineStringSequence getTripPatternShape(FeedScopedId tripPatternId) {
     return geometriesByTripPattern.get(tripPatternId);
+  }
+
+  /**
+   * The shape of the trip on the given trip pattern, if it differs from the shape of the pattern,
+   * otherwise {@code null}.
+   */
+  @Nullable
+  public CompactLineStringSequence getTripShape(FeedScopedId tripPatternId, FeedScopedId tripId) {
+    var tripShapes = geometriesByTripByTripPattern.get(tripPatternId);
+    if (tripShapes == null) {
+      return null;
+    }
+    return tripShapes.get(tripId);
   }
 
   /**
@@ -62,7 +98,7 @@ public class ShapeDataImport implements Serializable {
    */
   public ScheduledShapeData toScheduledShapeData() {
     frozen = true;
-    return ScheduledShapeData.of(geometriesByTripPattern);
+    return ScheduledShapeData.of(geometriesByTripPattern, geometriesByTripByTripPattern);
   }
 
   private void assertModificationsAllowed() {
