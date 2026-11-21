@@ -33,6 +33,7 @@ class ShapeDataImportTest {
   private static final CompactLineStringSequence TRIP_PATTERN_SHAPE = ShapeTestFactory.straightLine(
     60.0
   );
+  private static final CompactLineStringSequence TRIP_SHAPE = ShapeTestFactory.straightLine(61.0);
 
   @Test
   void storesTripPatternShape() {
@@ -52,6 +53,18 @@ class ShapeDataImportTest {
     var scheduled = subject.toScheduledShapeData();
 
     assertEquals(TRIP_PATTERN_SHAPE, scheduled.getTripPatternShape(id("A")));
+  }
+
+  @Test
+  void storesTripShapeAndConvertsItToScheduledData() {
+    var subject = new ShapeDataImport();
+    assertNull(subject.getTripShape(id("A"), id("trip")));
+
+    subject.setTripShape(PATTERN, id("trip"), TRIP_SHAPE);
+
+    assertEquals(TRIP_SHAPE, subject.getTripShape(id("A"), id("trip")));
+    assertNull(subject.getTripShape(id("other"), id("trip")));
+    assertEquals(TRIP_SHAPE, subject.toScheduledShapeData().getTripShape(id("A"), id("trip")));
   }
 
   @Test
@@ -89,5 +102,20 @@ class ShapeDataImportTest {
     );
     assertThat(exception).hasMessageThat().contains("2 hops, expected 1");
     assertNull(subject.getTripPatternShape(id("A")));
+  }
+
+  @Test
+  void rejectATripShapeWithTheWrongNumberOfHops() {
+    var subject = new ShapeDataImport();
+    var twoHops = TripShapeFactory.fromLineStrings(
+      List.of(makeLineString(10.0, 59.0, 10.1, 59.1), makeLineString(10.1, 59.1, 10.2, 59.0)),
+      DeduplicatorService.NOOP
+    );
+
+    var exception = assertThrows(IllegalArgumentException.class, () ->
+      subject.setTripShape(PATTERN, id("trip"), twoHops)
+    );
+    assertThat(exception).hasMessageThat().contains("2 hops, expected 1");
+    assertNull(subject.getTripShape(id("A"), id("trip")));
   }
 }

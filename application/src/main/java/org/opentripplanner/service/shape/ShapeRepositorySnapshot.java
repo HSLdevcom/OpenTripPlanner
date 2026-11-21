@@ -21,4 +21,12 @@ public interface ShapeRepositorySnapshot {
    */
   @Nullable
   CompactLineStringSequence getTripPatternShape(FeedScopedId tripPatternId);
+
+  /**
+   * The shape of the trip on the given scheduled trip pattern, if it differs from the shape of the
+   * pattern, otherwise {@code null}. These shapes are imported at graph build time and are never
+   * changed by real-time updates. A real-time pattern has no trip shapes.
+   */
+  @Nullable
+  CompactLineStringSequence getScheduledTripShape(FeedScopedId tripPatternId, FeedScopedId tripId);
 }

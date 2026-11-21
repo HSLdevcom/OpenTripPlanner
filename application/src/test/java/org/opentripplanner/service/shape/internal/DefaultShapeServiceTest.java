@@ -35,6 +35,8 @@ class DefaultShapeServiceTest {
     .withStopPattern(STOP_PATTERN)
     .build();
   private static final FeedScopedId UNKNOWN_PATTERN = id("unknown");
+  private static final FeedScopedId TRIP_WITH_OWN_SHAPE = id("tripWithShape");
+  private static final FeedScopedId TRIP_WITHOUT_OWN_SHAPE = id("trip");
 
   private static final CompactLineStringSequence SCHEDULED_TRIP_PATTERN_SHAPE =
     ShapeTestFactory.straightLine(60.0);
@@ -42,9 +44,13 @@ class DefaultShapeServiceTest {
     ShapeTestFactory.straightLine(61.0);
   private static final CompactLineStringSequence OVERRIDING_TRIP_PATTERN_SHAPE =
     ShapeTestFactory.straightLine(62.0);
+  private static final CompactLineStringSequence TRIP_SHAPE = ShapeTestFactory.straightLine(63.0);
 
   private final DefaultShapeRepository repository = new DefaultShapeRepository(
-    ScheduledShapeData.of(Map.of(SCHEDULED_PATTERN.getId(), SCHEDULED_TRIP_PATTERN_SHAPE))
+    ScheduledShapeData.of(
+      Map.of(SCHEDULED_PATTERN.getId(), SCHEDULED_TRIP_PATTERN_SHAPE),
+      Map.of(SCHEDULED_PATTERN.getId(), Map.of(TRIP_WITH_OWN_SHAPE, TRIP_SHAPE))
+    )
   );
 
   @Test
@@ -104,5 +110,33 @@ class DefaultShapeServiceTest {
       service.getTripPatternShape(UNKNOWN_PATTERN)
     );
     assertThat(exception).hasMessageThat().contains("No shape found");
+  }
+
+  @Test
+  void tripShapeTakesPrecedenceOverTripPatternShape() {
+    var service = new DefaultShapeService(repository.createSnapshot());
+
+    assertSame(TRIP_SHAPE, service.getTripShape(SCHEDULED_PATTERN.getId(), TRIP_WITH_OWN_SHAPE));
+  }
+
+  @Test
+  void tripWithoutOwnShapeGetsTripPatternShape() {
+    var service = new DefaultShapeService(repository.createSnapshot());
+
+    assertSame(
+      SCHEDULED_TRIP_PATTERN_SHAPE,
+      service.getTripShape(SCHEDULED_PATTERN.getId(), TRIP_WITHOUT_OWN_SHAPE)
+    );
+  }
+
+  @Test
+  void tripShapeIsNotUsedOnAnotherTripPattern() {
+    repository.setTripPatternShape(RT_PATTERN, RT_TRIP_PATTERN_SHAPE);
+    var service = new DefaultShapeService(repository.createSnapshot());
+
+    assertSame(
+      RT_TRIP_PATTERN_SHAPE,
+      service.getTripShape(RT_PATTERN.getId(), TRIP_WITH_OWN_SHAPE)
+    );
   }
 }

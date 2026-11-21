@@ -74,6 +74,15 @@ public class DefaultShapeRepository implements ShapeRepository {
   }
 
   @Override
+  @Nullable
+  public CompactLineStringSequence getScheduledTripShape(
+    FeedScopedId tripPatternId,
+    FeedScopedId tripId
+  ) {
+    return scheduledShapeData.getTripShape(tripPatternId, tripId);
+  }
+
+  @Override
   public ShapeRepositorySnapshot createSnapshot() {
     return new DefaultShapeRepository(scheduledShapeData, realTimeShapesByTripPattern.freeze());
   }

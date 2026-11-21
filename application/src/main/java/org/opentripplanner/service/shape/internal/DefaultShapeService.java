@@ -32,4 +32,13 @@ public class DefaultShapeService implements ShapeService {
     }
     return tripPatternShape;
   }
+
+  @Override
+  public CompactLineStringSequence getTripShape(FeedScopedId tripPatternId, FeedScopedId tripId) {
+    var tripShape = shapes.getScheduledTripShape(tripPatternId, tripId);
+    if (tripShape != null) {
+      return tripShape;
+    }
+    return getTripPatternShape(tripPatternId);
+  }
 }

@@ -198,7 +198,7 @@ class RealTimeTripShapeWriterTest {
     FeedScopedId patternId,
     CompactLineStringSequence tripPatternShape
   ) {
-    scheduledShapes = ScheduledShapeData.of(Map.of(patternId, tripPatternShape));
+    scheduledShapes = ScheduledShapeData.of(Map.of(patternId, tripPatternShape), Map.of());
     repository = new DefaultShapeRepository(scheduledShapes);
   }
 

@@ -26,4 +26,12 @@ public interface ShapeService {
    *                                  for the trip pattern id
    */
   CompactLineStringSequence getTripPatternShape(FeedScopedId tripPatternId);
+
+  /**
+   * The shape of the trip when it runs on the given trip pattern. Trips of one pattern can follow
+   * different shapes.
+   *
+   * @throws IllegalArgumentException if there is no shape for the trip pattern
+   */
+  CompactLineStringSequence getTripShape(FeedScopedId tripPatternId, FeedScopedId tripId);
 }
