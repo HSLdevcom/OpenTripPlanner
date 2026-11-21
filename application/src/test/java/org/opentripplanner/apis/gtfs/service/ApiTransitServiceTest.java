@@ -149,7 +149,7 @@ class ApiTransitServiceTest {
 
     var leg = new ScheduledTransitLegBuilder()
       .withTripPattern(pattern)
-      .withTripPatternShape(patternGeometry)
+      .withTripShape(patternGeometry)
       .withTripTimes(tripTimes)
       .withStartTime(ANY_TIME)
       .withEndTime(ANY_TIME)

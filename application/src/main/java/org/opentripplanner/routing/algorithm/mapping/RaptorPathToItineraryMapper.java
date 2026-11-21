@@ -260,7 +260,7 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
       return new FrequencyTransitLegBuilder()
         .withTripTimes(tripSchedule.getOriginalTripTimes())
         .withTripPattern(tripSchedule.getOriginalTripPattern())
-        .withTripPatternShape(
+        .withTripShape(
           shapeService.getTripShape(
             tripSchedule.getOriginalTripPattern().getId(),
             tripSchedule.getOriginalTripTimes().getTrip().getId()
@@ -298,7 +298,7 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
     return new ScheduledTransitLegBuilder<>()
       .withTripTimes(tripSchedule.getOriginalTripTimes())
       .withTripPattern(tripSchedule.getOriginalTripPattern())
-      .withTripPatternShape(
+      .withTripShape(
         shapeService.getTripShape(
           tripSchedule.getOriginalTripPattern().getId(),
           tripSchedule.getOriginalTripTimes().getTrip().getId()

@@ -58,7 +58,7 @@ public class ScheduledTransitLeg implements TransitLeg {
   ).thenComparing(FareOffer::uniqueId);
   private final TripTimes<?> tripTimes;
   private final TripPattern tripPattern;
-  private final CompactLineStringSequence tripPatternShape;
+  private final CompactLineStringSequence tripShape;
 
   private final ZonedDateTime startTime;
   private final ZonedDateTime endTime;
@@ -115,11 +115,9 @@ public class ScheduledTransitLeg implements TransitLeg {
 
     this.generalizedCost = builder.generalizedCost();
 
-    this.tripPatternShape = Objects.requireNonNull(builder.tripPatternShape());
-    this.distanceMeters = tripPatternShape.distanceBetween(
-      boardStopPosInPattern,
-      alightStopPosInPattern
-    );
+    this.tripShape = Objects.requireNonNull(builder.tripShape());
+    this.distanceMeters = tripShape.distanceBetween(boardStopPosInPattern, alightStopPosInPattern);
+
     this.transitAlerts = Set.copyOf(builder.alerts());
     this.fromViaLocationType = builder.fromViaLocationType();
     this.toViaLocationType = builder.toViaLocationType();
@@ -150,8 +148,8 @@ public class ScheduledTransitLeg implements TransitLeg {
     return tripPattern;
   }
 
-  public CompactLineStringSequence tripPatternShape() {
-    return tripPatternShape;
+  public CompactLineStringSequence tripShape() {
+    return tripShape;
   }
 
   public Instant serviceDateMidnight() {
@@ -309,12 +307,12 @@ public class ScheduledTransitLeg implements TransitLeg {
   }
 
   /**
-   * The leg geometry is built lazily by concatenating the trip pattern's hop shapes between the
-   * board and alight stops. It is not cached: each call recomputes it.
+   * The leg geometry is built lazily by concatenating the trip's hop shapes between the board and
+   * alight stops. It is not cached: each call recomputes it.
    */
   @Override
   public LineString legGeometry() {
-    return tripPatternShape.concatenate(boardStopPosInPattern, alightStopPosInPattern);
+    return tripShape.concatenate(boardStopPosInPattern, alightStopPosInPattern);
   }
 
   @Override

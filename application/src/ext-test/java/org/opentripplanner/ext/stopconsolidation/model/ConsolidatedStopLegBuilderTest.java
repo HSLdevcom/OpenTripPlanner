@@ -49,7 +49,7 @@ class ConsolidatedStopLegBuilderTest implements PlanTestConstants {
     new ScheduledTransitLegBuilder<>()
       .withTripTimes(TRIP_TIMES)
       .withTripPattern(PATTERN)
-      .withTripPatternShape(PATTERN_GEOMETRY)
+      .withTripShape(PATTERN_GEOMETRY)
       .withBoardStopIndexInPattern(0)
       .withAlightStopIndexInPattern(1)
       .withStartTime(TIME)

@@ -77,7 +77,7 @@ class LegImplTest implements PlanTestConstants {
     .withBoardStopIndexInPattern(0)
     .withAlightStopIndexInPattern(4)
     .withTripPattern(PATTERN)
-    .withTripPatternShape(PATTERN_GEOMETRY)
+    .withTripShape(PATTERN_GEOMETRY)
     .build();
   private static final LegImpl IMPL = new LegImpl();
   private static final Map<String, Object> INCLUDE_STOP_ONLY = Map.of(
@@ -158,7 +158,7 @@ class LegImplTest implements PlanTestConstants {
       .withServiceDate(serviceDate)
       .withTripTimes(tripData.scheduledTripTimes())
       .withTripPattern(tripData.scheduledTripPattern())
-      .withTripPatternShape(patternGeometry)
+      .withTripShape(patternGeometry)
       .withBoardStopIndexInPattern(0)
       .withAlightStopIndexInPattern(1)
       .build();

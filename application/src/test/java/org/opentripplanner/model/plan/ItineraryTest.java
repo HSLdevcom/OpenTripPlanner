@@ -220,7 +220,7 @@ public class ItineraryTest implements PlanTestConstants {
     var tripPattern = TransitRepositoryForTest.tripPattern("p", trip.getRoute())
       .withStopPattern(stopPattern)
       .build();
-    var tripPatternShape = TripShapeFactory.straightLines(
+    var tripShape = TripShapeFactory.straightLines(
       tripPattern.getStopPattern(),
       DeduplicatorService.NOOP
     );
@@ -237,7 +237,7 @@ public class ItineraryTest implements PlanTestConstants {
           .withEndTime(endTime)
           .withTripTimes(tripTimes)
           .withTripPattern(tripPattern)
-          .withTripPatternShape(tripPatternShape)
+          .withTripShape(tripShape)
           .withBoardStopIndexInPattern(0)
           .withAlightStopIndexInPattern(1)
           .withServiceDate(startTime.toLocalDate())
