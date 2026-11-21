@@ -1,14 +1,15 @@
 # Shape service
 
-Owns the shape of trip patterns. The shape of a pattern is a `CompactLineStringSequence`: one
+Owns the shapes of trip patterns and trips. A shape is a `CompactLineStringSequence`: one
 `CompactLineString` per hop (stop to stop) plus a table of cumulative distances.
 
 The module follows the same design as the timetable data (`TimetableDataImport` →
 `ScheduledTimetableData` → `TimetableRepository` publishing snapshots):
 
 - `ShapeService` – read access, used by routing, itinerary mapping and the GraphQL APIs. It is
-  request-scoped and backed by a `ShapeRepositorySnapshot`. Asking for the shape of an unknown
-  pattern is a bug and fails with `IllegalArgumentException`.
+  request-scoped and backed by a `ShapeRepositorySnapshot`. `getTripShape` serves the shape of a
+  trip, and `getTripPatternShape` the shape of a pattern. Asking for the shape of an unknown pattern
+  is a bug and fails with `IllegalArgumentException`.
 - `ShapeDataImport` (`dataimport`) – mutable, filled by the GTFS and NeTEx graph builders and
   serialized with the graph. `toScheduledShapeData()` freezes it into the immutable
   `ScheduledShapeData`.
@@ -22,13 +23,31 @@ The module follows the same design as the timetable data (`TimetableDataImport` 
 The write side is keyed by the `TripPattern`, so the shape can be validated against it. Both
 `ShapeDataImport` and `ShapeRepository` check on every write, with `TripShapeValidator`, that the
 pattern has a shape and that it has one hop per pair of stops, and fail with
-`IllegalArgumentException` otherwise. The data only stores the pattern id and reads are by id.
+`IllegalArgumentException` otherwise. The data only stores the pattern id (and the trip id for trip
+shapes), and reads are by id.
+
+## Trip shapes
+
+GTFS groups trips into patterns by their stops, route, direction and mode, not by their shape, so
+the trips of one pattern can follow different shapes. `TripShapeCollector` (`gtfs/shape`) computes
+the shape of each trip while the patterns are generated. The shape used by most trips of a pattern
+becomes the pattern shape. If two shapes are used by the same number of trips, the shape of the trip
+with the lowest id wins, so the result is reproducible. Every trip whose shape differs from the
+pattern shape gets a trip shape of its own. Trips that follow the pattern shape store nothing extra.
+
+NeTEx has one shape per journey pattern, so NeTEx data has no trip shapes.
+
+`ShapeService.getTripShape` returns the trip's own shape if it has one, otherwise the pattern shape.
+Trip shapes are scheduled data only: a real-time pattern has its own id and its shape is derived
+from the shape of the pattern it replaces, so a trip on a real-time pattern loses its own shape.
+This is a known limitation.
 
 ## Data flow
 
 1. **Graph build:** the GTFS/NeTEx mappers create shapes with `TripShapeFactory`, and
-   `AddTransitEntitiesToTimetable` stores them in the `ShapeDataImport`. Patterns without shape data
-   get straight lines between the stops.
+   `AddTransitEntitiesToTimetable` stores them in the `ShapeDataImport`. For GTFS,
+   `TripShapeCollector` chooses the pattern shape and the trip shapes, see above. Patterns without
+   shape data get straight lines between the stops.
 2. **Startup:** the `ShapeDataImport` is converted to `ScheduledShapeData` and handed to the
    `ShapeRepository` (see `ShapeModule`).
 3. **Real-time:** `RealTimeTripShapeWriter` (`updater/trip/shape`) stores the shape of every new
@@ -40,7 +59,8 @@ pattern has a shape and that it has one hop per pair of stops, and fail with
    a pattern is a real-time pattern whose shape was cleared, straight lines are used.
 5. **Requests:** each request gets a `ShapeService` over the snapshot of its transaction scope.
 
-Identical hops are deduplicated, so equal hops share one instance.
+Identical hops are deduplicated, so equal hops share one instance. Identical shapes are deduplicated
+too.
 
 ## Glossary
 
@@ -48,15 +68,17 @@ Identical hops are deduplicated, so equal hops share one instance.
 | --------------------------- | -------------------------------------------------------------------------------------- |
 | Hop                         | The segment between two consecutive stops of a pattern.                                |
 | Trip pattern shape          | All hops of a pattern, as a `CompactLineStringSequence`.                               |
-| `ShapeService`              | Read-only, request-scoped lookup of a pattern's shape.                                 |
+| Trip shape                  | The shape of a trip that differs from its pattern shape.                               |
+| `ShapeService`              | Read-only, request-scoped lookup of a pattern's or a trip's shape.                     |
 | `ShapeRepository`           | Mutable buffer for the writer thread; publishes snapshots.                             |
 | `ShapeRepositorySnapshot`   | Immutable, read-only view of committed shapes.                                         |
 | `ShapeRepositoryLifecycle`  | Plugs the repository into the transaction framework (buffer → snapshot at commit).     |
-| `ScheduledShapeData`        | Immutable shapes of the scheduled patterns, loaded from the graph.                     |
+| `ScheduledShapeData`        | Immutable shapes of the scheduled patterns and trips, loaded from the graph.           |
 | `ShapeDataImport`           | Mutable graph-build counterpart of `ScheduledShapeData`; serialized with the graph.    |
 | `CompactLineStringSequence` | Immutable list of hops plus cumulative distances; decodes hops on demand.              |
 | `CompactLineString`         | One hop in packed form (package-private); equal hops are shared.                       |
 | `PackedLineStringCodec`     | Encodes/decodes the packed byte form; lives in the `street` module.                    |
 | `TripShapeFactory`          | Builds a `CompactLineStringSequence` from line strings or from straight lines.         |
+| `TripShapeCollector`        | Chooses the pattern shape and the trip shapes while GTFS patterns are generated.       |
 | `RealTimeTripShapeWriter`   | Stores the shape of real-time patterns in the `ShapeRepository`.                       |
 | `RealTimeTripShapeFactory`  | Creates the shape for real-time patterns (copied from the original or straight lines). |
