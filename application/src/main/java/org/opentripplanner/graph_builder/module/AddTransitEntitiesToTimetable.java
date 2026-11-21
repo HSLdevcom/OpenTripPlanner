@@ -1,6 +1,7 @@
 package org.opentripplanner.graph_builder.module;
 
 import java.util.Collection;
+import java.util.Map;
 import org.opentripplanner.ext.flex.trip.FlexTrip;
 import org.opentripplanner.framework.application.OTPFeature;
 import org.opentripplanner.model.FeedInfo;
@@ -100,6 +101,12 @@ public class AddTransitEntitiesToTimetable {
         tripPattern,
         dataImport.getShapesByTripPattern().get(tripPattern.getId())
       );
+      dataImport
+        .getShapesByTripByTripPattern()
+        .getOrDefault(tripPattern.getId(), Map.of())
+        .forEach((tripId, tripShape) ->
+          shapeDataImport.setTripShape(tripPattern, tripId, tripShape)
+        );
     }
   }
 

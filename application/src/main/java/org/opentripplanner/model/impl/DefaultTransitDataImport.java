@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.ext.flex.trip.FlexTrip;
 import org.opentripplanner.model.FeedInfo;
@@ -62,6 +63,11 @@ class DefaultTransitDataImport implements TransitDataImport {
 
   private final Map<FeedScopedId, CompactLineStringSequence> shapesByTripPattern;
 
+  private final Map<
+    FeedScopedId,
+    Map<FeedScopedId, CompactLineStringSequence>
+  > shapesByTripByTripPattern;
+
   private final Collection<Trip> trips;
 
   private final Collection<TripOnServiceDate> tripOnServiceDates;
@@ -85,6 +91,11 @@ class DefaultTransitDataImport implements TransitDataImport {
     this.transfers = immutableList(builder.getTransfers());
     this.tripPatterns = immutableList(builder.getTripPatterns().values());
     this.shapesByTripPattern = Map.copyOf(builder.getShapesByTripPattern());
+    this.shapesByTripByTripPattern = builder
+      .getShapesByTripByTripPattern()
+      .entrySet()
+      .stream()
+      .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, e -> Map.copyOf(e.getValue())));
     this.trips = immutableList(builder.getTripsById().values());
     this.tripOnServiceDates = immutableList(builder.getTripOnServiceDates().values());
     this.flexTrips = immutableList(builder.getFlexTripsById().values());
@@ -155,6 +166,14 @@ class DefaultTransitDataImport implements TransitDataImport {
   @Override
   public Map<FeedScopedId, CompactLineStringSequence> getShapesByTripPattern() {
     return shapesByTripPattern;
+  }
+
+  @Override
+  public Map<
+    FeedScopedId,
+    Map<FeedScopedId, CompactLineStringSequence>
+  > getShapesByTripByTripPattern() {
+    return shapesByTripByTripPattern;
   }
 
   @Override

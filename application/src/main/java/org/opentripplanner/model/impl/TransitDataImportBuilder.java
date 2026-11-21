@@ -109,6 +109,11 @@ public class TransitDataImportBuilder {
 
   private final Map<FeedScopedId, CompactLineStringSequence> shapesByTripPattern = new HashMap<>();
 
+  private final Map<
+    FeedScopedId,
+    Map<FeedScopedId, CompactLineStringSequence>
+  > shapesByTripByTripPattern = new HashMap<>();
+
   private final EntityById<FlexTrip<?, ?>> flexTripsById = new DefaultEntityById<>();
 
   private final EntityById<Branding> brandingsById = new DefaultEntityById<>();
@@ -235,6 +240,13 @@ public class TransitDataImportBuilder {
 
   public Map<FeedScopedId, CompactLineStringSequence> getShapesByTripPattern() {
     return shapesByTripPattern;
+  }
+
+  public Map<
+    FeedScopedId,
+    Map<FeedScopedId, CompactLineStringSequence>
+  > getShapesByTripByTripPattern() {
+    return shapesByTripByTripPattern;
   }
 
   public EntityById<FlexTrip<?, ?>> getFlexTripsById() {
