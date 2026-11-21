@@ -243,7 +243,7 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
         return null;
       }
 
-      LineString geometry = getTripPatternGeometry(environment, tripPattern);
+      LineString geometry = getTripGeometry(environment, tripPattern);
       return Arrays.stream(geometry.getCoordinateSequence().toCoordinateArray())
         .map(coordinate -> Arrays.asList(coordinate.x, coordinate.y))
         .collect(Collectors.toList());
@@ -391,7 +391,7 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
       if (tripPattern == null) {
         return null;
       }
-      return getTripPatternGeometry(environment, tripPattern);
+      return getTripGeometry(environment, tripPattern);
     };
   }
 
@@ -444,11 +444,10 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
     return getTransitService(environment).findPattern(environment.getSource());
   }
 
-  private LineString getTripPatternGeometry(
-    DataFetchingEnvironment environment,
-    TripPattern tripPattern
-  ) {
-    return getShapeService(environment).getTripPatternShape(tripPattern.getId()).concatenate();
+  private LineString getTripGeometry(DataFetchingEnvironment environment, TripPattern tripPattern) {
+    return getShapeService(environment)
+      .getTripShape(tripPattern.getId(), getSource(environment).getId())
+      .concatenate();
   }
 
   private ShapeService getShapeService(DataFetchingEnvironment environment) {

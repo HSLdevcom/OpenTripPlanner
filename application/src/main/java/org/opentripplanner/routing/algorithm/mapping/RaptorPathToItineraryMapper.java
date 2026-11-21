@@ -259,7 +259,10 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
         .withTripTimes(tripSchedule.getOriginalTripTimes())
         .withTripPattern(tripSchedule.getOriginalTripPattern())
         .withTripPatternShape(
-          shapeService.getTripPatternShape(tripSchedule.getOriginalTripPattern().getId())
+          shapeService.getTripShape(
+            tripSchedule.getOriginalTripPattern().getId(),
+            tripSchedule.getOriginalTripTimes().getTrip().getId()
+          )
         )
         .withBoardStopIndexInPattern(boardStopIndexInPattern)
         .withAlightStopIndexInPattern(alightStopIndexInPattern)
@@ -294,7 +297,10 @@ public class RaptorPathToItineraryMapper<T extends TripSchedule> {
       .withTripTimes(tripSchedule.getOriginalTripTimes())
       .withTripPattern(tripSchedule.getOriginalTripPattern())
       .withTripPatternShape(
-        shapeService.getTripPatternShape(tripSchedule.getOriginalTripPattern().getId())
+        shapeService.getTripShape(
+          tripSchedule.getOriginalTripPattern().getId(),
+          tripSchedule.getOriginalTripTimes().getTrip().getId()
+        )
       )
       .withBoardStopIndexInPattern(boardStopIndexInPattern)
       .withAlightStopIndexInPattern(alightStopIndexInPattern)

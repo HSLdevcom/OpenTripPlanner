@@ -283,7 +283,7 @@ public class ServiceJourneyType {
 
             return EncodedPolyline.of(
               GqlUtil.getShapeService(environment)
-                .getTripPatternShape(tripPattern.getId())
+                .getTripShape(tripPattern.getId(), trip(environment).getId())
                 .concatenate()
             );
           })

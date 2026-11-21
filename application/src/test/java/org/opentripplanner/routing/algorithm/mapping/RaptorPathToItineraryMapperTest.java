@@ -52,6 +52,8 @@ import org.opentripplanner.routing.algorithm.raptoradapter.transit.RaptorTransit
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.cost.DefaultCostCalculator;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.service.shape.ShapeTestFactory;
+import org.opentripplanner.service.shape.dataimport.ShapeDataImport;
+import org.opentripplanner.service.shape.model.CompactLineStringSequence;
 import org.opentripplanner.service.streetdetails.internal.DefaultStreetDetailsRepository;
 import org.opentripplanner.service.streetdetails.internal.DefaultStreetDetailsService;
 import org.opentripplanner.standalone.api.TestServerContext;
@@ -114,6 +116,10 @@ public class RaptorPathToItineraryMapperTest {
     2,
     1
   ).withRoute(ROUTE);
+
+  private final ShapeDataImport shapeDataImport = ShapeTestFactory.shapeDataImport(
+    List.of(getOriginalPattern(TWO_STOP_PATTERN), getOriginalPattern(FIVE_STOP_PATTERN))
+  );
 
   @ParameterizedTest
   @ValueSource(ints = { 0, 3000, -3000 })
@@ -289,6 +295,24 @@ public class RaptorPathToItineraryMapperTest {
     assertTrue(itinerary.isSearchWindowAware());
   }
 
+  @Test
+  void legUsesTheShapeOfItsTrip() {
+    TestTripSchedule tripSchedule = getTestTripSchedule();
+    CompactLineStringSequence tripShape = ShapeTestFactory.straightLine(70.0);
+    shapeDataImport.setTripShape(
+      tripSchedule.getOriginalTripPattern(),
+      tripSchedule.getOriginalTripTimes().getTrip().getId(),
+      tripShape
+    );
+    var mapper = getRaptorPathToItineraryMapper();
+
+    var path = createTestTripSchedulePath(tripSchedule).egress(TestAccessEgress.free(2));
+    var itinerary = mapper.createItinerary(path);
+
+    var leg = (ScheduledTransitLeg) itinerary.legs().getFirst();
+    assertEquals(tripShape, leg.tripPatternShape());
+  }
+
   private TripTimes<?> buildTripTimes(TripPattern originalPattern) {
     var trip = TransitRepositoryForTest.trip("test").build();
     var stopTimes = new ArrayList<StopTime>();
@@ -356,11 +380,7 @@ public class RaptorPathToItineraryMapperTest {
         transitRepository,
         DefaultTimetableRepository.scheduledOnly(timetableDataImport.toScheduledTimetableData())
       ),
-      TestServerContext.createShapeService(
-        ShapeTestFactory.shapeDataImport(
-          List.of(getOriginalPattern(TWO_STOP_PATTERN), getOriginalPattern(FIVE_STOP_PATTERN))
-        )
-      ),
+      TestServerContext.createShapeService(shapeDataImport),
       new DefaultStreetDetailsService(new DefaultStreetDetailsRepository()),
       getRaptorTransitData(),
       regularTransfers,

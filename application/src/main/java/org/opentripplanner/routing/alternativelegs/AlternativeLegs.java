@@ -252,7 +252,7 @@ public class AlternativeLegs {
     return new ScheduledTransitLegBuilder<>()
       .withTripTimes(tripTimes)
       .withTripPattern(pattern)
-      .withTripPatternShape(shapeService.getTripPatternShape(pattern.getId()))
+      .withTripPatternShape(shapeService.getTripShape(pattern.getId(), tripTimes.getTrip().getId()))
       .withBoardStopIndexInPattern(boardingPosition)
       .withAlightStopIndexInPattern(alightingPosition)
       .withStartTime(boardingTime)
