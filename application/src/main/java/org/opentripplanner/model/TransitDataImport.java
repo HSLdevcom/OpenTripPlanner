@@ -62,6 +62,11 @@ public interface TransitDataImport {
 
   Map<FeedScopedId, CompactLineStringSequence> getGeometriesByTripPattern();
 
+  Map<
+    FeedScopedId,
+    Map<FeedScopedId, CompactLineStringSequence>
+  > getGeometriesByTripByTripPattern();
+
   Collection<Trip> getAllTrips();
 
   Collection<TripOnServiceDate> getTripOnServiceDates();
