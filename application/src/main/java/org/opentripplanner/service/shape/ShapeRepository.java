@@ -4,9 +4,9 @@ import org.opentripplanner.service.shape.model.CompactLineStringSequence;
 import org.opentripplanner.transit.model.network.TripPattern;
 
 /**
- * The mutable repository of the shape data. It owns the {@link ScheduledShapeData} - the
- * shapes of the scheduled trip patterns - and holds the shapes of the trip patterns created
- * by real-time updates on top of it.
+ * The mutable repository of the shape data. It owns the {@link ScheduledShapeData}, the
+ * shapes of the scheduled trip patterns and trips, and holds the shapes of the trip patterns
+ * created by real-time updates on top of it.
  * <p>
  * It is managed by the transaction framework: updaters obtain it through a {@code WriteContext} on
  * the single writer thread, and {@link #createSnapshot()} is called at commit time to publish a new
