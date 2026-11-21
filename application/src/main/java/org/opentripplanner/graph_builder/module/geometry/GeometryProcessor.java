@@ -82,11 +82,7 @@ public class GeometryProcessor {
    */
   public List<LineString> createHopShapes(Trip trip) {
     List<StopTime> stopTimes = builder.getStopTimesSortedByTrip().get(trip);
-    if (
-      trip.getShapeId() == null ||
-      trip.getShapeId().getId() == null ||
-      trip.getShapeId().getId().isEmpty()
-    ) {
+    if (trip.getShapeId() == null) {
       // a straight line between two stops has no interior points to simplify away
       return Arrays.asList(createStraightLineHopShapes(stopTimes));
     }
