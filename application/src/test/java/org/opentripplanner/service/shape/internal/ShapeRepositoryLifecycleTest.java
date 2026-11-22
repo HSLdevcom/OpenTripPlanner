@@ -29,9 +29,9 @@ class ShapeRepositoryLifecycleTest {
     .build();
 
   private static final CompactLineStringSequence TRIP_PATTERN_SHAPE_1 =
-    ShapeTestFactory.straightLine(60.0);
+    ShapeTestFactory.straightLine(60.0, 2);
   private static final CompactLineStringSequence TRIP_PATTERN_SHAPE_2 =
-    ShapeTestFactory.straightLine(61.0);
+    ShapeTestFactory.straightLine(61.0, 2);
 
   private final DefaultShapeRepository buffer = new DefaultShapeRepository(
     ScheduledShapeData.empty()

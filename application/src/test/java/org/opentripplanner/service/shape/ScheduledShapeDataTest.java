@@ -12,7 +12,8 @@ import org.opentripplanner.service.shape.model.CompactLineStringSequence;
 class ScheduledShapeDataTest {
 
   private static final CompactLineStringSequence TRIP_PATTERN_SHAPE = ShapeTestFactory.straightLine(
-    60.0
+    60.0,
+    2
   );
 
   @Test

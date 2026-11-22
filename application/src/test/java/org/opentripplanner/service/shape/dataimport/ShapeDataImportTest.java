@@ -31,9 +31,13 @@ class ShapeDataImportTest {
     )
     .build();
   private static final CompactLineStringSequence TRIP_PATTERN_SHAPE = ShapeTestFactory.straightLine(
-    60.0
+    60.0,
+    2
   );
-  private static final CompactLineStringSequence TRIP_SHAPE = ShapeTestFactory.straightLine(61.0);
+  private static final CompactLineStringSequence TRIP_SHAPE = ShapeTestFactory.straightLine(
+    61.0,
+    2
+  );
 
   @Test
   void storesTripPatternShape() {

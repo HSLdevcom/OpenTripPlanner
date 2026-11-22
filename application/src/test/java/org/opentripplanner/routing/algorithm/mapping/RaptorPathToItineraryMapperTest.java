@@ -299,7 +299,7 @@ public class RaptorPathToItineraryMapperTest {
   @Test
   void legUsesTheShapeOfItsTrip() {
     TestTripSchedule tripSchedule = getTestTripSchedule();
-    CompactLineStringSequence tripShape = ShapeTestFactory.straightLine(70.0);
+    CompactLineStringSequence tripShape = ShapeTestFactory.straightLine(70.0, 2);
     shapeDataImport.setTripShape(
       tripSchedule.getOriginalTripPattern(),
       tripSchedule.getOriginalTripTimes().getTrip().getId(),

@@ -39,12 +39,15 @@ class DefaultShapeServiceTest {
   private static final FeedScopedId TRIP_WITHOUT_OWN_SHAPE = id("trip");
 
   private static final CompactLineStringSequence SCHEDULED_TRIP_PATTERN_SHAPE =
-    ShapeTestFactory.straightLine(60.0);
+    ShapeTestFactory.straightLine(60.0, 2);
   private static final CompactLineStringSequence RT_TRIP_PATTERN_SHAPE =
-    ShapeTestFactory.straightLine(61.0);
+    ShapeTestFactory.straightLine(61.0, 2);
   private static final CompactLineStringSequence OVERRIDING_TRIP_PATTERN_SHAPE =
-    ShapeTestFactory.straightLine(62.0);
-  private static final CompactLineStringSequence TRIP_SHAPE = ShapeTestFactory.straightLine(63.0);
+    ShapeTestFactory.straightLine(62.0, 2);
+  private static final CompactLineStringSequence TRIP_SHAPE = ShapeTestFactory.straightLine(
+    63.0,
+    2
+  );
 
   private final DefaultShapeRepository repository = new DefaultShapeRepository(
     ScheduledShapeData.of(

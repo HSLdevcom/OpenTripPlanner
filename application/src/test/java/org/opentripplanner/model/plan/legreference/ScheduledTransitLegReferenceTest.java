@@ -18,6 +18,8 @@ import org.opentripplanner.model.plan.leg.ScheduledTransitLeg;
 import org.opentripplanner.routing.impl.TransitAlertServiceImpl;
 import org.opentripplanner.service.shape.ShapeService;
 import org.opentripplanner.service.shape.ShapeTestFactory;
+import org.opentripplanner.service.shape.dataimport.ShapeDataImport;
+import org.opentripplanner.service.shape.model.CompactLineStringSequence;
 import org.opentripplanner.standalone.api.TestServerContext;
 import org.opentripplanner.transit.dataimport.TimetableDataImport;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
@@ -53,6 +55,10 @@ class ScheduledTransitLegReferenceTest {
   private static final FeedScopedId SIMPLE_TRIP_ID = id("trip");
   private static final FeedScopedId TRIP_ID_WITH_MULTIPLE_CALLS = id("multiple_calls");
   private static final FeedScopedId LOOP_TRIP_ID = id("loop");
+  private static final CompactLineStringSequence SIMPLE_TRIP_SHAPE = ShapeTestFactory.straightLine(
+    60.0,
+    3
+  );
 
   @BeforeAll
   static void buildTransitService() {
@@ -129,9 +135,15 @@ class ScheduledTransitLegReferenceTest {
       transitRepository,
       DefaultTimetableRepository.scheduledOnly(timetableDataImport.toScheduledTimetableData())
     );
-    shapeService = TestServerContext.createShapeService(
-      ShapeTestFactory.shapeDataImport(timetableDataImport.getAllTripPatterns())
+
+    // build shape service
+    ShapeDataImport shapeDataImport = ShapeTestFactory.shapeDataImport(
+      timetableDataImport.getAllTripPatterns()
     );
+    Trip simpleTrip = transitService.getTrip(SIMPLE_TRIP_ID);
+    TripPattern simpleTripPattern = transitService.findPattern(simpleTrip);
+    shapeDataImport.setTripShape(simpleTripPattern, SIMPLE_TRIP_ID, SIMPLE_TRIP_SHAPE);
+    shapeService = TestServerContext.createShapeService(shapeDataImport);
   }
 
   @Test
@@ -157,6 +169,7 @@ class ScheduledTransitLegReferenceTest {
     assertEquals(SERVICE_DATE, leg.serviceDate());
     assertEquals(boardAtStopPos, leg.boardStopPosInPattern());
     assertEquals(alightAtStopPos, leg.alightStopPosInPattern());
+    assertEquals(SIMPLE_TRIP_SHAPE, leg.tripShape());
   }
 
   @Test

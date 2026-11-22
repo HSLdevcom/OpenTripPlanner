@@ -17,7 +17,11 @@ import org.opentripplanner.routing.alternativelegs.AlternativeLegsFilter;
 import org.opentripplanner.routing.alternativelegs.NavigationDirection;
 import org.opentripplanner.routing.impl.TransitAlertServiceImpl;
 import org.opentripplanner.service.shape.ShapeTestFactory;
+import org.opentripplanner.service.shape.dataimport.ShapeDataImport;
+import org.opentripplanner.service.shape.model.CompactLineStringSequence;
 import org.opentripplanner.standalone.api.TestServerContext;
+import org.opentripplanner.transit.model.network.TripPattern;
+import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.repository.DefaultTimetableRepository;
 import org.opentripplanner.transit.service.DefaultTransitService;
 
@@ -83,9 +87,15 @@ class AlternativeLegsTest extends GtfsTest {
       transitRepository,
       DefaultTimetableRepository.scheduledOnly(timetableDataImport.toScheduledTimetableData())
     );
-    var shapeService = TestServerContext.createShapeService(
-      ShapeTestFactory.shapeDataImport(timetableDataImport.getAllTripPatterns())
+
+    ShapeDataImport shapeDataImport = ShapeTestFactory.shapeDataImport(
+      timetableDataImport.getAllTripPatterns()
     );
+    Trip tripWithOwnShape = transitService.getTrip(new FeedScopedId(FEED_ID, "1.3"));
+    TripPattern tripPattern = transitService.findPattern(tripWithOwnShape);
+    CompactLineStringSequence tripShape = ShapeTestFactory.straightLine(60.0, 3);
+    shapeDataImport.setTripShape(tripPattern, tripWithOwnShape.getId(), tripShape);
+    var shapeService = TestServerContext.createShapeService(shapeDataImport);
 
     var originalLeg = new ScheduledTransitLegReference(
       new FeedScopedId(FEED_ID, "2.2"),
@@ -115,6 +125,11 @@ class AlternativeLegsTest extends GtfsTest {
       "B ~ BUS 1 0:10 0:20 ~ C []";
 
     assertEquals(expected, legs);
+    assertEquals(tripShape, alternativeLegs.get(1).tripShape());
+    assertEquals(
+      shapeService.getTripPatternShape(tripPattern.getId()),
+      alternativeLegs.get(2).tripShape()
+    );
   }
 
   @Test
