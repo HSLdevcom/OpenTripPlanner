@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import org.locationtech.jts.geom.LineString;
+import org.opentripplanner.core.model.deduplicator.DeduplicatorService;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.ext.flex.trip.UnscheduledTrip;
 import org.opentripplanner.model.StopTime;
@@ -27,6 +28,7 @@ import org.opentripplanner.transit.model.organization.Agency;
 import org.opentripplanner.transit.model.organization.AgencyBuilder;
 import org.opentripplanner.transit.model.organization.Operator;
 import org.opentripplanner.transit.model.organization.OperatorBuilder;
+import org.opentripplanner.transit.model.shape.TripShapeFactory;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.model.timetable.TripBuilder;
@@ -255,7 +257,9 @@ public class TransitRepositoryTestBuilder {
     var id = "Pattern" + (tripPatterns.size() + 1);
     var builder = TripPattern.of(id(id)).withRoute(key.route()).withStopPattern(key.stopPattern());
     if (key.hopGeometries() != null) {
-      builder.withHopGeometries(key.hopGeometries());
+      builder.withShape(
+        TripShapeFactory.fromLineStrings(key.hopGeometries(), DeduplicatorService.NOOP)
+      );
     }
     var newPattern = builder.build();
     tripPatterns.put(key, newPattern);

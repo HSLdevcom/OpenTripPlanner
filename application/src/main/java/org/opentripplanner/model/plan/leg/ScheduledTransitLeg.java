@@ -113,10 +113,9 @@ public class ScheduledTransitLeg implements TransitLeg {
 
     this.generalizedCost = builder.generalizedCost();
 
-    this.distanceMeters = tripPattern.distanceBetween(
-      boardStopPosInPattern,
-      alightStopPosInPattern
-    );
+    this.distanceMeters = tripPattern
+      .getShape()
+      .distanceBetween(boardStopPosInPattern, alightStopPosInPattern);
     this.transitAlerts = Set.copyOf(builder.alerts());
     this.fromViaLocationType = builder.fromViaLocationType();
     this.toViaLocationType = builder.toViaLocationType();
@@ -307,7 +306,7 @@ public class ScheduledTransitLeg implements TransitLeg {
    */
   @Override
   public LineString legGeometry() {
-    return tripPattern.geometryBetween(boardStopPosInPattern, alightStopPosInPattern);
+    return tripPattern.getShape().concatenate(boardStopPosInPattern, alightStopPosInPattern);
   }
 
   @Override

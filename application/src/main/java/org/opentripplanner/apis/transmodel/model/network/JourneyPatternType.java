@@ -13,7 +13,6 @@ import graphql.schema.GraphQLTypeReference;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.api.model.geometry.EncodedPolyline;
 import org.opentripplanner.api.model.transit.FeedScopedIdMapper;
 import org.opentripplanner.apis.transmodel.mapping.GeometryMapper;
@@ -116,14 +115,9 @@ public class JourneyPatternType {
         GraphQLFieldDefinition.newFieldDefinition()
           .name("pointsOnLink")
           .type(linkGeometryType)
-          .dataFetcher(environment -> {
-            LineString geometry = ((TripPattern) environment.getSource()).getGeometry();
-            if (geometry == null) {
-              return null;
-            } else {
-              return EncodedPolyline.of(geometry);
-            }
-          })
+          .dataFetcher(environment ->
+            EncodedPolyline.of(((TripPattern) environment.getSource()).getShape().concatenate())
+          )
           .build()
       )
       .field(

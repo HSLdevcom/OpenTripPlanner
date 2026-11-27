@@ -9,16 +9,15 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
-import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.core.model.accessibility.Accessibility;
 import org.opentripplanner.core.model.i18n.I18NString;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.model.PickDrop;
-import org.opentripplanner.street.geometry.CompactLineStringSequence;
 import org.opentripplanner.transit.model.basic.SubMode;
 import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.framework.AbstractTransitEntity;
 import org.opentripplanner.transit.model.framework.LogInfo;
+import org.opentripplanner.transit.model.shape.CompactLineStringSequence;
 import org.opentripplanner.transit.model.site.Station;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.model.timetable.Direction;
@@ -96,12 +95,7 @@ public final class TripPattern
   private final boolean containsMultipleModes;
   private String name;
 
-  /**
-   * Geometries of each inter-stop segment of the tripPattern, together with the precomputed
-   * cumulative distance along the pattern. Not used in routing, only for API listing and per-leg
-   * distance computation via {@link #distanceBetween(int, int)}.
-   */
-  private final CompactLineStringSequence patternGeometry;
+  private final CompactLineStringSequence shape;
 
   @Nullable
   private final TripPattern originalTripPattern;
@@ -137,7 +131,7 @@ public final class TripPattern
 
     this.originalTripPattern = builder.getOriginalTripPattern();
 
-    this.patternGeometry = builder.buildGeometry();
+    this.shape = builder.buildShape();
     this.routingTripPattern = new RoutingTripPattern(this);
 
     getId().requireSameFeedId(route.getId());
@@ -191,24 +185,14 @@ public final class TripPattern
     return containsMultipleModes;
   }
 
-  public LineString getHopGeometry(int stopPosInPattern) {
-    return patternGeometry.get(stopPosInPattern);
-  }
-
   /**
-   * Distance in meters along the pattern between the boarding and alighting stop positions.
-   * Constant-time lookup against the cumulative distance table computed at graph build.
+   * The shape of the pattern, with one hop shape per pair of consecutive stops. Patterns built
+   * without shape data (GTFS without {@code shapes.txt}, NeTEx without ServiceLink projections,
+   * real-time added trips) have straight lines between the stops. A pattern created by a real-time
+   * update gets a shape derived from the pattern it replaces. Never null.
    */
-  public int distanceBetween(int boardingStopPosition, int alightingStopPosition) {
-    return patternGeometry.distanceBetween(boardingStopPosition, alightingStopPosition);
-  }
-
-  /**
-   * Geometry of the pattern segment between the boarding and alighting stop positions, obtained by
-   * concatenating the underlying hop geometries.
-   */
-  public LineString geometryBetween(int boardingStopPosition, int alightingStopPosition) {
-    return patternGeometry.concatenate(boardingStopPosition, alightingStopPosition);
+  public CompactLineStringSequence getShape() {
+    return shape;
   }
 
   public StopPattern getStopPattern() {
@@ -227,16 +211,6 @@ public final class TripPattern
     return isModified()
       ? originalTripPattern.stopPattern.copyOf(stopPattern)
       : stopPattern.copyOf();
-  }
-
-  /**
-   * The concatenated hop geometry of the whole pattern. For patterns built without shape data (GTFS
-   * without {@code shapes.txt}, NeTEx without ServiceLink projections, real-time added trips), this
-   * is composed of straight-line segments between consecutive stops. The returned geometry is never
-   * null; it is empty for degenerate patterns with no hops (one stop or fewer).
-   */
-  public LineString getGeometry() {
-    return patternGeometry.concatenate(0, patternGeometry.size());
   }
 
   public int numberOfStops() {

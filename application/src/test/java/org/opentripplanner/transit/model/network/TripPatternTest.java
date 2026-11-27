@@ -12,8 +12,11 @@ import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.LineString;
+import org.opentripplanner.core.model.deduplicator.DeduplicatorService;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.basic.TransitMode;
+import org.opentripplanner.transit.model.shape.CompactLineStringSequence;
+import org.opentripplanner.transit.model.shape.TripShapeFactory;
 import org.opentripplanner.transit.model.site.RegularStop;
 
 class TripPatternTest {
@@ -34,16 +37,21 @@ class TripPatternTest {
     STOP_C
   );
 
-  private static final List<LineString> HOP_GEOMETRIES = List.of(
+  private static final List<LineString> HOP_SHAPES = List.of(
     makeLineString(STOP_A.getCoordinate(), STOP_X.getCoordinate(), STOP_B.getCoordinate()),
     makeLineString(STOP_B.getCoordinate(), STOP_Y.getCoordinate(), STOP_C.getCoordinate())
+  );
+
+  private static final CompactLineStringSequence SHAPE = TripShapeFactory.fromLineStrings(
+    HOP_SHAPES,
+    DeduplicatorService.NOOP
   );
 
   private static final TripPattern SUBJECT = TripPattern.of(id(ID))
     .withName(NAME)
     .withRoute(ROUTE)
     .withStopPattern(STOP_PATTERN)
-    .withHopGeometries(HOP_GEOMETRIES)
+    .withShape(SHAPE)
     .build();
 
   @Test
@@ -66,29 +74,35 @@ class TripPatternTest {
     assertEquals("v2", copy.getName());
     assertEquals(ROUTE, copy.getRoute());
     assertEquals(STOP_PATTERN, copy.getStopPattern());
-    assertEquals(SUBJECT.getHopGeometry(0), copy.getHopGeometry(0));
-    assertEquals(SUBJECT.getHopGeometry(1), copy.getHopGeometry(1));
-    assertEquals(HOP_GEOMETRIES.get(1), copy.getHopGeometry(1));
+    assertSame(SHAPE, copy.getShape());
+    assertEquals(HOP_SHAPES.get(1), copy.getShape().get(1));
   }
 
   @Test
-  void hopGeometryForReplacementPattern() {
-    var pattern = TripPattern.of(id("replacement"))
-      .withName("replacement")
+  void defaultShapeIsStraightLinesBetweenTheStops() {
+    var pattern = TripPattern.of(id("straight"))
       .withRoute(ROUTE)
-      .withStopPattern(TransitRepositoryForTest.stopPattern(STOP_A, STOP_B, STOP_X, STOP_Y))
-      .withOriginalTripPattern(SUBJECT)
+      .withStopPattern(STOP_PATTERN)
       .build();
 
-    assertEquals(HOP_GEOMETRIES.get(0), pattern.getHopGeometry(0));
-    assertEquals(
-      makeLineString(STOP_B.getCoordinate(), STOP_X.getCoordinate()),
-      pattern.getHopGeometry(1)
+    var shape = pattern.getShape();
+    assertEquals(2, shape.size());
+    assertEquals(makeLineString(STOP_A.getCoordinate(), STOP_B.getCoordinate()), shape.get(0));
+    assertEquals(makeLineString(STOP_B.getCoordinate(), STOP_C.getCoordinate()), shape.get(1));
+  }
+
+  @Test
+  void shapeWithWrongNumberOfHopsIsRejected() {
+    var shape = TripShapeFactory.fromLineStrings(
+      List.of(HOP_SHAPES.get(0)),
+      DeduplicatorService.NOOP
     );
-    assertEquals(
-      makeLineString(STOP_X.getCoordinate(), STOP_Y.getCoordinate()),
-      pattern.getHopGeometry(2)
-    );
+    var builder = TripPattern.of(id("invalid"))
+      .withRoute(ROUTE)
+      .withStopPattern(STOP_PATTERN)
+      .withShape(shape);
+
+    Assertions.assertThrows(IllegalArgumentException.class, builder::build);
   }
 
   @Test
@@ -102,12 +116,11 @@ class TripPatternTest {
       )
     );
     assertFalse(SUBJECT.sameAs(SUBJECT.copy().withMode(TransitMode.RAIL).build()));
-    // Clearing hopGeometries is required because TripPatternBuilder.buildHopGeometries now
-    // validates that the hop count matches the stop pattern; changing the stop pattern without
-    // clearing the inherited geometries would otherwise be a caller bug.
+    // The copy keeps the shape, which is validated against the stop pattern; changing the stop
+    // pattern without clearing the inherited shape would be a caller bug.
     assertFalse(
       SUBJECT.sameAs(
-        SUBJECT.copy().withStopPattern(TEST_MODEL.stopPattern(11)).withHopGeometries(null).build()
+        SUBJECT.copy().withStopPattern(TEST_MODEL.stopPattern(11)).withShape(null).build()
       )
     );
   }

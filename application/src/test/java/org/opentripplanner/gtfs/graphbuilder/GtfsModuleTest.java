@@ -1,6 +1,5 @@
 package org.opentripplanner.gtfs.graphbuilder;
 
-import static graphql.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -45,12 +44,10 @@ class GtfsModuleTest {
     assertEquals(1, frequencyTripPattern.size());
 
     var tripPattern = frequencyTripPattern.getFirst();
-    assertNotNull(tripPattern.getGeometry());
-    assertNotNull(tripPattern.getHopGeometry(0));
+    assertEquals(tripPattern.numberOfStops() - 1, tripPattern.getShape().size());
 
     var pattern = model.timetableDataImport.getTripPatternForId(tripPattern.getId());
-    assertNotNull(pattern.getGeometry());
-    assertNotNull(pattern.getHopGeometry(0));
+    assertEquals(pattern.numberOfStops() - 1, pattern.getShape().size());
   }
 
   @Test

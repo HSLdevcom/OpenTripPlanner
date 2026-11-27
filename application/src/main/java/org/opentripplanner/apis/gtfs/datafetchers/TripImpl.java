@@ -242,10 +242,7 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
         return null;
       }
 
-      LineString geometry = tripPattern.getGeometry();
-      if (geometry == null) {
-        return null;
-      }
+      LineString geometry = tripPattern.getShape().concatenate();
       return Arrays.stream(geometry.getCoordinateSequence().toCoordinateArray())
         .map(coordinate -> Arrays.asList(coordinate.x, coordinate.y))
         .collect(Collectors.toList());
@@ -393,7 +390,7 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
       if (tripPattern == null) {
         return null;
       }
-      return tripPattern.getGeometry();
+      return tripPattern.getShape().concatenate();
     };
   }
 

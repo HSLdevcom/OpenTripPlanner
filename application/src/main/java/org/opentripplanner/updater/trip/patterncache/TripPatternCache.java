@@ -6,6 +6,7 @@ import org.jspecify.annotations.Nullable;
 import org.opentripplanner.transit.model.network.StopPattern;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.timetable.Trip;
+import org.opentripplanner.updater.trip.shape.RealTimeTripShapeFactory;
 
 /**
  * Threadsafe mechanism for tracking any TripPatterns added to the graph via realtime messages. This
@@ -46,8 +47,14 @@ public class TripPatternCache {
 
   private final TripPatternIdGenerator tripPatternIdGenerator;
 
-  public TripPatternCache(TripPatternIdGenerator tripPatternIdGenerator) {
+  private final RealTimeTripShapeFactory shapeFactory;
+
+  public TripPatternCache(
+    TripPatternIdGenerator tripPatternIdGenerator,
+    RealTimeTripShapeFactory shapeFactory
+  ) {
     this.tripPatternIdGenerator = tripPatternIdGenerator;
+    this.shapeFactory = shapeFactory;
   }
 
   /**
@@ -91,6 +98,15 @@ public class TripPatternCache {
         .withStopPattern(stopPattern)
         .withRealTimeStopPatternModified()
         .withOriginalTripPattern(originalTripPattern)
+        .withShape(
+          originalTripPattern == null
+            ? null
+            : shapeFactory.createTripPatternShape(
+                stopPattern,
+                originalTripPattern.getStopPattern(),
+                originalTripPattern.getShape()
+              )
+        )
         .build();
 
       // Add pattern to cache

@@ -175,10 +175,10 @@ class StopCallImplTest {
     assertEquals(4, geometries.size());
 
     // Unchanged hop: the scheduled shape is kept
-    assertTrue(geometries.get(0).equalsExact(scheduledPattern.getHopGeometry(0), TOLERANCE));
+    assertTrue(geometries.get(0).equalsExact(scheduledPattern.getShape().get(0), TOLERANCE));
 
     // Hop to another stop of the same station: the scheduled shape is moved to the new stop
-    var scheduledHop = scheduledPattern.getHopGeometry(1).getCoordinates();
+    var scheduledHop = scheduledPattern.getShape().get(1).getCoordinates();
     var stationHop = geometries.get(1).getCoordinates();
     assertEquals(scheduledHop.length, stationHop.length);
     assertCoordinate(scheduledHop[0], stationHop[0]);

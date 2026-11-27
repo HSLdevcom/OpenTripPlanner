@@ -19,7 +19,7 @@ public class GeometryMapper {
     for (int i = 0; i < tripPattern.numberOfStops() - 1; i++) {
       var startLocation = tripPattern.getStop(i);
       var endLocation = tripPattern.getStop(i + 1);
-      var geometry = EncodedPolyline.of(tripPattern.getHopGeometry(i));
+      var geometry = EncodedPolyline.of(tripPattern.getShape().get(i));
 
       var stopToStopGeometry = new EncodedPolylineBeanWithStops(
         startLocation,

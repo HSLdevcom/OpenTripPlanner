@@ -152,12 +152,8 @@ public class PatternImpl implements GraphQLDataFetchers.GraphQLPattern {
   @Override
   public DataFetcher<Iterable<Coordinate>> geometry() {
     return environment -> {
-      LineString geometry = getSource(environment).getGeometry();
-      if (geometry == null) {
-        return null;
-      } else {
-        return Arrays.asList(geometry.getCoordinates());
-      }
+      LineString geometry = getSource(environment).getShape().concatenate();
+      return Arrays.asList(geometry.getCoordinates());
     };
   }
 
@@ -185,7 +181,7 @@ public class PatternImpl implements GraphQLDataFetchers.GraphQLPattern {
 
   @Override
   public DataFetcher<Geometry> patternGeometry() {
-    return environment -> getSource(environment).getGeometry();
+    return environment -> getSource(environment).getShape().concatenate();
   }
 
   @Override

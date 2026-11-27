@@ -7,6 +7,7 @@ import org.opentripplanner.transit.repository.TimetableRepository;
 import org.opentripplanner.transit.service.TransitRepository;
 import org.opentripplanner.updater.trip.patterncache.TripPatternCache;
 import org.opentripplanner.updater.trip.patterncache.TripPatternIdGenerator;
+import org.opentripplanner.updater.trip.shape.RealTimeTripShapeFactory;
 
 /**
  * Application-scoped factory for GTFS-RT trip update processing. Holds stable, application-lifetime
@@ -31,7 +32,10 @@ public class GtfsRealTimeTripUpdateAdapter {
   ) {
     this.transitRepository = transitRepository;
     this.localDateNow = localDateNow;
-    this.tripPatternCache = new TripPatternCache(new TripPatternIdGenerator());
+    this.tripPatternCache = new TripPatternCache(
+      new TripPatternIdGenerator(),
+      new RealTimeTripShapeFactory(deduplicator)
+    );
     this.tripTimesUpdater = new TripTimesUpdater(transitRepository.getTimeZone(), deduplicator);
     this.deduplicator = deduplicator;
   }

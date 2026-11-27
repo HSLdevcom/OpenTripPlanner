@@ -37,6 +37,7 @@ import org.opentripplanner.transit.model.framework.ImmutableEntityById;
 import org.opentripplanner.transit.model.network.StopPattern;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.organization.Operator;
+import org.opentripplanner.transit.model.shape.TripShapeFactory;
 import org.opentripplanner.transit.model.site.AreaStop;
 import org.opentripplanner.transit.model.site.GroupStop;
 import org.opentripplanner.transit.model.site.RegularStop;
@@ -261,8 +262,11 @@ class TripPatternMapper {
           ? ""
           : MultilingualStringMapper.getStringValue(journeyPattern.getName())
       )
-      .withHopGeometries(
-        serviceLinkMapper.getGeometriesByJourneyPattern(journeyPattern, stopPattern)
+      .withShape(
+        TripShapeFactory.fromLineStrings(
+          serviceLinkMapper.getGeometriesByJourneyPattern(journeyPattern, stopPattern),
+          deduplicator
+        )
       )
       .withScheduledTimeTableBuilder(builder ->
         builder.addAllTripTimes(createTripTimes(trips, tripStopTimes))

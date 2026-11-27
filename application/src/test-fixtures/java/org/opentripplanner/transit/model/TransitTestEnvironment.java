@@ -7,6 +7,7 @@ import java.time.ZoneId;
 import java.util.concurrent.ExecutionException;
 import org.opentripplanner.LocalTimeParser;
 import org.opentripplanner.core.framework.transaction.configure.TransactionFactory;
+import org.opentripplanner.core.model.deduplicator.DeduplicatorService;
 import org.opentripplanner.core.model.id.FeedScopedIdForTestFactory;
 import org.opentripplanner.core.model.transaction.RepositoryHandle;
 import org.opentripplanner.core.model.transaction.RepositoryRegistry;
@@ -31,6 +32,7 @@ import org.opentripplanner.transit.service.DefaultTransitService;
 import org.opentripplanner.transit.service.TransitRepository;
 import org.opentripplanner.transit.service.TransitService;
 import org.opentripplanner.transit.transfer.regular.NoRegularTransfers;
+import org.opentripplanner.updater.trip.shape.RealTimeTripShapeFactory;
 import org.opentripplanner.utils.time.ServiceDateUtils;
 
 /**
@@ -140,7 +142,8 @@ public final class TransitTestEnvironment {
    * Applies a real-time update that makes the trip call at the given stops on the default service
    * date, instead of the stops of its schedule. The scheduled times are kept, so there must be as
    * many stops as in the schedule. The real-time pattern refers to the scheduled pattern as its
-   * original, and can be fetched with {@link #tripData(String)} after the update.
+   * original and gets a shape derived from it. It can be fetched with {@link #tripData(String)}
+   * after the update.
    */
   public void applyStopPatternUpdate(String tripId, StopLocation... stops) {
     var tripData = tripData(tripId);
@@ -151,12 +154,20 @@ public final class TransitTestEnvironment {
       stopPattern.pickups.with(i, PickDrop.SCHEDULED);
       stopPattern.dropoffs.with(i, PickDrop.SCHEDULED);
     }
+    var realTimeStopPattern = stopPattern.build();
     var realTimePattern = TripPattern.of(id(tripId + "RealTimePattern"))
       .withRoute(scheduledPattern.getRoute())
       .withMode(scheduledPattern.getMode())
-      .withStopPattern(stopPattern.build())
+      .withStopPattern(realTimeStopPattern)
       .withRealTimeStopPatternModified()
       .withOriginalTripPattern(scheduledPattern)
+      .withShape(
+        new RealTimeTripShapeFactory(DeduplicatorService.NOOP).createTripPatternShape(
+          realTimeStopPattern,
+          scheduledPattern.getStopPattern(),
+          scheduledPattern.getShape()
+        )
+      )
       .build();
     var tripTimes = tripData.scheduledTripTimes().createRealTimeFromScheduledTimes().build();
     applyUpdate(RealTimeTripUpdate.of(realTimePattern, tripTimes, defaultServiceDate).build());

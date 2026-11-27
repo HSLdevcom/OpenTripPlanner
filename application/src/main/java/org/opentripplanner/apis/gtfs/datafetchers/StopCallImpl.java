@@ -43,7 +43,7 @@ public class StopCallImpl implements GraphQLDataFetchers.GraphQLStopCall {
       if (flexIndex != null && flexIndex.getTripById(tripTime.getTrip().getId()) != null) {
         return null;
       }
-      return pattern.getHopGeometry(stopPosition);
+      return pattern.getShape().get(stopPosition);
     };
   }
 

@@ -24,6 +24,7 @@ import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.network.StopPattern;
 import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.network.TripPatternBuilder;
+import org.opentripplanner.transit.model.shape.TripShapeFactory;
 import org.opentripplanner.transit.model.timetable.Direction;
 import org.opentripplanner.transit.model.timetable.FrequencyEntry;
 import org.opentripplanner.transit.model.timetable.ScheduledTripTimes;
@@ -188,7 +189,9 @@ public class GenerateTripPatternsOperation {
       .withStopPattern(stopPattern)
       .withMode(trip.getMode())
       .withNetexSubmode(trip.getNetexSubMode())
-      .withHopGeometries(geometryProcessor.createHopShapes(trip));
+      .withShape(
+        TripShapeFactory.fromLineStrings(geometryProcessor.createHopShapes(trip), deduplicator)
+      );
     tripPatternBuilders.put(stopPattern, tripPatternBuilder);
     return tripPatternBuilder;
   }
