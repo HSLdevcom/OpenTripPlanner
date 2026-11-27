@@ -7,13 +7,13 @@ import static org.opentripplanner.street.geometry.GeometryUtils.makeLineString;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.core.model.deduplicator.DeduplicatorService;
-import org.opentripplanner.service.shape.model.CompactLineStringSequence;
-import org.opentripplanner.service.shape.model.TripShapeFactory;
 import org.opentripplanner.street.geometry.SphericalDistanceLibrary;
 import org.opentripplanner.street.geometry.WgsCoordinate;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.network.TripPattern;
+import org.opentripplanner.transit.model.shape.CompactLineStringSequence;
+import org.opentripplanner.transit.model.shape.TripShapeFactory;
 import org.opentripplanner.transit.model.site.RegularStop;
 
 class RealTimeTripShapeFactoryTest {

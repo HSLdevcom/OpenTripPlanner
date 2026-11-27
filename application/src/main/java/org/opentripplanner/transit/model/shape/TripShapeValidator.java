@@ -1,6 +1,5 @@
-package org.opentripplanner.service.shape;
+package org.opentripplanner.transit.model.shape;
 
-import org.opentripplanner.service.shape.model.CompactLineStringSequence;
 import org.opentripplanner.transit.model.network.TripPattern;
 
 public final class TripShapeValidator {

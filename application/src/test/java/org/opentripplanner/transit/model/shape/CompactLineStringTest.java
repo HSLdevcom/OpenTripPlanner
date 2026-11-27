@@ -1,4 +1,4 @@
-package org.opentripplanner.service.shape.model;
+package org.opentripplanner.transit.model.shape;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;

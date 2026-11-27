@@ -6,11 +6,11 @@ import org.jspecify.annotations.Nullable;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.core.model.deduplicator.DeduplicatorService;
-import org.opentripplanner.service.shape.model.CompactLineStringSequence;
-import org.opentripplanner.service.shape.model.TripShapeFactory;
 import org.opentripplanner.street.geometry.GeometryUtils;
 import org.opentripplanner.transit.model.network.StopPattern;
 import org.opentripplanner.transit.model.network.TripPattern;
+import org.opentripplanner.transit.model.shape.CompactLineStringSequence;
+import org.opentripplanner.transit.model.shape.TripShapeFactory;
 
 /**
  * Creates the shape of a trip pattern created by a real-time update. The factory has no access to

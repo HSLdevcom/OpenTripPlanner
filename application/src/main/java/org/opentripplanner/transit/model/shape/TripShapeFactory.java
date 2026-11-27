@@ -1,4 +1,4 @@
-package org.opentripplanner.service.shape.model;
+package org.opentripplanner.transit.model.shape;
 
 import java.util.ArrayList;
 import java.util.List;
