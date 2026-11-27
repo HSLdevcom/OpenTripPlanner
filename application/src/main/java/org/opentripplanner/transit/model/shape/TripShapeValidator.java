@@ -1,30 +1,31 @@
 package org.opentripplanner.transit.model.shape;
 
-import org.opentripplanner.transit.model.network.TripPattern;
+import org.opentripplanner.core.model.id.FeedScopedId;
+import org.opentripplanner.transit.model.network.StopPattern;
 
 public final class TripShapeValidator {
 
   private TripShapeValidator() {}
 
   /**
-   * Check that the pattern has a shape, and that it has one hop for each pair of consecutive stops
-   * of the pattern.
+   * Check that the shape exists and has one hop for each pair of consecutive stops of the stop
+   * pattern.
    *
    * @throws IllegalArgumentException if the shape is missing, or if the number of hops does not
-   *                                  match the pattern
+   *                                  match the stop pattern
    */
-  public static void validate(TripPattern pattern, CompactLineStringSequence tripPatternShape) {
-    if (tripPatternShape == null) {
-      throw new IllegalArgumentException("No shape for trip pattern " + pattern.getId());
+  public static void validate(
+    StopPattern stopPattern,
+    CompactLineStringSequence shape,
+    FeedScopedId id
+  ) {
+    if (shape == null) {
+      throw new IllegalArgumentException("No shape for " + id);
     }
-    int expectedHops = Math.max(pattern.numberOfStops() - 1, 0);
-    if (tripPatternShape.size() != expectedHops) {
+    int expectedHops = Math.max(stopPattern.getSize() - 1, 0);
+    if (shape.size() != expectedHops) {
       throw new IllegalArgumentException(
-        "Shape of trip pattern %s has %d hops, expected %d".formatted(
-          pattern.getId(),
-          tripPatternShape.size(),
-          expectedHops
-        )
+        "Shape of %s has %d hops, expected %d".formatted(id, shape.size(), expectedHops)
       );
     }
   }

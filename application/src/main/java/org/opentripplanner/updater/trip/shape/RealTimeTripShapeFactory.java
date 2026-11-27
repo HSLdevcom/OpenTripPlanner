@@ -2,27 +2,14 @@ package org.opentripplanner.updater.trip.shape;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.jspecify.annotations.Nullable;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.core.model.deduplicator.DeduplicatorService;
 import org.opentripplanner.street.geometry.GeometryUtils;
 import org.opentripplanner.transit.model.network.StopPattern;
-import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.shape.CompactLineStringSequence;
 import org.opentripplanner.transit.model.shape.TripShapeFactory;
 
-/**
- * Creates the shape of a trip pattern created by a real-time update. The factory has no access to
- * any repository; the shape of the original pattern is given as input.
- * <p>
- * The shape is derived from the pattern it replaces, if there is one: For each hop, the geometry is
- * copied if the hop is between the same stops. If the stops are different but belong to the same
- * stations, the old geometry is used with the first and last point moved to the new stops.
- * Otherwise, a straight line is used. A pattern without an original pattern (an added trip), or
- * without a shape for the original, gets a straight line between each pair of stops, measured with
- * the haversine formula.
- */
 public class RealTimeTripShapeFactory {
 
   private final DeduplicatorService deduplicator;
@@ -32,35 +19,26 @@ public class RealTimeTripShapeFactory {
   }
 
   /**
-   * Create the shape of the given pattern.
-   *
-   * @param originalTripPatternShape the shape of {@link TripPattern#getOriginalTripPattern()}, or
-   *                                 {@code null} if the pattern has no original or its shape is
-   *                                 not available.
+   * Create the shape of a real-time pattern from the pattern it replaces. Hops are compared by
+   * position: a hop between the same stops keeps the original hop shape, a hop between other stops
+   * of the same stations keeps it with its ends moved to the new stops, and any other hop is a
+   * straight line.
    */
   public CompactLineStringSequence createTripPatternShape(
-    TripPattern pattern,
-    @Nullable CompactLineStringSequence originalTripPatternShape
+    StopPattern stopPattern,
+    StopPattern originalStopPattern,
+    CompactLineStringSequence originalTripPatternShape
   ) {
-    var original = pattern.getOriginalTripPattern();
-    if (original == null || originalTripPatternShape == null) {
-      return TripShapeFactory.straightLines(pattern.getStopPattern(), deduplicator);
-    }
     return TripShapeFactory.fromLineStrings(
       generateHopShapesFromOriginalTripPatternShape(
-        pattern.getStopPattern(),
-        original.getStopPattern(),
+        stopPattern,
+        originalStopPattern,
         originalTripPatternShape
       ),
       deduplicator
     );
   }
 
-  /**
-   * The new pattern and the one it replaces may have a different number of stops. The geometry is
-   * then preserved up until the first mismatching stop, and a straight line is used for all
-   * segments after that.
-   */
   private static List<LineString> generateHopShapesFromOriginalTripPatternShape(
     StopPattern stopPattern,
     StopPattern originalStopPattern,

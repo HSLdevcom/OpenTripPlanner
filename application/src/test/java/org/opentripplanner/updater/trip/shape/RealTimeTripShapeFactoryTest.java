@@ -1,17 +1,14 @@
 package org.opentripplanner.updater.trip.shape;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.opentripplanner.core.model.id.FeedScopedIdForTestFactory.id;
 import static org.opentripplanner.street.geometry.GeometryUtils.makeLineString;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.core.model.deduplicator.DeduplicatorService;
-import org.opentripplanner.street.geometry.SphericalDistanceLibrary;
 import org.opentripplanner.street.geometry.WgsCoordinate;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
-import org.opentripplanner.transit.model.network.Route;
-import org.opentripplanner.transit.model.network.TripPattern;
+import org.opentripplanner.transit.model.network.StopPattern;
 import org.opentripplanner.transit.model.shape.CompactLineStringSequence;
 import org.opentripplanner.transit.model.shape.TripShapeFactory;
 import org.opentripplanner.transit.model.site.RegularStop;
@@ -19,7 +16,6 @@ import org.opentripplanner.transit.model.site.RegularStop;
 class RealTimeTripShapeFactoryTest {
 
   private static final TransitRepositoryForTest TEST_MODEL = TransitRepositoryForTest.of();
-  private static final Route ROUTE = TransitRepositoryForTest.route("routeId").build();
 
   private static final RegularStop STOP_A = TEST_MODEL.stop("A").build();
   private static final RegularStop STOP_X = TEST_MODEL.stop("X").build();
@@ -27,10 +23,11 @@ class RealTimeTripShapeFactoryTest {
   private static final RegularStop STOP_Y = TEST_MODEL.stop("Y").build();
   private static final RegularStop STOP_C = TEST_MODEL.stop("C").build();
 
-  private static final TripPattern ORIGINAL = TripPattern.of(id("original"))
-    .withRoute(ROUTE)
-    .withStopPattern(TransitRepositoryForTest.stopPattern(STOP_A, STOP_B, STOP_C))
-    .build();
+  private static final StopPattern ORIGINAL_STOP_PATTERN = TransitRepositoryForTest.stopPattern(
+    STOP_A,
+    STOP_B,
+    STOP_C
+  );
 
   private static final CompactLineStringSequence ORIGINAL_TRIP_PATTERN_SHAPE =
     TripShapeFactory.fromLineStrings(
@@ -47,14 +44,11 @@ class RealTimeTripShapeFactoryTest {
 
   @Test
   void hopShapeForReplacementPattern() {
-    var pattern = TripPattern.of(id("replacement"))
-      .withRoute(ROUTE)
-      .withStopPattern(TransitRepositoryForTest.stopPattern(STOP_A, STOP_B, STOP_X, STOP_Y))
-      .withRealTimeStopPatternModified()
-      .withOriginalTripPattern(ORIGINAL)
-      .build();
-
-    var shape = subject.createTripPatternShape(pattern, ORIGINAL_TRIP_PATTERN_SHAPE);
+    var shape = subject.createTripPatternShape(
+      TransitRepositoryForTest.stopPattern(STOP_A, STOP_B, STOP_X, STOP_Y),
+      ORIGINAL_STOP_PATTERN,
+      ORIGINAL_TRIP_PATTERN_SHAPE
+    );
 
     assertEquals(3, shape.size());
     assertEquals(
@@ -67,14 +61,11 @@ class RealTimeTripShapeFactoryTest {
 
   @Test
   void copyHopsFromTheOriginalWhenStopsAreUnchanged() {
-    var pattern = TripPattern.of(id("replacement"))
-      .withRoute(ROUTE)
-      .withStopPattern(TransitRepositoryForTest.stopPattern(STOP_A, STOP_B, STOP_C))
-      .withRealTimeStopPatternModified()
-      .withOriginalTripPattern(ORIGINAL)
-      .build();
-
-    var shape = subject.createTripPatternShape(pattern, ORIGINAL_TRIP_PATTERN_SHAPE);
+    var shape = subject.createTripPatternShape(
+      ORIGINAL_STOP_PATTERN,
+      ORIGINAL_STOP_PATTERN,
+      ORIGINAL_TRIP_PATTERN_SHAPE
+    );
 
     assertEquals(ORIGINAL_TRIP_PATTERN_SHAPE.distanceBetween(0, 2), shape.distanceBetween(0, 2));
     assertEquals(ORIGINAL_TRIP_PATTERN_SHAPE.get(0), shape.get(0));
@@ -102,71 +93,26 @@ class RealTimeTripShapeFactoryTest {
       .withCoordinate(0.9, 0.9)
       .withParentStation(stationDestination)
       .build();
-    var original = TripPattern.of(id("original2"))
-      .withRoute(ROUTE)
-      .withStopPattern(TransitRepositoryForTest.stopPattern(stopOrigin, stopDestination))
-      .build();
     var middle = new WgsCoordinate(0.5, 0.5);
     var originalShape = TripShapeFactory.fromLineStrings(
       List.of(makeLineString(stopOrigin.getCoordinate(), middle, stopDestination.getCoordinate())),
       DeduplicatorService.NOOP
     );
-    var pattern = TripPattern.of(id("replacement2"))
-      .withRoute(ROUTE)
-      .withStopPattern(TransitRepositoryForTest.stopPattern(stopNewOrigin, stopDestination))
-      .withRealTimeStopPatternModified()
-      .withOriginalTripPattern(original)
-      .build();
 
-    var shape = subject.createTripPatternShape(pattern, originalShape);
+    var shape = subject.createTripPatternShape(
+      TransitRepositoryForTest.stopPattern(stopNewOrigin, stopDestination),
+      TransitRepositoryForTest.stopPattern(stopOrigin, stopDestination),
+      originalShape
+    );
 
     assertEquals(
       makeLineString(stopNewOrigin.getCoordinate(), middle, stopDestination.getCoordinate()),
       shape.get(0)
     );
+    // The original shape is not modified
     assertEquals(
       makeLineString(stopOrigin.getCoordinate(), middle, stopDestination.getCoordinate()),
       originalShape.get(0)
-    );
-  }
-
-  @Test
-  void useStraightLinesMeasuredWithHaversineForPatternsWithoutOriginal() {
-    var pattern = TripPattern.of(id("added"))
-      .withRoute(ROUTE)
-      .withStopPattern(TransitRepositoryForTest.stopPattern(STOP_A, STOP_B, STOP_C))
-      .withRealTimeAddedTrip()
-      .build();
-
-    var shape = subject.createTripPatternShape(pattern, null);
-
-    assertEquals(makeLineString(STOP_A.getCoordinate(), STOP_B.getCoordinate()), shape.get(0));
-    double expected = distance(STOP_A, STOP_B) + distance(STOP_B, STOP_C);
-    assertEquals((int) Math.round(expected), shape.distanceBetween(0, 2));
-  }
-
-  @Test
-  void useStraightLinesWhenTheOriginalTripPatternShapeIsNotAvailable() {
-    var pattern = TripPattern.of(id("replacement"))
-      .withRoute(ROUTE)
-      .withStopPattern(TransitRepositoryForTest.stopPattern(STOP_A, STOP_B, STOP_C))
-      .withRealTimeStopPatternModified()
-      .withOriginalTripPattern(ORIGINAL)
-      .build();
-
-    var shape = subject.createTripPatternShape(pattern, null);
-
-    assertEquals(2, shape.size());
-    assertEquals(makeLineString(STOP_A.getCoordinate(), STOP_B.getCoordinate()), shape.get(0));
-    assertEquals(makeLineString(STOP_B.getCoordinate(), STOP_C.getCoordinate()), shape.get(1));
-  }
-
-  private static double distance(RegularStop from, RegularStop to) {
-    return SphericalDistanceLibrary.distance(
-      from.getLat(),
-      from.getLon(),
-      to.getLat(),
-      to.getLon()
     );
   }
 }

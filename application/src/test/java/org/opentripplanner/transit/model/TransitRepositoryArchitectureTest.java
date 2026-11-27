@@ -25,6 +25,7 @@ public class TransitRepositoryArchitectureTest {
   private static final Package NETWORK = TRANSIT_MODEL.subPackage("network");
   private static final Package SITE = TRANSIT_MODEL.subPackage("site");
   private static final Package TIMETABLE = TRANSIT_MODEL.subPackage("timetable");
+  private static final Package SHAPE = TRANSIT_MODEL.subPackage("shape");
   private static final Package CALENDAR = TRANSIT_MODEL.subPackage("calendar");
   private static final Package TIMETABLE_BOOKING = TIMETABLE.subPackage("booking");
   private static final Package LEGACY_MODEL = OTP_ROOT.subPackage("model");
@@ -59,6 +60,12 @@ public class TransitRepositoryArchitectureTest {
   }
 
   @Test
+  void enforceShapePackageDependencies() {
+    // TODO OTP2 temporarily allow circular dependency between network and shape
+    SHAPE.dependsOn(GEOMETRY, FRAMEWORK_UTILS, GEO_UTILS, SITE, NETWORK).verify();
+  }
+
+  @Test
   void enforceNetworkPackageDependencies() {
     // TODO OTP2 temporarily allow circular dependency between network and timetable
     NETWORK.dependsOn(
@@ -69,6 +76,7 @@ public class TransitRepositoryArchitectureTest {
       BASIC,
       ORGANIZATION,
       SITE,
+      SHAPE,
       TIMETABLE,
       LEGACY_MODEL,
       RAPTOR_SPI,
